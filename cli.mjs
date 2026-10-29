@@ -7,6 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
+import { checkLicense, licenseHash, TAMPER_MESSAGE } from './license.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
 const PLUGIN_FILE = 'Studio Bridge.rbxmx';
@@ -333,6 +334,8 @@ async function doctor(args) {
   const note = (state, text) => lines.push(`${state.padEnd(5)} ${text}`);
   note('info', `studio-bridge ${version()} (${{ exe: 'packaged exe', npm: 'npm package, node ' + process.version, source: 'source checkout, node ' + process.version }[updateMode()]})`);
   note('info', `data folder: ${appDir}`);
+  const license = checkLicense();
+  note(license.ok ? 'ok' : 'FAIL', license.ok ? 'license file is intact' : `license file is ${license.reason}; Studio Bridge is disabled until the original LICENSE is restored`);
   const tokenFile = path.join(appDir, 'token.txt');
   const token = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : null;
   note(token ? 'ok' : 'FAIL', token ? 'token.txt exists' : 'token.txt is missing; run install');
@@ -494,6 +497,12 @@ function pause() {
 async function main() {
   const [command, ...rest] = userArgs();
 
+  if ((command === 'install' || command === 'update') && !checkLicense().ok) {
+    console.error(TAMPER_MESSAGE);
+    process.exitCode = 3;
+    return;
+  }
+
   if (command === 'serve') {
     await import('./server.mjs');
   } else if (command === 'install') {
@@ -513,8 +522,11 @@ async function main() {
       process.exitCode = 1;
     }
   } else if (command === 'licenses') {
-    console.log(readAsset('LICENSE'));
-    console.log('\n' + readAsset('THIRD_PARTY_NOTICES.txt'));
+    if (rest.includes('--hash')) console.log(licenseHash(readAsset('LICENSE')));
+    else {
+      console.log(readAsset('LICENSE'));
+      console.log('\n' + readAsset('THIRD_PARTY_NOTICES.txt'));
+    }
   } else if (command === 'settings') {
     process.exitCode = settingsCommand(rest);
   } else if (command === 'doctor') {

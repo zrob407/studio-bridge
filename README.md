@@ -102,7 +102,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the eleven suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the twelve suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
@@ -139,14 +139,12 @@ Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. 
 - Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
 - The core stays free. The author may also offer separate add-ons or services, possibly for a fee, under separate terms; those are not covered by this license, and versions already released stay available under the terms they were released with.
 
+Each copy checks that its `LICENSE` file is unmodified (line endings and trailing spaces are ignored). If it was changed or removed, Studio Bridge stays up only to say so: the MCP server tells the AI client "Tampering detected" and returns that message from every tool call, it refuses to serve the plugin or accept plugin connections, and `install` and `update` refuse to run. Restoring the original `LICENSE` lifts the lock at once, and `doctor`, `version` and `licenses` keep working. See License integrity check below.
+
 This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.
 
-### Why there is no license-tamper check
+### License integrity check
 
-For a short time the source tree contained a check that hashed the `LICENSE` file and locked Studio Bridge (the MCP server told the AI "tampering detected", the plugin was refused, `install` and `update` stopped) if the file was changed. It was never released and was reverted (see the Git history, commit "Revert Lock Studio Bridge when its license file has been tampered with"), for these reasons:
+Every version carries a hash of its own `LICENSE` text. If the file in a copy no longer matches (edited, emptied or deleted), the server switches to a locked mode: it still answers, but only to say "Tampering detected: any further use of a tampered license of this tool is not allowed", through the MCP server instructions and as the result of every tool call, so the AI assistant passes that on to the user. The plugin is not served and cannot connect, and `install` and `update` refuse to run. Putting the original `LICENSE` back lifts the lock without a restart. `studio-bridge licenses --hash` prints the hash a maintainer needs to update when the license text changes.
 
-- The first exe built with it was blocked by Windows Smart App Control on the maintainer's machine, so it was removed as a precaution. A later build without the check was blocked as well, so the check was probably not the cause: Smart App Control decides per file from Microsoft's reputation service and does not explain its decisions, and any new unsigned exe can be affected.
-- Because the source is public, anyone could remove such a check, so it could not enforce anything. The license text is what binds you.
-- It could lock out honest users after a harmless edit.
-
-The license conditions (keep the notice, do not sell it, do not present it as your own work) are unchanged.
+This is a safeguard against casual tampering, not copy protection: the source is public, so anyone determined can remove the check, and the license text is what actually binds you. An earlier build of this check was taken out for a few days while an unrelated Windows block on the unsigned exe was being investigated; the check was not the cause, and it is back now that Studio Bridge can also be installed from npm.
