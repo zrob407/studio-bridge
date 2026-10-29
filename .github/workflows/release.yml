@@ -18,46 +18,58 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
+
+      - name: Install build tools
+        shell: bash
+        run: npm ci
 
       - name: Check syntax
         shell: bash
         run: |
-          for file in server.mjs assets.mjs audit.mjs install.mjs png.mjs ws.mjs; do
+          for file in server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs install.mjs build/build.mjs; do
             node --check "$file"
           done
 
       - name: Run tests
         shell: bash
-        run: |
-          node test/reliability.test.mjs
-          node test/ws-transport.test.mjs
-          node test/tools.test.mjs
-          node test/plugin.test.mjs
+        run: npm test
 
-      - name: Package source
+      - name: Build the exe
+        shell: bash
+        run: npm run build
+
+      - name: Test the exe
         shell: bash
         run: |
-          mkdir dist
+          node test/cli.test.mjs dist/studio-bridge.exe
+          node test/serve.test.mjs dist/studio-bridge.exe
+
+      - name: Package
+        shell: bash
+        run: |
           version="${GITHUB_REF_NAME}"
-          7z a -tzip "dist/studio-bridge-${version}.zip" \
-            server.mjs assets.mjs audit.mjs install.mjs png.mjs ws.mjs screenshot.ps1 \
-            tools.json plugin.template.lua plugin.stub.lua handlers README.md LICENSE
+          cp dist/studio-bridge.exe "dist/studio-bridge-${version}.exe"
+          7z a -tzip "dist/studio-bridge-${version}-source.zip" \
+            server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs install.mjs screenshot.ps1 \
+            tools.json plugin.template.lua plugin.stub.lua package.json package-lock.json handlers build test README.md LICENSE
 
       - name: Checksums
         shell: bash
         run: |
           cd dist
-          sha256sum *.zip > SHA256SUMS.txt
+          sha256sum "studio-bridge-${GITHUB_REF_NAME}.exe" "studio-bridge-${GITHUB_REF_NAME}-source.zip" > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
       - uses: actions/attest-build-provenance@v2
         with:
-          subject-path: dist/*.zip
+          subject-path: |
+            dist/studio-bridge-*.exe
+            dist/studio-bridge-*-source.zip
 
       - name: Publish release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "${GITHUB_REF_NAME}" dist/* --title "${GITHUB_REF_NAME}" --generate-notes
+          gh release create "${GITHUB_REF_NAME}" "dist/studio-bridge-${GITHUB_REF_NAME}.exe" "dist/studio-bridge-${GITHUB_REF_NAME}-source.zip" dist/SHA256SUMS.txt --title "${GITHUB_REF_NAME}" --generate-notes

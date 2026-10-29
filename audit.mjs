@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { appDir } from './paths.mjs';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
+const dir = appDir;
 const CACHE_PATH = path.join(dir, 'asset-owners.json');
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_RATE_WAITS = 3;

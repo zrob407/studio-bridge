@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { appDir } from './paths.mjs';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
+const dir = appDir;
 const recordsPath = path.join(dir, 'uploads.json');
 const KEY_FILE = path.join(os.homedir(), '.roblox-key.txt');
 const DUPLICATE_WINDOW_MS = 24 * 60 * 60 * 1000;

@@ -66,9 +66,13 @@ async function handle(command) {
 }
 
 async function pluginLoop() {
-  while (pluginRunning) {
-    const command = await post('/poll', { id: 'fake-plugin-0001', role: 'edit', placeId: 1, placeName: 'Test' });
-    if (command.requestId) handle(command);
+  try {
+    while (pluginRunning) {
+      const command = await post('/poll', { id: 'fake-plugin-0001', role: 'edit', placeId: 1, placeName: 'Test' });
+      if (command.requestId) handle(command);
+    }
+  } catch {
+    pluginRunning = false;
   }
 }
 
@@ -111,5 +115,6 @@ check('window is not stuck busy', !/busy/.test(listing.text), listing.text);
 
 pluginRunning = false;
 server.kill();
+await new Promise((resolve) => server.once('exit', resolve));
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

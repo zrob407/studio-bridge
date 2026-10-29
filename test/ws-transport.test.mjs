@@ -290,5 +290,6 @@ const settled = await tool('studio_list', {});
 check('no leftover windows once every grace period has passed', /No Studio window/.test(settled.text), settled.text.replace(/\n/g, ' | '));
 
 server.kill();
+await new Promise((resolve) => server.once('exit', resolve));
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

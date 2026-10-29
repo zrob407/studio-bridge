@@ -81,6 +81,7 @@ const unknown = await rpc('tools/call', { name: 'example_tool', arguments: {} })
 check('a tool with no implementation answers with a clear error', unknown.result.isError === true);
 
 server.kill();
+await new Promise((resolve) => server.once('exit', resolve));
 fs.rmSync(workDir, { recursive: true, force: true });
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);
