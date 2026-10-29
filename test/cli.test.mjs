@@ -51,6 +51,7 @@ check('standalone install writes the full plugin', standalone.status === 0 && fu
 run('install', '--no-register');
 const doctor = run('doctor');
 check('doctor reports the token and the loader', doctor.status === 0 && /ok\s+token\.txt exists/.test(doctor.stdout) && /Studio Bridge\.rbxmx is installed \(loader\)/.test(doctor.stdout), doctor.stdout.split('\n').slice(0, 3).join(' | '));
+check('doctor finds the embedded screenshot helper', /ok\s+screenshot helper is available/.test(doctor.stdout), (doctor.stdout.match(/screenshot helper[^\n]*/) || [''])[0]);
 check('doctor sees that the bridge is not running', /not running on port 3991/.test(doctor.stdout));
 
 fs.writeFileSync(path.join(pluginsDir, 'ClaudeStudioBridge.rbxmx'), 'old');
