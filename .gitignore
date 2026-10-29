@@ -1,0 +1,9 @@
+token.txt
+uploads.json
+asset-owners.json
+exports/
+*.key
+.roblox-key.txt
+node_modules/
+dist/
+*.log
