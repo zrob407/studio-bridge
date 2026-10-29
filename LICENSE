@@ -1,21 +1,44 @@
-MIT License
+Studio Bridge License
 
-Copyright (c) 2026 studio-bridge contributors
+Copyright (c) 2026 zrob407
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This is a source-available license, not an OSI-approved open-source license.
+Versions 0.2.3 and earlier were released under the MIT License, and copies of
+those versions remain available to you under it.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+Permission is granted, free of charge, to anyone who obtains a copy of this
+software and its associated files (the "Software") to use, copy, modify,
+merge, publish and distribute the Software, subject to the following
+conditions:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Attribution. Keep this copyright notice and this license in every copy and
+   every substantial portion of the Software, including modified versions. Do
+   not present the Software, or a modified version of it, as your own original
+   work, and say what you changed.
+
+2. No selling the Software. You may not sell the Software or a modified
+   version of it, and you may not charge a fee for copies of it or for a
+   product or service whose value comes entirely or substantially from the
+   Software's own functionality (for example selling the exe, a paid fork, or
+   a paid hosted version of it). Sharing the Software for free is allowed.
+
+3. Your work is yours. Using the Software to make, test, publish or operate
+   games, experiences, assets or any other work, including commercial ones, is
+   allowed and is not selling the Software. The Software claims no rights over
+   what you make with it.
+
+4. Name. This license grants no right to use the name "Studio Bridge" for a
+   modified version in a way that suggests it is the original or is endorsed
+   by the author.
+
+5. No warranty. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+   EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+   WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+   IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+   SOFTWARE.
+
+Third-party components that ship with the Software's releases, such as the
+Node.js runtime embedded in the exe, are licensed under their own terms. See
+THIRD_PARTY_NOTICES.txt.
