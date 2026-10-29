@@ -6,6 +6,8 @@ local context = ({...})[1] or {}
 
 local ROLE = if not RunService:IsRunning() then "edit" elseif RunService:IsServer() then "server" else "client"
 
+print("[Studio Bridge:" .. ROLE .. "] plugin " .. tostring(context.version or "standalone") .. " loaded")
+
 local URL = "http://127.0.0.1:__PORT__"
 local TOKEN = "__TOKEN__"
 local CLIENT_ID = context.clientId or HttpService:GenerateGUID(false)
@@ -173,7 +175,7 @@ local function execute(code, context)
 	pcall(setfenv, fn, makeEnv(lines, files))
 
 	local recorded, recording = pcall(function()
-		return ChangeHistoryService:TryBeginRecording("Claude run_luau")
+		return ChangeHistoryService:TryBeginRecording("Studio Bridge run_luau")
 	end)
 
 	if recorded and recording then
@@ -272,7 +274,7 @@ local function reportFailure(ok, response)
 
 	if message ~= lastFailure then
 		lastFailure = message
-		warn("[ClaudeStudioBridge:" .. ROLE .. "] cannot reach the bridge: " .. message)
+		warn("[Studio Bridge:" .. ROLE .. "] cannot reach the bridge: " .. message)
 	end
 end
 
@@ -510,7 +512,7 @@ local function step()
 
 	if lastFailure then
 		lastFailure = nil
-		print("[ClaudeStudioBridge:" .. ROLE .. "] connected")
+		print("[Studio Bridge:" .. ROLE .. "] connected")
 	end
 
 	local decoded = HttpService:JSONDecode(response.Body)
@@ -619,7 +621,7 @@ local function runSocketSession()
 
 	if lastFailure then
 		lastFailure = nil
-		print("[ClaudeStudioBridge:" .. ROLE .. "] connected (websocket)")
+		print("[Studio Bridge:" .. ROLE .. "] connected (websocket)")
 	end
 
 	local nextBeat = os.clock() + HEARTBEAT_SECONDS
@@ -661,7 +663,7 @@ if ROLE ~= "client" then
 				local alive, problem = pcall(step)
 
 				if not alive then
-					warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. tostring(problem))
+					warn("[Studio Bridge:" .. ROLE .. "] " .. tostring(problem))
 					task.wait(RETRY_DELAY)
 				end
 			end

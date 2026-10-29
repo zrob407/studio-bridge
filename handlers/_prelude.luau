@@ -10,11 +10,11 @@ local ScriptEditorService = optionalService("ScriptEditorService")
 local ReflectionService = optionalService("ReflectionService")
 
 local function bridgeState()
-	local state = shared.__ClaudeBridge
+	local state = shared.__StudioBridge
 
 	if not state then
 		state = {lastPlayEnded = 0}
-		shared.__ClaudeBridge = state
+		shared.__StudioBridge = state
 	end
 
 	return state
