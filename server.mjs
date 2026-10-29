@@ -10,7 +10,6 @@ import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
-import { checkLicense, TAMPER_MESSAGE } from './license.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestRelease, loadSettings } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
@@ -249,7 +248,6 @@ const server = http.createServer(async (req, res) => {
   if (!host.startsWith('127.0.0.1') && !host.startsWith('localhost')) return respond(res, 403, { error: 'forbidden' });
   if (req.method !== 'POST') return respond(res, 405, { error: 'method not allowed' });
   if (!tokenMatches(req.headers['x-bridge-token'])) return respond(res, 401, { error: 'unauthorized' });
-  if (!checkLicense().ok) return respond(res, 403, { error: 'license tampered', message: TAMPER_MESSAGE });
 
   let body;
   try {
@@ -388,10 +386,6 @@ server.on('upgrade', (req, socket) => {
   const pathOk = String(req.url || '').split('?')[0] === '/ws';
   if (!hostOk || !pathOk || req.headers.origin !== undefined || !tokenMatches(req.headers['x-bridge-token'])) {
     socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
-    return;
-  }
-  if (!checkLicense().ok) {
-    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n');
     return;
   }
   const state = { studio: null, connection: null, silence: null };
@@ -1023,15 +1017,13 @@ async function handle(message) {
         result: {
           protocolVersion: params?.protocolVersion || '2024-11-05',
           capabilities: { tools: { listChanged: true } },
-          serverInfo: { name: 'studio-bridge', version: currentVersion() },
-          ...(checkLicense().ok ? {} : { instructions: TAMPER_MESSAGE }),
+          serverInfo: { name: 'studio-bridge', version: '0.1.0' },
         },
       });
     }
     if (method === 'ping' && isRequest) return send({ jsonrpc: '2.0', id, result: {} });
     if (method === 'tools/list') return send({ jsonrpc: '2.0', id, result: { tools: allTools } });
     if (method === 'tools/call') {
-      if (!checkLicense().ok) return send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: TAMPER_MESSAGE }], isError: true } });
       const result = await callTool(params?.name, params?.arguments || {});
       return send({ jsonrpc: '2.0', id, result });
     }
