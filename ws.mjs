@@ -23,6 +23,7 @@ function encodeFrame(opcode, payload) {
 }
 
 export function acceptWebSocket(req, socket, handlers = {}) {
+  socket.on('error', () => {});
   const key = req.headers['sec-websocket-key'];
   if (typeof key !== 'string' || String(req.headers.upgrade).toLowerCase() !== 'websocket') {
     socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n');
@@ -53,6 +54,7 @@ export function acceptWebSocket(req, socket, handlers = {}) {
       socket.write(encodeFrame(0x8, payload));
       closed = true;
       socket.end();
+      setTimeout(() => socket.destroy(), 2000).unref();
     },
     terminate() {
       closed = true;
@@ -137,12 +139,13 @@ export function acceptWebSocket(req, socket, handlers = {}) {
       fail(1011);
     }
   });
+  socket.on('end', () => {
+    if (!socket.destroyed) socket.end();
+  });
   socket.on('close', () => {
     const wasClosed = closed;
     closed = true;
     if (handlers.onClose) handlers.onClose(wasClosed);
   });
-  socket.on('error', () => {});
-
   return connection;
 }
