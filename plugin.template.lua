@@ -11,6 +11,8 @@ local MAX_OUTPUT_CHARS = 30000
 local MAX_TABLE_ENTRIES = 60
 local MAX_DEPTH = 3
 local RETRY_DELAY = 3
+local DEFAULT_COMMAND_TIMEOUT = 60
+local RESULT_ATTEMPTS = 3
 
 local format
 
@@ -137,7 +139,21 @@ local function compile(code)
 	return built, nil
 end
 
-local function execute(code)
+local function finishRecording(context)
+	local recording = context.recording
+
+	if recording then
+		context.recording = nil
+
+		pcall(function()
+			ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
+		end)
+	end
+end
+
+local function execute(code, context)
+	context = context or {}
+
 	local lines = {}
 	local files = {}
 	local fn, compileError = compile(code)
@@ -151,15 +167,16 @@ local function execute(code)
 	local recorded, recording = pcall(function()
 		return ChangeHistoryService:TryBeginRecording("Claude run_luau")
 	end)
+
+	if recorded and recording then
+		context.recording = recording
+	end
+
 	local results = table.pack(xpcall(fn, function(message)
 		return tostring(message) .. "\n" .. debug.traceback()
 	end))
 
-	if recorded and recording then
-		pcall(function()
-			ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
-		end)
-	end
+	finishRecording(context)
 
 	if not results[1] then
 		return {ok = false, error = results[2], output = lines}
@@ -238,8 +255,12 @@ end
 
 local lastFailure
 
+local function describeFailure(ok, response)
+	return if ok then "HTTP " .. tostring(response.StatusCode) .. " " .. tostring(response.StatusMessage) else tostring(response)
+end
+
 local function reportFailure(ok, response)
-	local message = if ok then "HTTP " .. tostring(response.StatusCode) .. " " .. tostring(response.StatusMessage) else tostring(response)
+	local message = describeFailure(ok, response)
 
 	if message ~= lastFailure then
 		lastFailure = message
@@ -275,13 +296,14 @@ elseif ROLE == "client" then
 	end)
 end
 
-local function relayToClient(code)
+local function relayToClient(code, timeout)
 	local player = game:GetService("Players"):GetPlayers()[1]
 
 	if not relay or not player then
 		return {ok = false, error = "no client is connected to this session", output = {}}
 	end
 
+	local limit = math.max(RELAY_TIMEOUT, timeout or 0)
 	local result
 
 	task.spawn(function()
@@ -292,13 +314,77 @@ local function relayToClient(code)
 		result = if ok and type(value) == "table" then value else {ok = false, error = "relay failed: " .. tostring(value), output = {}}
 	end)
 
-	local deadline = os.clock() + RELAY_TIMEOUT
+	local deadline = os.clock() + limit
 
 	while not result and os.clock() < deadline do
 		task.wait(0.05)
 	end
 
-	return result or {ok = false, error = "the client did not answer within " .. RELAY_TIMEOUT .. "s (is the client plugin loaded?)", output = {}}
+	return result or {ok = false, error = "the client did not answer within " .. limit .. "s (is the client plugin loaded?)", output = {}}
+end
+
+local function deliver(result)
+	local reason = "unknown"
+
+	for attempt = 1, RESULT_ATTEMPTS do
+		local ok, response = post("/result", result)
+
+		if ok and response.Success then
+			return
+		end
+
+		reason = describeFailure(ok, response)
+		task.wait(attempt)
+	end
+
+	post("/result", {
+		requestId = result.requestId,
+		ok = false,
+		error = "Studio finished but the result could not be delivered after " .. RESULT_ATTEMPTS .. " attempts (" .. reason .. ")",
+		output = {},
+	})
+end
+
+local function runCommand(decoded)
+	local limit = if type(decoded.timeout) == "number" and decoded.timeout > 0 then decoded.timeout else DEFAULT_COMMAND_TIMEOUT
+	local context = {}
+	local finished = false
+	local result
+
+	local worker = task.spawn(function()
+		local executed, value
+
+		if decoded.target == "client" then
+			executed, value = pcall(relayToClient, decoded.code, limit)
+		else
+			executed, value = pcall(execute, decoded.code, context)
+		end
+
+		if not executed then
+			value = {ok = false, error = "bridge error: " .. tostring(value), output = {}}
+		end
+
+		result = value
+		finished = true
+	end)
+
+	local deadline = os.clock() + limit
+
+	while not finished and os.clock() < deadline do
+		task.wait(0.05)
+	end
+
+	if not finished then
+		pcall(task.cancel, worker)
+		finishRecording(context)
+		result = {ok = false, error = "Cancelled by the bridge plugin after " .. limit .. "s; the code was still running.", output = {}}
+	end
+
+	pcall(truncate, result)
+
+	result.requestId = decoded.requestId
+
+	deliver(result)
 end
 
 local function step()
@@ -318,27 +404,9 @@ local function step()
 
 	local decoded = HttpService:JSONDecode(response.Body)
 
-	if not decoded.requestId then
-		return
+	if decoded.requestId then
+		task.spawn(runCommand, decoded)
 	end
-
-	local executed, result
-
-	if decoded.target == "client" then
-		executed, result = pcall(relayToClient, decoded.code)
-	else
-		executed, result = pcall(execute, decoded.code)
-	end
-
-	if not executed then
-		result = {ok = false, error = "bridge error: " .. tostring(result), output = {}}
-	end
-
-	pcall(truncate, result)
-
-	result.requestId = decoded.requestId
-
-	post("/result", result)
 end
 
 if ROLE ~= "client" then
