@@ -28,6 +28,8 @@ tool_timeout_sec = 600
 
 The setup follows the configuration format in OpenAI's published Codex documentation. The test suite checks the server against the official MCP client library, and `doctor` reports a Codex registration. If something does not work with Codex, please open an issue.
 
+Only one bridge runs at a time, because it owns port 3010 and the Studio plugin connects to that port. When you upgrade, a newer server that finds an older one still running asks it to stop (using the shared token) and takes over the port, so you do not have to end the old process by hand. A server of the same version, or an older one, never replaces another. That also means two AI clients, for example Claude Code and Codex, cannot use the bridge at the same time: the second one to start finds the port busy and stops with a message.
+
 Other commands: `update` downloads the latest release, checks it against the release's `SHA256SUMS.txt` and installs it over the old one (`update --check` only reports), `doctor` checks the installation and mentions when an update is available (`--offline` skips that), `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
 
 To change a tool without rebuilding the exe, put a replacement file under `%LOCALAPPDATA%StudioBridgeoverrides` using the same relative path (for example `handlersscript_get.luau` or `tools.json`); it wins over the embedded copy.
@@ -102,7 +104,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the twelve suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the thirteen suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
