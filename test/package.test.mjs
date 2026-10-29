@@ -28,7 +28,7 @@ const tarball = path.join(sandbox, packInfo.filename);
 const names = packInfo.files.map((file) => file.path);
 
 check('the package has the scoped name and a studio-bridge command', pkg.name === '@zrob407/studio-bridge' && pkg.bin && pkg.bin['studio-bridge'] === 'cli.mjs' && pkg.private !== true);
-check('the tarball contains the program, the tools and the plugin sources', ['cli.mjs', 'server.mjs', 'tools.json', 'plugin.template.lua', 'plugin.stub.lua', 'LICENSE', 'handlers/_prelude.luau', 'handlers/script_get.luau'].every((name) => names.includes(name)), `${names.length} files`);
+check('the tarball contains the program, the tools and the plugin sources', ['cli.mjs', 'server.mjs', 'license.mjs', 'tools.json', 'plugin.template.lua', 'plugin.stub.lua', 'LICENSE', 'handlers/_prelude.luau', 'handlers/script_get.luau'].every((name) => names.includes(name)), `${names.length} files`);
 const forbidden = names.filter((name) => /^(test|build|dist|exports|node_modules|\.github)\//.test(name) || /(^|\/)(token\.txt|uploads\.json|asset-owners\.json|settings\.json|update-log\.txt)$/.test(name) || /\.key$/.test(name));
 check('no tests, build files, tokens or local data are published', forbidden.length === 0, forbidden.join(', '));
 check('the tarball is small', packInfo.size < 400 * 1024, `${(packInfo.size / 1024).toFixed(0)} KB`);
