@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -65,6 +65,33 @@ check('uninstall removes the plugin but keeps the data', uninstall.status === 0 
 run('install', '--no-register');
 const purge = run('uninstall', '--no-register', '--purge');
 check('uninstall --purge also deletes the data folder', purge.status === 0 && !fs.existsSync(home) && !fs.existsSync(pluginPath));
+
+if (target) {
+  const lockHome = path.join(sandbox, 'lockhome');
+  fs.mkdirSync(lockHome, { recursive: true });
+  const installed = path.join(lockHome, 'studio-bridge.exe');
+  const leftover = path.join(lockHome, 'studio-bridge.exe.old');
+  fs.copyFileSync(target, installed);
+  fs.copyFileSync(target, leftover);
+  const lockEnv = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: lockHome, STUDIO_BRIDGE_TOKEN: 'lock', STUDIO_BRIDGE_OFFLINE: '1' };
+  const holders = [
+    spawn(installed, ['serve'], { env: { ...lockEnv, STUDIO_BRIDGE_PORT: '3981' }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }),
+    spawn(leftover, ['serve'], { env: { ...lockEnv, STUDIO_BRIDGE_PORT: '3982' }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }),
+  ];
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const locked = spawnSync(target, ['install', '--no-register'], { env: lockEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  const lockedOut = `${locked.stdout || ''}${locked.stderr || ''}`;
+  check('installing while the installed exe and a stale leftover are both running succeeds', locked.status === 0 && /Updated the installed exe/.test(lockedOut) && !/Could not replace/.test(lockedOut), lockedOut.trim().split('\n')[0]);
+  const names = fs.readdirSync(lockHome);
+  check('the running copy is moved aside under a unique name', names.some((name) => /^studio-bridge\.exe\.old-\d+$/.test(name)) && names.includes('studio-bridge.exe'), names.join(', '));
+  for (const holder of holders) {
+    holder.kill();
+    await new Promise((resolve) => holder.once('exit', resolve));
+  }
+  const again = spawnSync(target, ['install', '--no-register'], { env: lockEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  const remaining = fs.readdirSync(lockHome).filter((name) => name.startsWith('studio-bridge.exe.old'));
+  check('leftover copies are cleaned up once they are no longer running', again.status === 0 && remaining.length === 0, remaining.join(', ') || 'none left');
+}
 
 fs.rmSync(sandbox, { recursive: true, force: true });
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
