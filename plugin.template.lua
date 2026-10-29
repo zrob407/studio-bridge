@@ -15,8 +15,8 @@ local DEFAULT_COMMAND_TIMEOUT = 60
 local RESULT_ATTEMPTS = 3
 local HEARTBEAT_SECONDS = 10
 local OPEN_TIMEOUT = 6
-local HTTP_FALLBACK_SECONDS = 30
-local MAX_SOCKET_FAILURES = 3
+local MAX_RECONNECT_DELAY = 20
+local MAX_RESULT_BYTES = 32 * 1024 * 1024
 local SOCKET_PROTOCOL = 1
 local WS_URL = string.gsub(URL, "^http", "ws") .. "/ws"
 
@@ -278,10 +278,14 @@ local socket
 local unacked = {}
 local seen = {}
 
-local function sendJson(session, payload)
+local function sendText(session, text)
 	return (pcall(function()
-		session.client:Send(HttpService:JSONEncode(payload))
+		session.client:Send(text)
 	end))
+end
+
+local function sendJson(session, payload)
+	return sendText(session, HttpService:JSONEncode(payload))
 end
 
 local RELAY_NAME = "__BridgeRelay"
@@ -366,9 +370,23 @@ local function deliver(result)
 
 	if session and session.ready then
 		result.type = "result"
+
+		local encoded = HttpService:JSONEncode(result)
+
+		if #encoded > MAX_RESULT_BYTES then
+			result = {
+				type = "result",
+				requestId = result.requestId,
+				ok = false,
+				error = "The result was " .. #encoded .. " bytes, over the " .. MAX_RESULT_BYTES .. " byte limit, and was dropped.",
+				output = {},
+			}
+			encoded = HttpService:JSONEncode(result)
+		end
+
 		unacked[result.requestId] = result
 
-		if sendJson(session, result) then
+		if sendText(session, encoded) then
 			return
 		end
 	end
@@ -421,7 +439,56 @@ local function runCommand(decoded)
 	deliver(result)
 end
 
+local function acceptCommand(command, session)
+	local requestId = command.requestId
+
+	if type(requestId) ~= "string" then
+		return
+	end
+
+	if session then
+		sendJson(session, {type = "ack", requestId = requestId})
+	end
+
+	if seen[requestId] then
+		local stored = unacked[requestId]
+
+		if stored then
+			if session then
+				sendJson(session, stored)
+			else
+				task.spawn(function()
+					deliverOverHttp(stored)
+
+					unacked[requestId] = nil
+					seen[requestId] = nil
+				end)
+			end
+		end
+
+		return
+	end
+
+	seen[requestId] = true
+	task.spawn(runCommand, command)
+end
+
+local function flushUnacked()
+	for requestId, stored in unacked do
+		local ok, response = post("/result", stored)
+
+		if ok and response.Success then
+			unacked[requestId] = nil
+			seen[requestId] = nil
+		end
+	end
+end
+
 local function step()
+	if next(unacked) then
+		flushUnacked()
+	end
+
 	local ok, response = post("/poll", hello())
 
 	if not ok or not response.Success then
@@ -439,7 +506,7 @@ local function step()
 	local decoded = HttpService:JSONDecode(response.Body)
 
 	if decoded.requestId then
-		task.spawn(runCommand, decoded)
+		acceptCommand(decoded, nil)
 	end
 end
 
@@ -457,26 +524,7 @@ local function handleSocketMessage(session, raw)
 		session.ready = true
 		socket = session
 	elseif message.type == "command" then
-		local requestId = message.requestId
-
-		if type(requestId) ~= "string" then
-			return
-		end
-
-		sendJson(session, {type = "ack", requestId = requestId})
-
-		if seen[requestId] then
-			local stored = unacked[requestId]
-
-			if stored then
-				sendJson(session, stored)
-			end
-
-			return
-		end
-
-		seen[requestId] = true
-		task.spawn(runCommand, message)
+		acceptCommand(message, session)
 	elseif message.type == "result_ack" then
 		unacked[message.requestId] = nil
 		seen[message.requestId] = nil
@@ -553,14 +601,8 @@ local function runSocketSession()
 		return false, endSession(session.problem or "the bridge did not answer the handshake")
 	end
 
-	local finished = {}
-
 	for _, stored in unacked do
-		table.insert(finished, stored)
-	end
-
-	if #finished > 0 then
-		sendJson(session, {type = "resume", finished = finished})
+		sendJson(session, stored)
 	end
 
 	sendJson(session, {type = "ready"})
@@ -587,19 +629,6 @@ local function runSocketSession()
 	return true, endSession(session.problem or "connection closed")
 end
 
-local function pollOverHttpFor(seconds)
-	local deadline = os.clock() + seconds
-
-	while os.clock() < deadline do
-		local alive, problem = pcall(step)
-
-		if not alive then
-			warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. tostring(problem))
-			task.wait(RETRY_DELAY)
-		end
-	end
-end
-
 if ROLE == "server" then
 	game:BindToClose(function()
 		local session = socket
@@ -613,6 +642,23 @@ end
 
 if ROLE ~= "client" then
 	task.spawn(function()
+		while true do
+			local session = socket
+
+			if session and session.ready then
+				task.wait(1)
+			else
+				local alive, problem = pcall(step)
+
+				if not alive then
+					warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. tostring(problem))
+					task.wait(RETRY_DELAY)
+				end
+			end
+		end
+	end)
+
+	task.spawn(function()
 		local failures = 0
 
 		while true do
@@ -623,13 +669,7 @@ if ROLE ~= "client" then
 				task.wait(1)
 			else
 				failures += 1
-
-				if failures >= MAX_SOCKET_FAILURES then
-					failures = 0
-					pollOverHttpFor(HTTP_FALLBACK_SECONDS)
-				else
-					task.wait(RETRY_DELAY)
-				end
+				task.wait(math.min(failures * 2, MAX_RECONNECT_DELAY))
 			end
 		end
 	end)

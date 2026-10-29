@@ -23,6 +23,8 @@ const GRACE_MS = Number(process.env.STUDIO_BRIDGE_GRACE_MS || 10000);
 const QUEUE_WAIT_MS = Number(process.env.STUDIO_BRIDGE_QUEUE_WAIT_MS || 120000);
 const SOCKET_SILENCE_MS = Number(process.env.STUDIO_BRIDGE_SOCKET_SILENCE_MS || 35000);
 const TRANSIENT_SILENCE_MS = 20000;
+const RECONNECT_GRACE_MS = 3000;
+const MAX_REQUEUES = 3;
 const SOCKET_PROTOCOL = 1;
 
 const studios = new Map();
@@ -53,7 +55,7 @@ function touch(info) {
 
 function isActive(studio) {
   const limit = studio.role === 'edit' ? STALE_MS : TRANSIENT_STALE_MS;
-  return studio.socket !== null || studio.inflight.size > 0 || Date.now() - studio.lastSeen < limit;
+  return studio.socket !== null || studio.inflight.size > 0 || studio.queue.length > 0 || Date.now() - studio.lastSeen < limit;
 }
 
 function activeStudios() {
@@ -179,6 +181,15 @@ function queueTimer(studio, requestId) {
 function requeue(studio, requestId) {
   const entry = pending.get(requestId);
   if (!entry) return;
+  entry.requeues = (entry.requeues || 0) + 1;
+  if (entry.requeues > MAX_REQUEUES) {
+    finish(requestId, {
+      ok: false,
+      error: `The connection to Studio dropped ${MAX_REQUEUES} times before it acknowledged this command, so it was not run again.`,
+      output: [],
+    });
+    return;
+  }
   clearTimeout(entry.timer);
   entry.timer = queueTimer(studio, requestId);
   entry.socket = null;
@@ -285,6 +296,20 @@ function acceptResult(connection, message) {
   if (typeof message.requestId === 'string') connection.send(JSON.stringify({ type: 'result_ack', requestId: message.requestId }));
 }
 
+function releaseSocket(state) {
+  if (state.released) return;
+  state.released = true;
+  clearTimeout(state.silence);
+  const studio = state.studio;
+  if (!studio) return;
+  const wasCurrent = studio.socket === state.connection;
+  detachSocket(studio, state.connection);
+  if (wasCurrent && !studio.socket) {
+    const limit = studio.role === 'edit' ? STALE_MS : TRANSIENT_STALE_MS;
+    studio.lastSeen = state.goodbye ? 0 : Date.now() - limit + RECONNECT_GRACE_MS;
+  }
+}
+
 function handleSocketMessage(state, text) {
   let message;
   try {
@@ -316,7 +341,9 @@ function handleSocketMessage(state, text) {
     const entry = pending.get(message.requestId);
     if (entry) entry.acked = true;
   } else if (message.type === 'goodbye') {
+    state.goodbye = true;
     connection.close(1000);
+    releaseSocket(state);
   } else if (message.type === 'result') {
     acceptResult(connection, message);
   } else if (message.type === 'resume') {
@@ -327,6 +354,7 @@ function handleSocketMessage(state, text) {
 }
 
 server.on('upgrade', (req, socket) => {
+  socket.on('error', () => {});
   const host = String(req.headers.host || '');
   const hostOk = host.startsWith('127.0.0.1') || host.startsWith('localhost');
   const pathOk = String(req.url || '').split('?')[0] === '/ws';
@@ -345,13 +373,7 @@ server.on('upgrade', (req, socket) => {
       resetSilence();
       if (typeof text === 'string') handleSocketMessage(state, text);
     },
-    onClose: () => {
-      clearTimeout(state.silence);
-      const studio = state.studio;
-      if (!studio) return;
-      detachSocket(studio, state.connection);
-      if (!studio.socket) studio.lastSeen = studio.role === 'edit' ? Date.now() : 0;
-    },
+    onClose: () => releaseSocket(state),
   });
   if (!connection) return;
   state.connection = connection;
@@ -952,7 +974,9 @@ for index, step in ipairs(steps) do
 	end
 end
 
-return table.concat(out, "\\n")`;
+table.insert(out, tostring(failures))
+
+return table.unpack(out)`;
 }
 
 async function runBatch(args) {
@@ -978,7 +1002,12 @@ async function runBatch(args) {
   const requested = Number(args.timeout_seconds);
   const timeoutS = Number.isFinite(requested) && requested > 0 ? Math.min(requested, MAX_TIMEOUT_S) : DEFAULT_TIMEOUT_S;
   const result = await dispatch(picked.studio, code, timeoutS);
-  return textResult(render(result, picked.studio, true), !result.ok);
+  let failed = 0;
+  if (result.ok && Array.isArray(result.returned) && result.returned.length > 0) {
+    failed = Number(result.returned[result.returned.length - 1]) || 0;
+    result.returned = result.returned.slice(0, -1);
+  }
+  return textResult(render(result, picked.studio, true), !result.ok || failed > 0);
 }
 
 function saveFilesDetailed(result) {
