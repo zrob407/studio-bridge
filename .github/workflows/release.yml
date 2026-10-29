@@ -19,6 +19,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Check that the tag matches the package version
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          if [ "v${package_version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "The tag ${GITHUB_REF_NAME} does not match package.json version ${package_version}. Bump the version first."
+            exit 1
+          fi
 
       - name: Install build tools
         shell: bash
@@ -76,3 +86,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" "dist/studio-bridge-${GITHUB_REF_NAME}.exe" "dist/studio-bridge-${GITHUB_REF_NAME}-source.zip" dist/SHA256SUMS.txt --title "${GITHUB_REF_NAME}" --generate-notes
+
+      - name: Publish to npm
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "NPM_TOKEN is not set, so the npm package was not published."
+            exit 0
+          fi
+          npm publish --provenance --access public

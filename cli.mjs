@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -6,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { applyRelease, checkForUpdate, currentVersion, isNewer, latestRelease, loadSettings, saveSettings } from './updater.mjs';
+import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
 const PLUGIN_FILE = 'Studio Bridge.rbxmx';
 const LEGACY_FILES = ['ClaudeStudioBridge.rbxmx', 'ClaudeStudioBridge.lua'];
@@ -330,7 +331,7 @@ async function bridgeStatus(token, port) {
 async function doctor(args) {
   const lines = [];
   const note = (state, text) => lines.push(`${state.padEnd(5)} ${text}`);
-  note('info', `studio-bridge ${version()} (${isPackaged ? 'packaged exe' : 'node ' + process.version})`);
+  note('info', `studio-bridge ${version()} (${{ exe: 'packaged exe', npm: 'npm package, node ' + process.version, source: 'source checkout, node ' + process.version }[updateMode()]})`);
   note('info', `data folder: ${appDir}`);
   const tokenFile = path.join(appDir, 'token.txt');
   const token = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : null;
@@ -399,10 +400,10 @@ async function doctor(args) {
 
 async function update(args) {
   const checkOnly = args.includes('--check');
-  const release = await latestRelease();
-  if (release.feed.overridden) console.log(`Using the release feed from STUDIO_BRIDGE_RELEASES_URL (${release.feed.url}).`);
+  const release = await latestUpdate();
+  if (release.feed && release.feed.overridden) console.log(`Using the release feed from STUDIO_BRIDGE_RELEASES_URL (${release.feed.url}).`);
   if (release.none) {
-    console.log('No release has been published yet.');
+    console.log(release.mode === 'npm' ? 'The package has not been published to npm yet.' : 'No release has been published yet.');
     return 0;
   }
   const current = version();
@@ -415,7 +416,7 @@ async function update(args) {
     console.log('Run: studio-bridge update');
     return 0;
   }
-  if (!isPackaged) {
+  if (release.mode === 'source') {
     console.log('This is a source checkout, so update it with git pull and run install again.');
     return 0;
   }

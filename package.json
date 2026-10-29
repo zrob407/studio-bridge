@@ -1,15 +1,55 @@
 {
-  "name": "studio-bridge",
+  "name": "@zrob407/studio-bridge",
   "version": "0.3.0",
   "description": "MCP server and Roblox Studio plugin that let an AI assistant work inside Studio",
   "license": "SEE LICENSE IN LICENSE",
-  "private": true,
   "type": "module",
+  "bin": {
+    "studio-bridge": "cli.mjs"
+  },
+  "files": [
+    "cli.mjs",
+    "install.mjs",
+    "server.mjs",
+    "assets.mjs",
+    "audit.mjs",
+    "png.mjs",
+    "ws.mjs",
+    "paths.mjs",
+    "updater.mjs",
+    "screenshot.ps1",
+    "tools.json",
+    "plugin.template.lua",
+    "plugin.stub.lua",
+    "handlers",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.txt"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "roblox",
+    "roblox-studio",
+    "luau",
+    "claude",
+    "codex"
+  ],
+  "homepage": "https://github.com/zrob407/studio-bridge#readme",
+  "bugs": {
+    "url": "https://github.com/zrob407/studio-bridge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zrob407/studio-bridge.git"
+  },
   "engines": {
     "node": ">=22"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs",
+    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs && node test/package.test.mjs && node test/npm-update.test.mjs",
     "build": "node build/build.mjs"
   },
   "devDependencies": {
@@ -18,9 +58,5 @@
     "postject": "1.0.0-alpha.6",
     "rcedit": "4.0.1",
     "smol-toml": "1.9.1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/zrob407/studio-bridge.git"
   }
 }

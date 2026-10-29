@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { appDir, readAsset } from './paths.mjs';
+import { appDir, installedViaNpm, isPackaged, readAsset } from './paths.mjs';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SETTINGS = { checkUpdates: true, autoUpdate: false };
@@ -91,6 +92,64 @@ function expectedHash(sumsText, fileName) {
   return null;
 }
 
+export function updateMode() {
+  const forced = process.env.STUDIO_BRIDGE_INSTALL_MODE;
+  if (['exe', 'npm', 'source'].includes(forced)) return forced;
+  return isPackaged ? 'exe' : installedViaNpm ? 'npm' : 'source';
+}
+
+function packageName() {
+  try {
+    return JSON.parse(readAsset('package.json')).name;
+  } catch {
+    return 'studio-bridge';
+  }
+}
+
+async function latestNpmVersion() {
+  const base = (process.env.STUDIO_BRIDGE_NPM_REGISTRY_URL || 'https://registry.npmjs.org').replace(/\/$/, '');
+  const name = packageName();
+  const response = await fetch(`${base}/${name.replace('/', '%2F')}/latest`, { headers: { 'User-Agent': 'studio-bridge', Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+  if (response.status === 404) return { mode: 'npm', none: true };
+  if (!response.ok) throw new Error(`the npm registry answered HTTP ${response.status}`);
+  const data = await response.json();
+  const version = String(data.version || '');
+  return { mode: 'npm', name, tag: `v${version}`, version };
+}
+
+export async function latestUpdate() {
+  const mode = updateMode();
+  if (mode === 'npm') return latestNpmVersion();
+  return { mode, ...(await latestRelease()) };
+}
+
+function runProcess(file, args, shell = false) {
+  return new Promise((resolve) => {
+    const child = spawn(file, args, { windowsHide: true, shell, stdio: ['ignore', 'pipe', 'pipe'] });
+    let output = '';
+    child.stdout.on('data', (chunk) => {
+      output += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      output += chunk;
+    });
+    child.on('error', (err) => resolve({ status: 1, output: String(err.message) }));
+    child.on('close', (status) => resolve({ status, output }));
+  });
+}
+
+async function applyNpm(info, installArgs, log) {
+  const command = process.env.STUDIO_BRIDGE_NPM_COMMAND || 'npm';
+  const line = `${command} install -g ${info.name}@${info.version}`;
+  log(`Running: ${line}`);
+  const installedPackage = await runProcess(line, [], true);
+  if (installedPackage.status !== 0) throw new Error(`npm could not install the update: ${installedPackage.output.trim().split('\n').slice(-3).join(' | ')}`);
+  const cli = path.join(path.dirname(fileURLToPath(import.meta.url)), 'cli.mjs');
+  const refreshed = await runProcess(process.execPath, [cli, 'install', ...installArgs]);
+  if (refreshed.status !== 0) throw new Error(`The new version's installer failed: ${refreshed.output.trim().split('\n').slice(-3).join(' | ')}`);
+  return refreshed.output;
+}
+
 export async function stageRelease(release, log = () => {}) {
   if (!release.exe || !release.sums) throw new Error('The release does not include both the exe and SHA256SUMS.txt, so nothing was changed.');
   const folder = path.join(appDir, 'update');
@@ -129,6 +188,7 @@ export function runInstall(exeFile, args) {
 }
 
 export async function applyRelease(release, installArgs = [], log = () => {}) {
+  if (release.mode === 'npm') return applyNpm(release, installArgs, log);
   const staged = await stageRelease(release, log);
   try {
     const installed = await runInstall(staged.exeFile, installArgs);
@@ -172,7 +232,7 @@ export async function checkForUpdate({ force = false } = {}) {
   if (!force && cached && typeof cached.checkedAt === 'number' && Date.now() - cached.checkedAt < DAY_MS && cached.tag) {
     return { tag: cached.tag, version: cached.tag.replace(/^v/, ''), newer: isNewer(cached.tag, currentVersion()), cached: true };
   }
-  const release = await latestRelease();
+  const release = await latestUpdate();
   if (release.none) return { none: true, newer: false };
   fs.mkdirSync(appDir, { recursive: true });
   fs.writeFileSync(cachePath(), JSON.stringify({ checkedAt: Date.now(), tag: release.tag }) + '\n');

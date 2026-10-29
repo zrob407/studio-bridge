@@ -18,9 +18,11 @@ export const isPackaged = sea !== null;
 
 const sourceDir = path.dirname(fileURLToPath(import.meta.url));
 
+export const installedViaNpm = !isPackaged && sourceDir.split(path.sep).includes('node_modules');
+
 export const appDir = process.env.STUDIO_BRIDGE_HOME
   ? path.resolve(process.env.STUDIO_BRIDGE_HOME)
-  : isPackaged
+  : isPackaged || installedViaNpm
     ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'StudioBridge')
     : sourceDir;
 
