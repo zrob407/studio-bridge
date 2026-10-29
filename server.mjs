@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './assets.mjs';
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
+import { acceptWebSocket } from './ws.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const token = fs.readFileSync(path.join(dir, 'token.txt'), 'utf8').trim();
@@ -20,6 +21,8 @@ const DEFAULT_TIMEOUT_S = 60;
 const MAX_TIMEOUT_S = 600;
 const GRACE_MS = Number(process.env.STUDIO_BRIDGE_GRACE_MS || 10000);
 const QUEUE_WAIT_MS = Number(process.env.STUDIO_BRIDGE_QUEUE_WAIT_MS || 120000);
+const SOCKET_SILENCE_MS = Number(process.env.STUDIO_BRIDGE_SOCKET_SILENCE_MS || 35000);
+const SOCKET_PROTOCOL = 1;
 
 const studios = new Map();
 const pending = new Map();
@@ -37,7 +40,7 @@ function tokenMatches(value) {
 
 function touch(info) {
   const existing = studios.get(info.id);
-  const studio = existing || { id: info.id, queue: [], waiter: null, inflight: new Set(), connectedAt: Date.now() };
+  const studio = existing || { id: info.id, queue: [], waiter: null, socket: null, inflight: new Set(), connectedAt: Date.now() };
   studio.role = info.role || 'edit';
   studio.placeId = info.placeId;
   studio.placeName = info.placeName;
@@ -49,7 +52,7 @@ function touch(info) {
 
 function isActive(studio) {
   const limit = studio.role === 'edit' ? STALE_MS : TRANSIENT_STALE_MS;
-  return studio.inflight.size > 0 || Date.now() - studio.lastSeen < limit;
+  return studio.socket !== null || studio.inflight.size > 0 || Date.now() - studio.lastSeen < limit;
 }
 
 function activeStudios() {
@@ -60,7 +63,7 @@ function activeStudios() {
 }
 
 function describeStudio(studio) {
-  return `${studio.id.slice(0, 8)}  ${studio.placeName} [${studio.role}] (placeId ${studio.placeId})${studio.inflight.size > 0 ? '  [busy]' : ''}`;
+  return `${studio.id.slice(0, 8)}  ${studio.placeName} [${studio.role}] (placeId ${studio.placeId})${studio.socket ? '  [ws]' : ''}${studio.inflight.size > 0 ? '  [busy]' : ''}`;
 }
 
 function pickStudio(selector) {
@@ -140,24 +143,52 @@ function takeNext(studio) {
   return null;
 }
 
+function sendCommand(studio, command) {
+  const entry = pending.get(command.requestId);
+  if (!entry) return;
+  entry.acked = false;
+  entry.socket = studio.socket;
+  const sent = studio.socket.send(JSON.stringify({ type: 'command', ...command }));
+  if (!sent) requeue(studio, command.requestId);
+}
+
 function pump(studio) {
-  if (!studio.waiter || studio.inflight.size > 0) return;
+  if (studio.inflight.size > 0) return;
+  if (studio.socket) {
+    const command = takeNext(studio);
+    if (command) sendCommand(studio, command);
+    return;
+  }
+  if (!studio.waiter) return;
   const command = takeNext(studio);
   if (command) release(studio, command);
+}
+
+function queueTimer(studio, requestId) {
+  return setTimeout(() => {
+    studio.queue = studio.queue.filter((command) => command.requestId !== requestId);
+    finish(requestId, {
+      ok: false,
+      error: `Studio did not start this within ${Math.round(QUEUE_WAIT_MS / 1000)}s. Another command may still be running, or the plugin is not connected.`,
+      output: [],
+    });
+  }, QUEUE_WAIT_MS);
+}
+
+function requeue(studio, requestId) {
+  const entry = pending.get(requestId);
+  if (!entry) return;
+  clearTimeout(entry.timer);
+  entry.timer = queueTimer(studio, requestId);
+  entry.socket = null;
+  studio.inflight.delete(requestId);
+  studio.queue.unshift({ requestId, code: entry.code, target: entry.target, timeout: entry.timeoutS });
 }
 
 function dispatch(studio, code, timeoutS, target) {
   return new Promise((resolve) => {
     const requestId = crypto.randomUUID();
-    const timer = setTimeout(() => {
-      studio.queue = studio.queue.filter((command) => command.requestId !== requestId);
-      finish(requestId, {
-        ok: false,
-        error: `Studio did not start this within ${Math.round(QUEUE_WAIT_MS / 1000)}s. Another command may still be running, or the plugin is not polling.`,
-        output: [],
-      });
-    }, QUEUE_WAIT_MS);
-    pending.set(requestId, { resolve, timer, studio, timeoutS });
+    pending.set(requestId, { resolve, timer: queueTimer(studio, requestId), studio, timeoutS, code, target, acked: false, socket: null });
     studio.queue.push({ requestId, code, target, timeout: timeoutS });
     pump(studio);
   });
@@ -234,6 +265,93 @@ const server = http.createServer(async (req, res) => {
   }
 
   respond(res, 404, { error: 'not found' });
+});
+
+function detachSocket(studio, connection) {
+  if (studio.socket === connection) studio.socket = null;
+  for (const requestId of [...studio.inflight]) {
+    const entry = pending.get(requestId);
+    if (entry && entry.socket === connection && !entry.acked) requeue(studio, requestId);
+  }
+}
+
+function acceptResult(connection, message) {
+  const entry = pending.get(message.requestId);
+  if (entry) {
+    entry.studio.lastSeen = Date.now();
+    finish(message.requestId, message);
+  }
+  if (typeof message.requestId === 'string') connection.send(JSON.stringify({ type: 'result_ack', requestId: message.requestId }));
+}
+
+function handleSocketMessage(state, text) {
+  let message;
+  try {
+    message = JSON.parse(text);
+  } catch {
+    return;
+  }
+  if (!message || typeof message !== 'object') return;
+  const { connection } = state;
+  if (message.type === 'hello') {
+    if (typeof message.id !== 'string' || message.id === '') return connection.close(1008);
+    const studio = touch(message);
+    const previous = studio.socket;
+    if (previous && previous !== connection) {
+      detachSocket(studio, previous);
+      previous.close(1000);
+    }
+    state.studio = studio;
+    studio.socket = connection;
+    connection.send(JSON.stringify({ type: 'hello_ack', protocol: SOCKET_PROTOCOL }));
+    return;
+  }
+  const studio = state.studio;
+  if (!studio) return;
+  studio.lastSeen = Date.now();
+  if (message.type === 'ready') {
+    pump(studio);
+  } else if (message.type === 'ack') {
+    const entry = pending.get(message.requestId);
+    if (entry) entry.acked = true;
+  } else if (message.type === 'result') {
+    acceptResult(connection, message);
+  } else if (message.type === 'resume') {
+    for (const result of Array.isArray(message.finished) ? message.finished : []) {
+      if (result && typeof result === 'object') acceptResult(connection, result);
+    }
+  }
+}
+
+server.on('upgrade', (req, socket) => {
+  const host = String(req.headers.host || '');
+  const hostOk = host.startsWith('127.0.0.1') || host.startsWith('localhost');
+  const pathOk = String(req.url || '').split('?')[0] === '/ws';
+  if (!hostOk || !pathOk || req.headers.origin !== undefined || !tokenMatches(req.headers['x-bridge-token'])) {
+    socket.end('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+    return;
+  }
+  const state = { studio: null, connection: null, silence: null };
+  const resetSilence = () => {
+    clearTimeout(state.silence);
+    state.silence = setTimeout(() => state.connection && state.connection.terminate(), SOCKET_SILENCE_MS);
+  };
+  const connection = acceptWebSocket(req, socket, {
+    onMessage: (text) => {
+      resetSilence();
+      if (typeof text === 'string') handleSocketMessage(state, text);
+    },
+    onClose: () => {
+      clearTimeout(state.silence);
+      const studio = state.studio;
+      if (!studio) return;
+      detachSocket(studio, state.connection);
+      if (!studio.socket) studio.lastSeen = studio.role === 'edit' ? Date.now() : 0;
+    },
+  });
+  if (!connection) return;
+  state.connection = connection;
+  resetSilence();
 });
 
 server.on('error', (err) => {

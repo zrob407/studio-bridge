@@ -23,7 +23,7 @@ jobs:
       - name: Check syntax
         shell: bash
         run: |
-          for file in server.mjs assets.mjs audit.mjs install.mjs png.mjs; do
+          for file in server.mjs assets.mjs audit.mjs install.mjs png.mjs ws.mjs; do
             node --check "$file"
           done
 
@@ -33,7 +33,7 @@ jobs:
           mkdir dist
           version="${GITHUB_REF_NAME}"
           7z a -tzip "dist/studio-bridge-${version}.zip" \
-            server.mjs assets.mjs audit.mjs install.mjs png.mjs screenshot.ps1 \
+            server.mjs assets.mjs audit.mjs install.mjs png.mjs ws.mjs screenshot.ps1 \
             plugin.template.lua handlers README.md LICENSE
 
       - name: Checksums

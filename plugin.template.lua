@@ -13,6 +13,12 @@ local MAX_DEPTH = 3
 local RETRY_DELAY = 3
 local DEFAULT_COMMAND_TIMEOUT = 60
 local RESULT_ATTEMPTS = 3
+local HEARTBEAT_SECONDS = 10
+local OPEN_TIMEOUT = 6
+local HTTP_FALLBACK_SECONDS = 30
+local MAX_SOCKET_FAILURES = 3
+local SOCKET_PROTOCOL = 1
+local WS_URL = string.gsub(URL, "^http", "ws") .. "/ws"
 
 local format
 
@@ -268,6 +274,16 @@ local function reportFailure(ok, response)
 	end
 end
 
+local socket
+local unacked = {}
+local seen = {}
+
+local function sendJson(session, payload)
+	return (pcall(function()
+		session.client:Send(HttpService:JSONEncode(payload))
+	end))
+end
+
 local RELAY_NAME = "__BridgeRelay"
 local RELAY_TIMEOUT = 30
 local relay
@@ -323,7 +339,7 @@ local function relayToClient(code, timeout)
 	return result or {ok = false, error = "the client did not answer within " .. limit .. "s (is the client plugin loaded?)", output = {}}
 end
 
-local function deliver(result)
+local function deliverOverHttp(result)
 	local reason = "unknown"
 
 	for attempt = 1, RESULT_ATTEMPTS do
@@ -343,6 +359,24 @@ local function deliver(result)
 		error = "Studio finished but the result could not be delivered after " .. RESULT_ATTEMPTS .. " attempts (" .. reason .. ")",
 		output = {},
 	})
+end
+
+local function deliver(result)
+	local session = socket
+
+	if session and session.ready then
+		result.type = "result"
+		unacked[result.requestId] = result
+
+		if sendJson(session, result) then
+			return
+		end
+	end
+
+	deliverOverHttp(result)
+
+	unacked[result.requestId] = nil
+	seen[result.requestId] = nil
 end
 
 local function runCommand(decoded)
@@ -409,14 +443,182 @@ local function step()
 	end
 end
 
+local function handleSocketMessage(session, raw)
+	local decoded, message = pcall(function()
+		return HttpService:JSONDecode(raw)
+	end)
+
+	if not decoded or type(message) ~= "table" then
+		return
+	end
+
+	if message.type == "hello_ack" then
+		session.acknowledged = true
+		session.ready = true
+		socket = session
+	elseif message.type == "command" then
+		local requestId = message.requestId
+
+		if type(requestId) ~= "string" then
+			return
+		end
+
+		sendJson(session, {type = "ack", requestId = requestId})
+
+		if seen[requestId] then
+			local stored = unacked[requestId]
+
+			if stored then
+				sendJson(session, stored)
+			end
+
+			return
+		end
+
+		seen[requestId] = true
+		task.spawn(runCommand, message)
+	elseif message.type == "result_ack" then
+		unacked[message.requestId] = nil
+		seen[message.requestId] = nil
+	end
+end
+
+local function runSocketSession()
+	local created, client = pcall(function()
+		return HttpService:CreateWebStreamClient(Enum.WebStreamClientType.WebSocket, {
+			Url = WS_URL,
+			Headers = {["X-Bridge-Token"] = TOKEN},
+		})
+	end)
+
+	if not created then
+		return false, tostring(client)
+	end
+
+	local session = {client = client, opened = false, closed = false, acknowledged = false, ready = false}
+
+	client.Opened:Connect(function()
+		session.opened = true
+	end)
+	client.Closed:Connect(function()
+		session.closed = true
+	end)
+	client.Error:Connect(function(status, message)
+		session.closed = true
+		session.problem = tostring(status) .. " " .. tostring(message)
+	end)
+	client.MessageReceived:Connect(function(raw)
+		handleSocketMessage(session, raw)
+	end)
+
+	local function waitFor(condition)
+		local deadline = os.clock() + OPEN_TIMEOUT
+
+		while not condition() and not session.closed and os.clock() < deadline do
+			task.wait(0.05)
+		end
+
+		return condition()
+	end
+
+	local function endSession(problem)
+		session.ready = false
+
+		if socket == session then
+			socket = nil
+		end
+
+		pcall(function()
+			client:Close()
+		end)
+
+		return problem
+	end
+
+	if not waitFor(function()
+		return session.opened
+	end) then
+		return false, endSession(session.problem or "could not open the websocket")
+	end
+
+	local info = hello()
+
+	info.type = "hello"
+	info.protocol = SOCKET_PROTOCOL
+	sendJson(session, info)
+
+	if not waitFor(function()
+		return session.acknowledged
+	end) then
+		return false, endSession(session.problem or "the bridge did not answer the handshake")
+	end
+
+	local finished = {}
+
+	for _, stored in unacked do
+		table.insert(finished, stored)
+	end
+
+	if #finished > 0 then
+		sendJson(session, {type = "resume", finished = finished})
+	end
+
+	sendJson(session, {type = "ready"})
+
+	if lastFailure then
+		lastFailure = nil
+		print("[ClaudeStudioBridge:" .. ROLE .. "] connected (websocket)")
+	end
+
+	local nextBeat = os.clock() + HEARTBEAT_SECONDS
+
+	while not session.closed do
+		task.wait(0.25)
+
+		if os.clock() >= nextBeat then
+			nextBeat = os.clock() + HEARTBEAT_SECONDS
+
+			if not sendJson(session, {type = "heartbeat"}) then
+				break
+			end
+		end
+	end
+
+	return true, endSession(session.problem or "connection closed")
+end
+
+local function pollOverHttpFor(seconds)
+	local deadline = os.clock() + seconds
+
+	while os.clock() < deadline do
+		local alive, problem = pcall(step)
+
+		if not alive then
+			warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. tostring(problem))
+			task.wait(RETRY_DELAY)
+		end
+	end
+end
+
 if ROLE ~= "client" then
 	task.spawn(function()
-		while true do
-			local alive, problem = pcall(step)
+		local failures = 0
 
-			if not alive then
-				warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. tostring(problem))
-				task.wait(RETRY_DELAY)
+		while true do
+			local alive, completed = pcall(runSocketSession)
+
+			if alive and completed then
+				failures = 0
+				task.wait(1)
+			else
+				failures += 1
+
+				if failures >= MAX_SOCKET_FAILURES then
+					failures = 0
+					pollOverHttpFor(HTTP_FALLBACK_SECONDS)
+				else
+					task.wait(RETRY_DELAY)
+				end
 			end
 		end
 	end)
