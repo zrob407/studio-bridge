@@ -189,6 +189,14 @@ local function fetch(haveVersion, role)
 	end
 
 	if not response.Success then
+		local explained, refusal = pcall(function()
+			return HttpService:JSONDecode(response.Body)
+		end)
+
+		if explained and type(refusal) == "table" and type(refusal.message) == "string" then
+			return nil, refusal.message
+		end
+
 		return nil, "the bridge refused the plugin request: HTTP " .. tostring(response.StatusCode)
 	end
 
