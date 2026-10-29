@@ -3,6 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
 
@@ -178,7 +180,7 @@ async function bridgeStatus(token, port) {
   }
 }
 
-async function doctor() {
+async function doctor(args) {
   const lines = [];
   const note = (state, text) => lines.push(`${state.padEnd(5)} ${text}`);
   note('info', `studio-bridge ${version()} (${isPackaged ? 'packaged exe' : 'node ' + process.version})`);
@@ -221,8 +223,149 @@ async function doctor() {
     const registered = runClaude(['mcp', 'get', MCP_NAME]);
     note(registered.status === 0 ? 'ok' : 'WARN', registered.status === 0 ? `registered with Claude Code as ${MCP_NAME}` : `not registered with Claude Code; run install`);
   }
+  if (!args.includes('--offline') && !process.env.STUDIO_BRIDGE_OFFLINE) {
+    const [state, text] = await updateNotice();
+    note(state, text);
+  }
   console.log(lines.join('\n'));
   return lines.some((line) => line.startsWith('FAIL')) ? 1 : 0;
+}
+
+function parseVersion(text) {
+  const match = /^v?(\d+)\.(\d+)\.(\d+)/.exec(String(text).trim());
+  return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+}
+
+function isNewer(candidate, current) {
+  const a = parseVersion(candidate);
+  const b = parseVersion(current);
+  if (!a || !b) return false;
+  for (let index = 0; index < 3; index++) {
+    if (a[index] !== b[index]) return a[index] > b[index];
+  }
+  return false;
+}
+
+function releaseFeed() {
+  if (process.env.STUDIO_BRIDGE_RELEASES_URL) return { url: process.env.STUDIO_BRIDGE_RELEASES_URL, overridden: true };
+  let repository = '';
+  try {
+    const value = JSON.parse(readAsset('package.json')).repository;
+    repository = typeof value === 'string' ? value : value && value.url;
+  } catch {
+    repository = '';
+  }
+  const match = /github\.com[/:]([^/]+\/[^/.]+)/.exec(repository || '');
+  if (!match) throw new Error('this build does not know where its releases are published');
+  return { url: `https://api.github.com/repos/${match[1]}/releases/latest`, overridden: false };
+}
+
+function trustedUrl(url, feed) {
+  const parsed = new URL(url);
+  if (feed.overridden) return parsed.origin === new URL(feed.url).origin;
+  return parsed.protocol === 'https:' && (parsed.hostname === 'github.com' || parsed.hostname.endsWith('.github.com') || parsed.hostname.endsWith('.githubusercontent.com'));
+}
+
+async function latestRelease() {
+  const feed = releaseFeed();
+  const response = await fetch(feed.url, { headers: { 'User-Agent': 'studio-bridge', Accept: 'application/vnd.github+json' }, signal: AbortSignal.timeout(8000) });
+  if (response.status === 404) return { feed, none: true };
+  if (!response.ok) throw new Error(`the release feed answered HTTP ${response.status}`);
+  const data = await response.json();
+  const tag = String(data.tag_name || '');
+  const assets = Array.isArray(data.assets) ? data.assets : [];
+  const exe = assets.find((asset) => /^studio-bridge-.*\.exe$/.test(asset.name));
+  const sums = assets.find((asset) => asset.name === 'SHA256SUMS.txt');
+  return { feed, tag, version: tag.replace(/^v/, ''), exe, sums };
+}
+
+async function download(url, file, feed) {
+  if (!trustedUrl(url, feed)) throw new Error(`refusing to download from ${new URL(url).origin}`);
+  const response = await fetch(url, { headers: { 'User-Agent': 'studio-bridge' }, signal: AbortSignal.timeout(300000) });
+  if (!response.ok || !response.body) throw new Error(`download failed: HTTP ${response.status}`);
+  const hash = crypto.createHash('sha256');
+  await pipeline(
+    Readable.fromWeb(response.body),
+    async function* (source) {
+      for await (const chunk of source) {
+        hash.update(chunk);
+        yield chunk;
+      }
+    },
+    fs.createWriteStream(file),
+  );
+  return hash.digest('hex');
+}
+
+function expectedHash(sumsText, fileName) {
+  for (const line of sumsText.split(/\r?\n/)) {
+    const match = /^([0-9a-fA-F]{64})\s+\*?(.+?)\s*$/.exec(line);
+    if (match && match[2] === fileName) return match[1].toLowerCase();
+  }
+  return null;
+}
+
+async function update(args) {
+  const checkOnly = args.includes('--check');
+  const release = await latestRelease();
+  if (release.feed.overridden) console.log(`Using the release feed from STUDIO_BRIDGE_RELEASES_URL (${release.feed.url}).`);
+  if (release.none) {
+    console.log('No release has been published yet.');
+    return 0;
+  }
+  const current = version();
+  if (!isNewer(release.version, current)) {
+    console.log(`studio-bridge ${current} is up to date (latest release: ${release.tag}).`);
+    return 0;
+  }
+  console.log(`A newer version is available: ${release.tag} (you have ${current}).`);
+  if (checkOnly) {
+    console.log('Run: studio-bridge update');
+    return 0;
+  }
+  if (!isPackaged) {
+    console.log('This is a source checkout, so update it with git pull and run install again.');
+    return 0;
+  }
+  if (!release.exe || !release.sums) {
+    console.log('The release does not include both the exe and SHA256SUMS.txt, so nothing was changed.');
+    return 1;
+  }
+  const folder = path.join(appDir, 'update');
+  fs.rmSync(folder, { recursive: true, force: true });
+  fs.mkdirSync(folder, { recursive: true });
+  const sumsFile = path.join(folder, 'SHA256SUMS.txt');
+  await download(release.sums.browser_download_url, sumsFile, release.feed);
+  const expected = expectedHash(fs.readFileSync(sumsFile, 'utf8'), release.exe.name);
+  if (!expected) {
+    console.log(`SHA256SUMS.txt has no entry for ${release.exe.name}, so nothing was changed.`);
+    fs.rmSync(folder, { recursive: true, force: true });
+    return 1;
+  }
+  const exeFile = path.join(folder, release.exe.name);
+  console.log(`Downloading ${release.exe.name} ...`);
+  const actual = await download(release.exe.browser_download_url, exeFile, release.feed);
+  if (actual !== expected) {
+    console.log(`The download does not match its published checksum (expected ${expected}, got ${actual}). Nothing was changed.`);
+    fs.rmSync(folder, { recursive: true, force: true });
+    return 1;
+  }
+  console.log('Checksum matches. Installing ...');
+  const passthrough = args.filter((arg) => arg === '--standalone' || arg === '--no-register');
+  const installed = spawnSync(exeFile, ['install', ...passthrough], { stdio: 'inherit', windowsHide: true });
+  fs.rmSync(folder, { recursive: true, force: true });
+  return installed.status === 0 ? 0 : 1;
+}
+
+async function updateNotice() {
+  try {
+    const release = await latestRelease();
+    if (release.none) return ['info', 'no release has been published yet'];
+    if (isNewer(release.version, version())) return ['info', `update available: ${release.tag} (you have ${version()}); run: studio-bridge update`];
+    return ['ok', `up to date (latest release: ${release.tag})`];
+  } catch {
+    return ['info', 'could not check for updates'];
+  }
 }
 
 function help() {
@@ -237,7 +380,8 @@ Usage: studio-bridge <command>
   uninstall [options]    Remove the plugin and the Claude Code registration
       --purge            Also delete the data folder (token, upload records, exports)
       --no-register      Leave the Claude Code configuration alone
-  doctor                 Check the installation
+  doctor                 Check the installation (--offline skips the update check)
+  update [--check]       Download and install the latest release (--check only reports)
   version                Print the version`);
 }
 
@@ -265,8 +409,15 @@ async function main() {
     }
   } else if (command === 'uninstall') {
     uninstall(rest);
+  } else if (command === 'update') {
+    try {
+      process.exitCode = await update(rest);
+    } catch (err) {
+      console.error(`Update failed: ${err.message}`);
+      process.exitCode = 1;
+    }
   } else if (command === 'doctor') {
-    process.exitCode = await doctor();
+    process.exitCode = await doctor(rest);
   } else if (command === 'version' || command === '--version' || command === '-v') {
     console.log(`studio-bridge ${version()}`);
   } else if (!command && isPackaged && process.stdin.isTTY) {

@@ -14,7 +14,7 @@ const home = path.join(sandbox, 'home');
 const pluginsDir = path.join(localAppData, 'Roblox', 'Plugins');
 fs.mkdirSync(pluginsDir, { recursive: true });
 
-const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991' };
+const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991', STUDIO_BRIDGE_OFFLINE: '1' };
 const run = (...args) => spawnSync(command[0], [...command.slice(1), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 60000 });
 
 let failures = 0;
