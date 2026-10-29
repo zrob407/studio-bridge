@@ -27,7 +27,7 @@ jobs:
       - name: Check syntax
         shell: bash
         run: |
-          for file in server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs install.mjs build/build.mjs; do
+          for file in server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs updater.mjs install.mjs build/build.mjs; do
             node --check "$file"
           done
 
@@ -45,6 +45,7 @@ jobs:
           node test/cli.test.mjs dist/studio-bridge.exe
           node test/serve.test.mjs dist/studio-bridge.exe
           node test/update.test.mjs dist/studio-bridge.exe
+          node test/autoupdate.test.mjs dist/studio-bridge.exe
 
       - name: Package
         shell: bash
@@ -52,7 +53,7 @@ jobs:
           version="${GITHUB_REF_NAME}"
           cp dist/studio-bridge.exe "dist/studio-bridge-${version}.exe"
           7z a -tzip "dist/studio-bridge-${version}-source.zip" \
-            server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs install.mjs screenshot.ps1 \
+            server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs updater.mjs install.mjs screenshot.ps1 \
             tools.json plugin.template.lua plugin.stub.lua package.json package-lock.json handlers build test README.md LICENSE
 
       - name: Checksums

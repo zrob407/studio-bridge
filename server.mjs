@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './assets.mjs';
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
-import { appDir, assetExists, assetFile, readAsset, assetOnDisk } from './paths.mjs';
+import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
+import { applyRelease, checkForUpdate, currentVersion, isNewer, latestRelease, loadSettings } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
 const dir = appDir;
@@ -415,7 +416,83 @@ server.on('error', (err) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   log(`[studio-bridge] listening on 127.0.0.1:${PORT}`);
+  runUpdateWatcher();
 });
+
+let updateState = { newer: false, tag: null, applied: null };
+let updating = false;
+
+function recordUpdate(line) {
+  try {
+    fs.appendFileSync(path.join(dir, 'update-log.txt'), `${new Date().toISOString()} ${line}\n`);
+  } catch (err) {
+    log(`[studio-bridge] could not write update-log.txt: ${err.message}`);
+  }
+}
+
+async function runUpdateWatcher() {
+  if (process.env.STUDIO_BRIDGE_OFFLINE) return;
+  if (!isPackaged && !process.env.STUDIO_BRIDGE_RELEASES_URL) return;
+  const settings = loadSettings();
+  if (!settings.checkUpdates) return;
+  try {
+    const found = await checkForUpdate();
+    if (found.none || !found.newer) return;
+    updateState = { newer: true, tag: found.tag, applied: null };
+    if (!settings.autoUpdate || !isPackaged) return;
+    if (updating) return;
+    updating = true;
+    try {
+      const release = found.release || (await latestRelease());
+      await applyRelease(release, ['--no-register'], (line) => log(`[studio-bridge] auto-update: ${line}`));
+      updateState = { newer: false, tag: release.tag, applied: release.tag };
+      recordUpdate(`auto-updated to ${release.tag}; restart to use it`);
+      log(`[studio-bridge] auto-update installed ${release.tag}; it takes effect at the next restart`);
+    } catch (err) {
+      recordUpdate(`auto-update to ${found.tag} failed: ${err.message}`);
+      log(`[studio-bridge] auto-update failed: ${err.message}`);
+    } finally {
+      updating = false;
+    }
+  } catch (err) {
+    log(`[studio-bridge] update check failed: ${err.message}`);
+  }
+}
+
+function updateNotice() {
+  if (updateState.applied) return `Studio Bridge ${updateState.applied} was installed. Run /mcp so Claude Code starts the new version.`;
+  if (updateState.newer) return `Update available: ${updateState.tag} (you have ${currentVersion()}). If the user wants it, call bridge_update with confirm true, then ask them to run /mcp.`;
+  return '';
+}
+
+async function runBridgeUpdate(args) {
+  if (updating) return { content: [{ type: 'text', text: 'An update is already in progress.' }], isError: true };
+  let release;
+  try {
+    release = await latestRelease();
+  } catch (err) {
+    return { content: [{ type: 'text', text: `Could not check for updates: ${err.message}` }], isError: true };
+  }
+  const reply = (text, isError = false) => ({ content: [{ type: 'text', text }], isError });
+  if (release.none) return reply('No release has been published yet.');
+  const current = currentVersion();
+  if (!isNewer(release.version, current)) return reply(`Studio Bridge ${current} is up to date (latest release: ${release.tag}).`);
+  if (args.confirm !== true) {
+    return reply(`Update available: ${release.tag} (you have ${current}). Nothing was changed. Ask the user whether to install it, then call this tool again with confirm true. They run /mcp afterwards to start the new version.`);
+  }
+  if (!isPackaged) return reply('This is a source checkout, so it cannot update itself: update it with git pull and run install again.');
+  updating = true;
+  try {
+    await applyRelease(release, ['--no-register']);
+    updateState = { newer: false, tag: release.tag, applied: release.tag };
+    recordUpdate(`updated to ${release.tag} on request; restart to use it`);
+    return reply(`Studio Bridge ${release.tag} was downloaded, verified against its published checksum and installed. Ask the user to run /mcp so Claude Code starts the new version.`);
+  } catch (err) {
+    return reply(`Update failed: ${err.message}`, true);
+  } finally {
+    updating = false;
+  }
+}
 
 
 const TOOLS_OVERRIDE = process.env.STUDIO_BRIDGE_TOOLS_FILE || null;
@@ -871,8 +948,9 @@ async function viewportScreenshot(args) {
 async function callTool(name, args) {
   if (name === 'studio_list') {
     const active = activeStudios();
-    const text = active.length ? active.map(describeStudio).join('\n') : 'No Studio window is connected.';
-    return { content: [{ type: 'text', text }] };
+    const listing = active.length ? active.map(describeStudio).join('\n') : 'No Studio window is connected.';
+    const notice = updateNotice();
+    return { content: [{ type: 'text', text: notice ? `${listing}\n\n${notice}` : listing }] };
   }
   if (name === 'screenshot') {
     const picked = pickStudio(args.studio);
@@ -902,6 +980,7 @@ async function callTool(name, args) {
   if (name === 'asset_publish_instances') return publishInstances(args);
   if (name === 'gui_click') return guiClick(args);
   if (name === 'batch') return runBatch(args);
+  if (name === 'bridge_update') return runBridgeUpdate(args);
   if (name === 'viewport_screenshot') return viewportScreenshot(args);
   if (handlerToolNames.has(name)) {
     const forcedRole = (toolMeta[name] && toolMeta[name].role) || null;
