@@ -4,9 +4,10 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 
 ## Pieces
 
-- `server.mjs` is the MCP server (no dependencies, Node 22). It also runs a small HTTP bridge on `127.0.0.1:3010` that the Studio plugin talks to. Requests need the secret in `token.txt`.
+- `server.mjs` is the MCP server (no dependencies, Node 22). It also runs a bridge on `127.0.0.1:3010` that the Studio plugin talks to, over a WebSocket (`/ws`, with acknowledgements and result replay after a reconnect) with HTTP long-polling as an automatic fallback. Every connection needs the secret in `token.txt`, and browser origins are refused.
 - `plugin.template.lua` is the Studio plugin source. `node install.mjs` fills in the token and writes `%LOCALAPPDATA%\Roblox\Plugins\ClaudeStudioBridge.rbxmx`. Restart Studio after installing. In Studio: Plugins > Manage Plugins, allow HTTP requests (and Script Injection) for ClaudeStudioBridge.
 - `handlers/*.luau` are the Luau bodies of the tools. They are read on every call, so editing one does not need a restart. A new tool or schema change needs a Claude Code restart.
+- `ws.mjs` is a small dependency-free WebSocket server layer.
 - `assets.mjs` is the Open Cloud upload client.
 - `screenshot.ps1` captures or focuses the Studio window.
 
@@ -24,7 +25,7 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 
 ## Tools
 
-- Code: `run_luau`
+- Code: `run_luau`, `batch` (up to 50 edit-window tools in one call and one undo step)
 - Scripts: `script_get`, `script_set`, `script_edit` (line numbers refer to the original script), `script_search`, `script_validate`
 - Building UI: `ui_build` (a whole GUI from one nested description), `ui_check` (layout checks in a running play session)
 - Instances: `instance_find`, `instance_children`, `instance_get`, `instance_set`, `instance_create`, `instance_delete`, `instance_move`, `instance_clone`, `selection_get`, `selection_set`
