@@ -44,6 +44,7 @@ jobs:
         run: |
           node test/cli.test.mjs dist/studio-bridge.exe
           node test/serve.test.mjs dist/studio-bridge.exe
+          node test/update.test.mjs dist/studio-bridge.exe
 
       - name: Package
         shell: bash
