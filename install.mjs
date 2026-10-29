@@ -23,7 +23,7 @@ if (source.includes(']]>')) {
 const model = `<roblox version="4">
 \t<Item class="Script" referent="RBX0">
 \t\t<Properties>
-\t\t\t<string name="Name">ClaudeStudioBridge</string>
+\t\t\t<string name="Name">Studio Bridge</string>
 \t\t\t<ProtectedString name="Source"><![CDATA[${source}]]></ProtectedString>
 \t\t</Properties>
 \t</Item>
@@ -33,14 +33,20 @@ const model = `<roblox version="4">
 const pluginsDir = path.join(process.env.LOCALAPPDATA, 'Roblox', 'Plugins');
 fs.mkdirSync(pluginsDir, { recursive: true });
 
-const target = path.join(pluginsDir, 'ClaudeStudioBridge.rbxmx');
+const target = path.join(pluginsDir, 'Studio Bridge.rbxmx');
 fs.writeFileSync(target, model);
 
-const legacy = path.join(pluginsDir, 'ClaudeStudioBridge.lua');
-if (fs.existsSync(legacy)) {
-  fs.unlinkSync(legacy);
+for (const legacyName of ['ClaudeStudioBridge.rbxmx', 'ClaudeStudioBridge.lua']) {
+  const legacy = path.join(pluginsDir, legacyName);
+  if (!fs.existsSync(legacy)) continue;
+  try {
+    fs.unlinkSync(legacy);
+    console.log(`Removed the old plugin file ${legacyName}`);
+  } catch (err) {
+    console.log(`Could not remove ${legacy} (${err.code}); close Studio and delete it, or two copies of the plugin will load.`);
+  }
 }
 
 console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}. It loads the signed plugin from the running bridge and reloads it when plugin.template.lua changes.`);
-console.log('Restart Roblox Studio, then open Plugins > Manage Plugins and allow HTTP requests and Script Injection for ClaudeStudioBridge.');
+console.log('Restart Roblox Studio, then open Plugins > Manage Plugins and allow HTTP requests and Script Injection for Studio Bridge.');
 console.log(`Register with Claude Code:  claude mcp add --scope user studio-bridge -- node "${path.join(dir, 'server.mjs')}"`);

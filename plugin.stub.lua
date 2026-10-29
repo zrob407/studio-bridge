@@ -118,7 +118,7 @@ local function constantTimeEquals(a, b)
 end
 
 local function compile(code)
-	local available, fn, compileError = pcall(loadstring, code, "=ClaudeStudioBridge")
+	local available, fn, compileError = pcall(loadstring, code, "=Studio Bridge")
 
 	if available then
 		return fn, compileError
@@ -145,7 +145,7 @@ local lastProblem
 local function report(problem)
 	if problem ~= lastProblem then
 		lastProblem = problem
-		warn("[ClaudeStudioBridge:" .. ROLE .. "] " .. problem)
+		warn("[Studio Bridge:" .. ROLE .. "] " .. problem)
 	end
 end
 

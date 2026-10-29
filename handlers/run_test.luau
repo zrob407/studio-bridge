@@ -76,11 +76,11 @@ if RunService:IsRunning() then
 	error("a play session is already running; call play_stop first")
 end
 
-local bridgeState = shared.__ClaudeBridge
+local bridgeState = shared.__StudioBridge
 
 if not bridgeState then
 	bridgeState = {lastPlayEnded = 0}
-	shared.__ClaudeBridge = bridgeState
+	shared.__StudioBridge = bridgeState
 end
 
 local wait = COOLDOWN - (os.clock() - bridgeState.lastPlayEnded)

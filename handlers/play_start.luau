@@ -11,11 +11,11 @@ if mode ~= "play" and mode ~= "run" then
 	error('mode must be "play" or "run"')
 end
 
-local bridgeState = shared.__ClaudeBridge
+local bridgeState = shared.__StudioBridge
 
 if not bridgeState then
 	bridgeState = {lastPlayEnded = 0}
-	shared.__ClaudeBridge = bridgeState
+	shared.__StudioBridge = bridgeState
 end
 
 local remaining = 3 - (os.clock() - bridgeState.lastPlayEnded)
@@ -36,7 +36,7 @@ task.spawn(function()
 	bridgeState.lastPlayEnded = os.clock()
 
 	if not ok then
-		warn("[ClaudeStudioBridge] play_start failed: " .. tostring(problem))
+		warn("[Studio Bridge] play_start failed: " .. tostring(problem))
 	end
 end)
 
