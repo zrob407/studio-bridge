@@ -32,6 +32,8 @@ await build({
 
 const assets = {
   'package.json': path.join(root, 'package.json'),
+  LICENSE: path.join(root, 'LICENSE'),
+  'THIRD_PARTY_NOTICES.txt': path.join(root, 'THIRD_PARTY_NOTICES.txt'),
   'tools.json': path.join(root, 'tools.json'),
   'plugin.template.lua': path.join(root, 'plugin.template.lua'),
   'plugin.stub.lua': path.join(root, 'plugin.stub.lua'),
@@ -77,7 +79,7 @@ await rcedit(exePath, {
     FileDescription: 'Studio Bridge: MCP server and installer for Roblox Studio',
     InternalName: 'studio-bridge',
     OriginalFilename: 'studio-bridge.exe',
-    LegalCopyright: 'MIT License',
+    LegalCopyright: 'Copyright (c) 2026 zrob407. Studio Bridge License.',
   },
   'file-version': `${pkg.version}.0`,
   'product-version': `${pkg.version}.0`,

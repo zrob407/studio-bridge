@@ -1,6 +1,6 @@
 # studio-bridge
 
-An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. MIT licensed, no dependencies beyond Node 22.
+An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. Free to use, including for commercial games, under the Studio Bridge License (source-available, see License below); no dependencies beyond Node 22.
 
 OpenAI support (for example Codex CLI) is coming soon. Studio Bridge speaks standard MCP, so it is not tied to one assistant; today it is set up and tested with Claude Code.
 
@@ -115,4 +115,11 @@ The exe is not code-signed. If you download it in a browser, Windows SmartScreen
 
 ## License
 
-MIT, see `LICENSE`.
+Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. In plain terms:
+
+- You may use, copy, modify and share it for free, and use it to make anything you like, including commercial games.
+- You must keep the copyright notice and license, and you must not present it, or a modified version, as your own original work.
+- You may not sell it, or charge for copies of it or for a product or service whose value comes mainly from it (a paid fork, a paid hosted version, selling the exe).
+- Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
+
+This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.

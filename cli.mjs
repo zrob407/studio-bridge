@@ -313,6 +313,7 @@ Usage: studio-bridge <command>
   uninstall [options]    Remove the plugin and the Claude Code registration
       --purge            Also delete the data folder (token, upload records, exports)
       --no-register      Leave the Claude Code configuration alone
+  licenses               Print the license and the third-party notices
   doctor                 Check the installation (--offline skips the update check)
   update [--check]       Download and install the latest release (--check only reports)
   settings [name on|off] Show or change check-updates and auto-update
@@ -350,6 +351,9 @@ async function main() {
       console.error(`Update failed: ${err.message}`);
       process.exitCode = 1;
     }
+  } else if (command === 'licenses') {
+    console.log(readAsset('LICENSE'));
+    console.log('\n' + readAsset('THIRD_PARTY_NOTICES.txt'));
   } else if (command === 'settings') {
     process.exitCode = settingsCommand(rest);
   } else if (command === 'doctor') {

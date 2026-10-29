@@ -26,6 +26,9 @@ const check = (name, condition, detail = '') => {
 const version = run('version');
 check('version prints the package version', version.status === 0 && /^studio-bridge \d+\.\d+\.\d+/.test(version.stdout), version.stdout.trim());
 
+const licenses = run('licenses');
+check('licenses prints the Studio Bridge License and the Node.js notice', licenses.status === 0 && /Studio Bridge License/.test(licenses.stdout) && /No selling the Software/.test(licenses.stdout) && /Node\.js is licensed for use as follows/.test(licenses.stdout), licenses.stdout.split('\n')[0]);
+
 const unknown = run('nonsense');
 check('an unknown command prints help and fails', unknown.status === 1 && /Usage: studio-bridge/.test(unknown.stdout));
 

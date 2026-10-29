@@ -54,7 +54,7 @@ jobs:
           cp dist/studio-bridge.exe "dist/studio-bridge-${version}.exe"
           7z a -tzip "dist/studio-bridge-${version}-source.zip" \
             server.mjs assets.mjs audit.mjs png.mjs ws.mjs paths.mjs cli.mjs updater.mjs install.mjs screenshot.ps1 \
-            tools.json plugin.template.lua plugin.stub.lua package.json package-lock.json handlers build test README.md LICENSE
+            tools.json plugin.template.lua plugin.stub.lua package.json package-lock.json handlers build test README.md LICENSE THIRD_PARTY_NOTICES.txt
 
       - name: Checksums
         shell: bash
