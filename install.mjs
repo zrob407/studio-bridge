@@ -12,7 +12,8 @@ if (!fs.existsSync(tokenPath)) {
 }
 
 const token = fs.readFileSync(tokenPath, 'utf8').trim();
-const template = fs.readFileSync(path.join(dir, 'plugin.template.lua'), 'utf8');
+const standalone = process.argv.includes('--standalone');
+const template = fs.readFileSync(path.join(dir, standalone ? 'plugin.template.lua' : 'plugin.stub.lua'), 'utf8');
 const source = template.replace('__PORT__', port).replace('__TOKEN__', token);
 
 if (source.includes(']]>')) {
@@ -40,6 +41,6 @@ if (fs.existsSync(legacy)) {
   fs.unlinkSync(legacy);
 }
 
-console.log(`Plugin written to ${target}`);
+console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}. It loads the signed plugin from the running bridge and reloads it when plugin.template.lua changes.`);
 console.log('Restart Roblox Studio, then open Plugins > Manage Plugins and allow HTTP requests and Script Injection for ClaudeStudioBridge.');
 console.log(`Register with Claude Code:  claude mcp add --scope user studio-bridge -- node "${path.join(dir, 'server.mjs')}"`);

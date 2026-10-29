@@ -243,6 +243,19 @@ const server = http.createServer(async (req, res) => {
     return respond(res, 400, { error: 'bad request' });
   }
 
+  if (req.url === '/plugin') {
+    let source;
+    try {
+      source = fs.readFileSync(path.join(dir, 'plugin.template.lua'), 'utf8').replace('__PORT__', String(PORT)).replace('__TOKEN__', token);
+    } catch {
+      return respond(res, 500, { error: 'plugin source unavailable' });
+    }
+    const version = crypto.createHash('sha256').update(source).digest('hex').slice(0, 16);
+    if (body.have === version) return respond(res, 200, { version, unchanged: true });
+    const signature = crypto.createHmac('sha256', token).update(source).digest('hex');
+    return respond(res, 200, { version, source, signature });
+  }
+
   if (req.url === '/poll') {
     if (typeof body.id !== 'string' || body.id === '') return respond(res, 400, { error: 'missing id' });
     const studio = touch(body);
