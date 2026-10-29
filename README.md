@@ -2,7 +2,7 @@
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. Free to use, including for commercial games, under the Studio Bridge License (source-available, see License below); no dependencies beyond Node 22.
 
-OpenAI support (for example Codex CLI) is coming soon. Studio Bridge speaks standard MCP, so it is not tied to one assistant; today it is set up and tested with Claude Code.
+Studio Bridge speaks standard MCP, so it is not tied to one assistant. It is used and tested with Claude Code. Setup for OpenAI's Codex CLI is included (see Install), but it has not yet been tried with Codex itself.
 
 ## Install
 
@@ -13,6 +13,18 @@ Windows, Roblox Studio and Claude Code are required.
 If an earlier source install is registered with Claude Code (`node server.mjs`), the installer finds it, switches the registration to the exe, reuses its token (so an open Studio window keeps working) and copies over `uploads.json` and `asset-owners.json` if the new location has none. It never overwrites existing files and leaves the old folder alone; `--migrate-from <folder>` does the same for a folder you point it at. Old plugin files such as `ClaudeStudioBridge.rbxmx` are removed so only one copy loads.
 
 **From source (Node 22 or newer).** Run `node cli.mjs install` in this folder. `node install.mjs` still works and does the same.
+
+**With OpenAI Codex CLI.** `studio-bridge install --client codex` (or `--client all` for Claude Code and Codex) adds a `[mcp_servers.studio-bridge]` entry to `~/.codex/config.toml` (or `$CODEX_HOME/config.toml`), keeping everything else in that file, with a 30-second startup timeout and a 600-second tool timeout; Codex's default tool timeout is 60 seconds, which would cut off playtests and large asset batches. Restart Codex afterwards. To add it by hand:
+
+```toml
+[mcp_servers.studio-bridge]
+command = "C:\\Users\\you\\AppData\\Local\\StudioBridge\\studio-bridge.exe"
+args = ["serve"]
+startup_timeout_sec = 30
+tool_timeout_sec = 600
+```
+
+The setup follows the configuration format in OpenAI's published Codex documentation. The test suite checks the server against the official MCP client library, and `doctor` reports a Codex registration. If something does not work with Codex, please open an issue.
 
 Other commands: `update` downloads the latest release, checks it against the release's `SHA256SUMS.txt` and installs it over the old one (`update --check` only reports), `doctor` checks the installation and mentions when an update is available (`--offline` skips that), `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
 
@@ -88,7 +100,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the eight suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the nine suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, and the official MCP client library talking to the server. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
@@ -131,7 +143,7 @@ This is not an OSI-approved open-source license, because it forbids selling the 
 
 For a short time the source tree contained a check that hashed the `LICENSE` file and locked Studio Bridge (the MCP server told the AI "tampering detected", the plugin was refused, `install` and `update` stopped) if the file was changed. It was never released and was reverted (see the Git history, commit "Revert Lock Studio Bridge when its license file has been tampered with"), for these reasons:
 
-- The first exe built with it was blocked by Windows Smart App Control on the maintainer's machine, while the build just before it, without the check, ran normally. The cause of that block was not confirmed, but a lock that makes the tool look suspicious to Windows is not worth having.
+- The first exe built with it was blocked by Windows Smart App Control on the maintainer's machine, so it was removed as a precaution. A later build without the check was blocked as well, so the check was probably not the cause: Smart App Control decides per file from Microsoft's reputation service and does not explain its decisions, and any new unsigned exe can be affected.
 - Because the source is public, anyone could remove such a check, so it could not enforce anything. The license text is what binds you.
 - It could lock out honest users after a harmless edit.
 

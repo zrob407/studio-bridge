@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import readline from 'node:readline';
@@ -164,22 +165,120 @@ function migrateFrom(folder) {
   return notes;
 }
 
+const CODEX_TABLE = /^\s*\[\s*mcp_servers\s*\.\s*(?:studio-bridge|"studio-bridge")\s*(?:\.[^\]]*)?\]\s*(?:#.*)?$/;
+const ANY_TOML_TABLE = /^\s*\[/;
+
+function codexConfigPath() {
+  return path.join(process.env.CODEX_HOME || path.join(os.homedir(), '.codex'), 'config.toml');
+}
+
+function withoutCodexEntry(lines) {
+  const kept = [];
+  let skipping = false;
+  for (const line of lines) {
+    if (CODEX_TABLE.test(line)) {
+      skipping = true;
+      continue;
+    }
+    if (skipping && ANY_TOML_TABLE.test(line)) skipping = false;
+    if (!skipping) kept.push(line);
+  }
+  return kept;
+}
+
+function codexBlock(command, port) {
+  const lines = [
+    '[mcp_servers.studio-bridge]',
+    `command = ${JSON.stringify(command[0])}`,
+    `args = [${command.slice(1).map((arg) => JSON.stringify(arg)).join(', ')}]`,
+    'startup_timeout_sec = 30',
+    'tool_timeout_sec = 600',
+  ];
+  if (process.env.STUDIO_BRIDGE_PORT) lines.push('', '[mcp_servers.studio-bridge.env]', `STUDIO_BRIDGE_PORT = ${JSON.stringify(String(port))}`);
+  return lines;
+}
+
+function writeCodexConfig(command, port) {
+  const file = codexConfigPath();
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const newline = existing.includes('\r\n') ? '\r\n' : '\n';
+  const before = existing.split(/\r?\n/);
+  const kept = withoutCodexEntry(before);
+  const replaced = kept.length !== before.length;
+  while (kept.length > 0 && kept[kept.length - 1].trim() === '') kept.pop();
+  const lines = kept.length > 0 ? [...kept, '', ...codexBlock(command, port)] : codexBlock(command, port);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, lines.join(newline) + newline);
+  return replaced;
+}
+
+function removeCodexConfig() {
+  const file = codexConfigPath();
+  if (!fs.existsSync(file)) return false;
+  const existing = fs.readFileSync(file, 'utf8');
+  const newline = existing.includes('\r\n') ? '\r\n' : '\n';
+  const before = existing.split(/\r?\n/);
+  const kept = withoutCodexEntry(before);
+  if (kept.length === before.length) return false;
+  while (kept.length > 0 && kept[kept.length - 1].trim() === '') kept.pop();
+  fs.writeFileSync(file, kept.length > 0 ? kept.join(newline) + newline : '');
+  return true;
+}
+
+function codexRegisteredCommand() {
+  const file = codexConfigPath();
+  if (!fs.existsSync(file)) return null;
+  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  let inside = false;
+  for (const line of lines) {
+    if (CODEX_TABLE.test(line)) {
+      inside = true;
+      continue;
+    }
+    if (inside && ANY_TOML_TABLE.test(line)) inside = false;
+    const match = inside && /^\s*command\s*=\s*("(?:[^"\\]|\\.)*")\s*$/.exec(line);
+    if (match) {
+      try {
+        return JSON.parse(match[1]);
+      } catch {
+        return '';
+      }
+    }
+  }
+  return lines.some((line) => CODEX_TABLE.test(line)) ? '' : null;
+}
+
+function registerCodex(command, port) {
+  const file = codexConfigPath();
+  try {
+    const replaced = writeCodexConfig(command, port);
+    console.log(`Registered with Codex in ${file}${replaced ? ', replacing the previous entry' : ''}.`);
+  } catch (err) {
+    console.log(`Could not write ${file} (${err.message}). Add this to it yourself:`);
+    console.log(codexBlock(command, port).map((line) => `  ${line}`).join('\n'));
+  }
+}
+
 function install(args) {
   const standalone = args.includes('--standalone');
   const skipRegister = args.includes('--no-register');
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
+  const clientIndex = args.indexOf('--client');
+  const client = clientIndex >= 0 ? String(args[clientIndex + 1]) : 'claude';
+  if (!['claude', 'codex', 'all'].includes(client)) throw new Error(`--client must be claude, codex or all (got "${client}")`);
   const fromIndex = args.indexOf('--migrate-from');
   const explicitFolder = fromIndex >= 0 ? args[fromIndex + 1] : null;
-  const migrationNotes = migrateFrom(explicitFolder || (skipRegister ? null : previousSourceFolder()));
+  const migrationNotes = migrateFrom(explicitFolder || (skipRegister || client === 'codex' ? null : previousSourceFolder()));
   const token = ensureToken();
   const command = stableServerCommand();
   const target = writePlugin(token, port, standalone);
   console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}.`);
   for (const note of migrationNotes) console.log(note);
-  if (!skipRegister) register(command, port);
+  if (!skipRegister && client !== 'codex') register(command, port);
+  if (!skipRegister && client !== 'claude') registerCodex(command, port);
   console.log('');
   console.log('Next steps:');
-  console.log('  1. Restart Claude Code, or run /mcp, so it starts the bridge.');
+  console.log(client === 'codex' ? '  1. Restart Codex so it starts the bridge.' : '  1. Restart Claude Code, or run /mcp, so it starts the bridge.' + (client === 'all' ? ' Restart Codex too.' : ''));
   console.log('  2. Restart Roblox Studio. If it asks, allow HTTP requests and Script Injection for "Studio Bridge".');
   console.log('  3. Ask Claude to list the connected Studio windows to check it works.');
 }
@@ -201,6 +300,7 @@ function uninstall(args) {
     if (claudeMissing(removed)) console.log(`The claude command was not found; run: claude mcp remove ${MCP_NAME} --scope user`);
     else console.log(removed.status === 0 ? 'Removed the Claude Code registration.' : 'No Claude Code registration to remove.');
   }
+  if (!args.includes('--no-register') && removeCodexConfig()) console.log(`Removed the Codex entry from ${codexConfigPath()}.`);
   if (args.includes('--purge')) {
     if (!isPackaged && !process.env.STUDIO_BRIDGE_HOME) {
       console.log('Not deleting data: this is a source checkout. Delete token.txt, uploads.json, asset-owners.json and exports yourself if you want them gone.');
@@ -276,6 +376,15 @@ async function doctor(args) {
       if (/(^|[\\/])node(\.exe)?$/i.test(registeredCommand)) note('WARN', 'Claude Code still starts the old source version of Studio Bridge; run install to switch it to this install');
       else if (isPackaged && registeredCommand && path.resolve(registeredCommand).toLowerCase() !== installedExe.toLowerCase()) note('WARN', `Claude Code starts ${registeredCommand}, not this install (${installedExe}); run install to point it here`);
       else note('ok', `registered with Claude Code as ${MCP_NAME}`);
+    }
+  }
+  const codexCommand = codexRegisteredCommand();
+  if (codexCommand !== null) {
+    const installedForCodex = path.join(appDir, 'studio-bridge.exe');
+    if (isPackaged && codexCommand && path.resolve(codexCommand).toLowerCase() !== installedForCodex.toLowerCase()) {
+      note('WARN', `Codex starts ${codexCommand}, not this install (${installedForCodex}); run install --client codex to point it here`);
+    } else {
+      note('ok', `registered with Codex in ${codexConfigPath()}`);
     }
   }
   const preferences = loadSettings();
@@ -360,6 +469,7 @@ Usage: studio-bridge <command>
       --standalone       Install the full plugin instead of the self-updating loader
       --no-register      Do not touch the Claude Code configuration
       --migrate-from <folder>  Carry the token and upload records over from an old source install
+      --client <claude|codex|all>  Which AI client to register with (default claude)
   uninstall [options]    Remove the plugin and the Claude Code registration
       --purge            Also delete the data folder (token, upload records, exports)
       --no-register      Leave the Claude Code configuration alone

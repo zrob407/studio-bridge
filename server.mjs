@@ -419,6 +419,10 @@ server.listen(PORT, '127.0.0.1', () => {
   runUpdateWatcher();
 });
 
+const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+const SERVER_INSTRUCTIONS =
+  'Studio Bridge runs Luau inside Roblox Studio. studio_list shows the connected windows: edit (the default), and server and client during a play session; pass studio "server" or "client" to target those. Prefer batch (several edit-window tools in one call and one undo step) or a single run_luau over many small calls. run_test starts its own play session, so stop a running one with play_stop first. Long operations accept timeout_seconds.';
+
 let updateState = { newer: false, tag: null, applied: null };
 let updating = false;
 
@@ -1015,9 +1019,10 @@ async function handle(message) {
         jsonrpc: '2.0',
         id,
         result: {
-          protocolVersion: params?.protocolVersion || '2024-11-05',
+          protocolVersion: SUPPORTED_PROTOCOLS.includes(params?.protocolVersion) ? params.protocolVersion : SUPPORTED_PROTOCOLS[0],
           capabilities: { tools: { listChanged: true } },
-          serverInfo: { name: 'studio-bridge', version: '0.1.0' },
+          serverInfo: { name: 'studio-bridge', version: currentVersion() },
+          instructions: SERVER_INSTRUCTIONS,
         },
       });
     }
