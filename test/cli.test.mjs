@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseToml } from 'smol-toml';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2];
@@ -14,7 +15,7 @@ const home = path.join(sandbox, 'home');
 const pluginsDir = path.join(localAppData, 'Roblox', 'Plugins');
 fs.mkdirSync(pluginsDir, { recursive: true });
 
-const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991', STUDIO_BRIDGE_OFFLINE: '1' };
+const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991', STUDIO_BRIDGE_OFFLINE: '1', CODEX_HOME: path.join(sandbox, 'unused-codex-home') };
 const run = (...args) => spawnSync(command[0], [...command.slice(1), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 60000 });
 
 let failures = 0;
@@ -146,6 +147,42 @@ check('it replaces the old registration instead of adding a second one', /remove
 check('the new registration is a user-scope entry named studio-bridge', /add .*--scope user.* studio-bridge -- /.test(calls));
 const oldDoctor = spawnSync(command[0], [...command.slice(1), 'doctor'], { env: { ...registerEnv, STUDIO_BRIDGE_OFFLINE: '1' }, encoding: 'utf8', windowsHide: true, timeout: 60000 });
 check('doctor warns when Claude Code still starts the old source version', /WARN\s+Claude Code still starts the old source version/.test(oldDoctor.stdout || ''));
+
+const codexHome = path.join(sandbox, 'codex');
+const codexFile = path.join(codexHome, 'config.toml');
+fs.mkdirSync(codexHome, { recursive: true });
+fs.writeFileSync(codexFile, 'model = "gpt-5"\r\n# keep me\r\n\r\n[mcp_servers.other]\r\ncommand = "other-tool"\r\nargs = ["--x"]\r\n');
+const codexInstallHome = path.join(sandbox, 'codex-install-home');
+const codexEnv = { ...registerEnv, STUDIO_BRIDGE_HOME: codexInstallHome, CODEX_HOME: codexHome };
+const runCodex = (...args) => {
+  const finished = spawnSync(command[0], [...command.slice(1), ...args], { env: codexEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  return { status: finished.status, out: `${finished.stdout || ''}${finished.stderr || ''}` };
+};
+const claudeCallsBefore = fs.existsSync(claudeLog) ? fs.readFileSync(claudeLog, 'utf8') : '';
+const codexInstall = runCodex('install', '--client', 'codex');
+const codexText = fs.readFileSync(codexFile, 'utf8');
+const codexParsed = parseToml(codexText);
+const entry = (codexParsed.mcp_servers || {})['studio-bridge'] || {};
+const expectedCommand = target ? path.join(codexInstallHome, 'studio-bridge.exe') : process.execPath;
+check('install --client codex registers with Codex', codexInstall.status === 0 && /Registered with Codex/.test(codexInstall.out), codexInstall.out.split('\n')[1]);
+check('and does not touch Claude Code', (fs.existsSync(claudeLog) ? fs.readFileSync(claudeLog, 'utf8') : '') === claudeCallsBefore);
+check('the entry is valid TOML with the right command, args and timeouts', entry.command === expectedCommand && Array.isArray(entry.args) && entry.args[entry.args.length - 1] === 'serve' && entry.tool_timeout_sec === 600 && entry.startup_timeout_sec === 30, JSON.stringify(entry).slice(0, 120));
+check('the port is passed through when one is set', entry.env && entry.env.STUDIO_BRIDGE_PORT === '3991');
+check('existing Codex settings and other servers are preserved', codexParsed.model === 'gpt-5' && codexParsed.mcp_servers.other.command === 'other-tool' && /# keep me/.test(codexText));
+check('Windows line endings in the file are kept', /\r\n/.test(codexText) && !/[^\r]\n/.test(codexText));
+runCodex('install', '--client', 'codex');
+const again = fs.readFileSync(codexFile, 'utf8');
+check('installing again replaces the entry instead of adding another', (again.match(/\[mcp_servers\.studio-bridge\]/g) || []).length === 1 && Object.keys(parseToml(again).mcp_servers).length === 2);
+const codexDoctor = runCodex('doctor');
+check('doctor reports the Codex registration', /ok\s+registered with Codex/.test(codexDoctor.out));
+const badClient = runCodex('install', '--client', 'bogus');
+check('an unknown client is refused with a clear message', badClient.status === 1 && /--client must be/.test(badClient.out));
+const codexUninstall = runCodex('uninstall');
+const afterUninstall = parseToml(fs.readFileSync(codexFile, 'utf8'));
+check('uninstall removes only our Codex entry', codexUninstall.status === 0 && !(afterUninstall.mcp_servers || {})['studio-bridge'] && afterUninstall.mcp_servers.other.command === 'other-tool' && afterUninstall.model === 'gpt-5');
+fs.rmSync(codexFile);
+runCodex('install', '--client', 'codex');
+check('a missing Codex config file is created', fs.existsSync(codexFile) && Boolean(parseToml(fs.readFileSync(codexFile, 'utf8')).mcp_servers['studio-bridge']));
 
 if (target) {
   const lockHome = path.join(sandbox, 'lockhome');
