@@ -10,6 +10,20 @@
       }
     },
     {
+      "name": "bridge_update",
+      "description": "Check for a newer Studio Bridge release. Without confirm it only reports. With confirm true it downloads the release, verifies its checksum and installs it; the user must then run /mcp. Set confirm only after the user has agreed to the update.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Set true only after the user agreed to install the update."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
       "name": "screenshot",
       "description": "Capture the Roblox Studio window as an image (brings the window to the front first). Pass \"studio\" to choose the window by place name when several Studio windows are open.",
       "inputSchema": {

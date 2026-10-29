@@ -12,11 +12,21 @@ Windows, Roblox Studio and Claude Code are required.
 
 **From source (Node 22 or newer).** Run `node cli.mjs install` in this folder. `node install.mjs` still works and does the same.
 
-Other commands: `update` downloads the latest release, checks it against the release's `SHA256SUMS.txt` and installs it over the old one (`update --check` only reports; nothing is ever downloaded or replaced without you running `update`), `doctor` checks the installation and mentions when an update is available (`--offline` skips that), `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
+Other commands: `update` downloads the latest release, checks it against the release's `SHA256SUMS.txt` and installs it over the old one (`update --check` only reports), `doctor` checks the installation and mentions when an update is available (`--offline` skips that), `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
 
 To change a tool without rebuilding the exe, put a replacement file under `%LOCALAPPDATA%StudioBridgeoverrides` using the same relative path (for example `handlersscript_get.luau` or `tools.json`); it wins over the embedded copy.
 
 To build the exe yourself: `npm ci` then `npm run build` (Windows, Node 24). The result is `diststudio-bridge.exe`.
+
+## Updates
+
+Three layers, from least to most automatic. Only the first two are on by default.
+
+1. **A notice.** When the bridge starts it asks GitHub for the latest release, at most once a day, and `studio_list` then mentions an available update. Nothing is downloaded. Turn it off with `studio-bridge settings check-updates off`.
+2. **Update on request.** Tell Claude to update Studio Bridge. The `bridge_update` tool reports the new version first and only downloads, verifies and installs it when it is called with `confirm: true`, which Claude should do only after you agree. You then run `/mcp`. You can also run `studio-bridge update` yourself.
+3. **Auto-update (off by default).** `studio-bridge settings auto-update on` makes the bridge download, verify and install new releases on its own when it starts; they take effect at the next restart and are logged in `update-log.txt` in the data folder. Because this replaces the program without asking, it is opt-in and best used once releases are code-signed.
+
+Every download is checked against the `SHA256SUMS.txt` published with the release before anything is replaced, and downloads are only accepted from GitHub. `studio-bridge settings` shows the current choices.
 
 ## Pieces
 
@@ -50,6 +60,7 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 
 ## Tools
 
+- Maintenance: `bridge_update` (reports a newer release; installs it only when called with `confirm: true`)
 - Code: `run_luau`, `batch` (up to 50 edit-window tools in one call and one undo step)
 - Scripts: `script_get`, `script_set`, `script_edit` (line numbers refer to the original script), `script_search`, `script_validate`
 - Building UI: `ui_build` (a whole GUI from one nested description), `ui_check` (layout checks in a running play session)
@@ -75,7 +86,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs six suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, and the MCP handshake. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the eight suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
@@ -92,7 +103,7 @@ Report vulnerabilities privately through the repository's security advisory page
 
 ## Privacy
 
-The project collects no telemetry and has no accounts. Files it writes stay on your computer: `token.txt`, upload and owner caches, and exported files under `exports\`. Do not commit or share those; the provided `.gitignore` excludes them.
+The project collects no telemetry and has no accounts. The one request it makes on its own is the once-a-day update check to GitHub's public releases API (your IP address is visible to GitHub, as with any request); turn it off with `studio-bridge settings check-updates off`. Files it writes stay on your computer: `token.txt`, upload and owner caches, and exported files under `exports\`. Do not commit or share those; the provided `.gitignore` excludes them.
 
 ## Code signing policy
 
