@@ -600,6 +600,17 @@ local function pollOverHttpFor(seconds)
 	end
 end
 
+if ROLE == "server" then
+	game:BindToClose(function()
+		local session = socket
+
+		if session then
+			sendJson(session, {type = "goodbye"})
+			task.wait(0.2)
+		end
+	end)
+end
+
 if ROLE ~= "client" then
 	task.spawn(function()
 		local failures = 0

@@ -22,6 +22,7 @@ const MAX_TIMEOUT_S = 600;
 const GRACE_MS = Number(process.env.STUDIO_BRIDGE_GRACE_MS || 10000);
 const QUEUE_WAIT_MS = Number(process.env.STUDIO_BRIDGE_QUEUE_WAIT_MS || 120000);
 const SOCKET_SILENCE_MS = Number(process.env.STUDIO_BRIDGE_SOCKET_SILENCE_MS || 35000);
+const TRANSIENT_SILENCE_MS = 20000;
 const SOCKET_PROTOCOL = 1;
 
 const studios = new Map();
@@ -314,6 +315,8 @@ function handleSocketMessage(state, text) {
   } else if (message.type === 'ack') {
     const entry = pending.get(message.requestId);
     if (entry) entry.acked = true;
+  } else if (message.type === 'goodbye') {
+    connection.close(1000);
   } else if (message.type === 'result') {
     acceptResult(connection, message);
   } else if (message.type === 'resume') {
@@ -334,7 +337,8 @@ server.on('upgrade', (req, socket) => {
   const state = { studio: null, connection: null, silence: null };
   const resetSilence = () => {
     clearTimeout(state.silence);
-    state.silence = setTimeout(() => state.connection && state.connection.terminate(), SOCKET_SILENCE_MS);
+    const transient = state.studio && state.studio.role !== 'edit';
+    state.silence = setTimeout(() => state.connection && state.connection.terminate(), transient ? Math.min(SOCKET_SILENCE_MS, TRANSIENT_SILENCE_MS) : SOCKET_SILENCE_MS);
   };
   const connection = acceptWebSocket(req, socket, {
     onMessage: (text) => {
