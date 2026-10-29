@@ -258,7 +258,7 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/plugin') {
     let source;
     try {
-      source = readAsset('plugin.template.lua').replace('__PORT__', String(PORT)).replace('__TOKEN__', token);
+      source = readAsset('plugin.template.lua').replace('__PORT__', String(PORT)).replace('__TOKEN__', body.role === 'client' ? '' : token);
     } catch {
       return respond(res, 500, { error: 'plugin source unavailable' });
     }

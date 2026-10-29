@@ -8,6 +8,8 @@ local TOKEN = "__TOKEN__"
 local CLIENT_ID = HttpService:GenerateGUID(false)
 local RETRY_SECONDS = 3
 local RELOAD_CHECK_SECONDS = 10
+local RELAY_NAME = "__BridgeRelay"
+local RELAY_FETCH_SECONDS = 15
 
 local K = {
 	0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
@@ -149,7 +151,27 @@ local function report(problem)
 	end
 end
 
-local function fetch(haveVersion)
+local function verifyBody(body)
+	if type(body) ~= "table" or type(body.version) ~= "string" then
+		return nil, "the bridge sent an unreadable plugin response"
+	end
+
+	if body.unchanged then
+		return body
+	end
+
+	if type(body.source) ~= "string" or type(body.signature) ~= "string" then
+		return nil, "the bridge sent a plugin response without source or signature"
+	end
+
+	if not constantTimeEquals(hmacSha256Hex(TOKEN, body.source), string.lower(body.signature)) then
+		return nil, "the plugin source failed its signature check, so it was not run"
+	end
+
+	return body
+end
+
+local function fetch(haveVersion, role)
 	local ok, response = pcall(function()
 		return HttpService:RequestAsync({
 			Url = URL .. "/plugin",
@@ -158,7 +180,7 @@ local function fetch(haveVersion)
 				["Content-Type"] = "application/json",
 				["X-Bridge-Token"] = TOKEN,
 			},
-			Body = HttpService:JSONEncode({have = haveVersion, role = ROLE}),
+			Body = HttpService:JSONEncode({have = haveVersion, role = role or ROLE}),
 		})
 	end)
 
@@ -174,23 +196,46 @@ local function fetch(haveVersion)
 		return HttpService:JSONDecode(response.Body)
 	end)
 
-	if not decoded or type(body) ~= "table" or type(body.version) ~= "string" then
+	if not decoded then
 		return nil, "the bridge sent an unreadable plugin response"
 	end
 
-	if body.unchanged then
-		return body
+	return verifyBody(body)
+end
+
+local function fetchViaRelay()
+	local remote = game:GetService("ReplicatedStorage"):WaitForChild(RELAY_NAME, 60)
+
+	if not remote then
+		return nil, "the bridge relay did not appear in this play session"
 	end
 
-	if type(body.source) ~= "string" or type(body.signature) ~= "string" then
-		return nil, "the bridge sent a plugin response without source or signature"
+	local finished = false
+	local answer
+
+	task.spawn(function()
+		local ok, value = pcall(function()
+			return remote:InvokeServer("plugin")
+		end)
+
+		if ok then
+			answer = value
+		end
+
+		finished = true
+	end)
+
+	local deadline = os.clock() + RELAY_FETCH_SECONDS
+
+	while not finished and os.clock() < deadline do
+		task.wait(0.1)
 	end
 
-	if not constantTimeEquals(hmacSha256Hex(TOKEN, body.source), string.lower(body.signature)) then
-		return nil, "the plugin source from the bridge failed its signature check, so it was not run"
+	if answer == nil then
+		return nil, "the play server did not hand over the plugin"
 	end
 
-	return body
+	return verifyBody(answer)
 end
 
 local current
@@ -210,7 +255,7 @@ local function load(body)
 
 	current = nil
 
-	local ran, api = pcall(fn, {clientId = CLIENT_ID, version = body.version})
+	local ran, api = pcall(fn, {clientId = CLIENT_ID, version = body.version, clientBody = body.clientBody})
 
 	if not ran then
 		report("the plugin failed to start: " .. tostring(api))
@@ -238,13 +283,23 @@ end
 
 task.spawn(function()
 	while true do
-		local body, problem = fetch(current and current.version)
+		local body, problem
+
+		if ROLE == "client" then
+			body, problem = fetchViaRelay()
+		else
+			body, problem = fetch(current and current.version)
+		end
 
 		if not body then
 			report(problem)
 			task.wait(RETRY_SECONDS)
 		else
 			if not body.unchanged and (not current or idle()) then
+				if ROLE == "server" then
+					body.clientBody = (fetch(nil, "client"))
+				end
+
 				load(body)
 			end
 

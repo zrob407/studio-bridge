@@ -54,12 +54,22 @@ function claudeMissing(result) {
 function stableServerCommand() {
   if (!isPackaged) return [process.execPath, fileURLToPath(import.meta.url), 'serve'];
   const target = path.join(appDir, 'studio-bridge.exe');
+  const aside = `${target}.old`;
+  try {
+    fs.rmSync(aside, { force: true });
+  } catch {}
   if (path.resolve(target) !== path.resolve(process.execPath)) {
     try {
       fs.copyFileSync(process.execPath, target);
     } catch (err) {
       if (!fs.existsSync(target)) throw err;
-      console.log(`Could not replace ${target} (${err.code}); it is probably running. Close Claude Code and run the installer again to update it.`);
+      try {
+        fs.renameSync(target, aside);
+        fs.copyFileSync(process.execPath, target);
+        console.log('Updated the installed exe. The copy that is running keeps going until Claude Code restarts it (run /mcp).');
+      } catch (renameError) {
+        console.log(`Could not replace ${target} (${renameError.code}). Close Claude Code and run the installer again to update it.`);
+      }
     }
   }
   return [target, 'serve'];

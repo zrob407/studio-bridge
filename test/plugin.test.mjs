@@ -43,8 +43,19 @@ check('same version answers unchanged without the source', same.unchanged === tr
 const stale = await (await ask({ have: 'old' })).json();
 check('a different version gets the full source', stale.source === first.source);
 
-const stubSource = fs.readFileSync(path.join(bridgeDir, 'plugin.stub.lua'), 'utf8');
-check('stub verifies the signature before running anything', stubSource.includes('hmacSha256Hex(TOKEN, body.source)') && stubSource.indexOf('constantTimeEquals(hmacSha256Hex') < stubSource.indexOf('return body\nend\n\nlocal current'));
+const clientBody = await (await ask({ role: 'client' })).json();
+check('the client variant has no secret in it', typeof clientBody.source === 'string' && !clientBody.source.includes(token) && !clientBody.source.includes('__TOKEN__') && clientBody.source.includes('local TOKEN = ""'));
+check('the client variant is signed and differs from the edit variant', clientBody.signature === crypto.createHmac('sha256', token).update(clientBody.source).digest('hex') && clientBody.version !== first.version);
+const serverBody = await (await ask({ role: 'server' })).json();
+check('the server variant keeps the token', serverBody.source.includes(token));
+
+const stubSource = fs.readFileSync(path.join(bridgeDir, 'plugin.stub.lua'), 'utf8').replace(/\r\n/g, '\n');
+const verifyAt = stubSource.indexOf('constantTimeEquals(hmacSha256Hex(TOKEN, body.source)');
+const runAt = stubSource.indexOf('pcall(fn, {');
+check('stub verifies the signature before running anything', verifyAt > 0 && runAt > verifyAt);
+check('both the HTTP path and the relay path go through that verification', (stubSource.match(/return verifyBody\(/g) || []).length === 2);
+check('a play client never uses HTTP to load the plugin', stubSource.includes('if ROLE == "client" then\n\t\t\tbody, problem = fetchViaRelay()'));
+check('the play server hands the client variant to the plugin', stubSource.includes('body.clientBody = (fetch(nil, "client"))') && first.source.includes('return context.clientBody'));
 
 server.kill();
 await new Promise((resolve) => server.once('exit', resolve));
