@@ -10,7 +10,7 @@ import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
-import { applyRelease, checkForUpdate, currentVersion, isNewer, latestRelease, loadSettings } from './updater.mjs';
+import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
 const dir = appDir;
@@ -436,18 +436,18 @@ function recordUpdate(line) {
 
 async function runUpdateWatcher() {
   if (process.env.STUDIO_BRIDGE_OFFLINE) return;
-  if (!isPackaged && !process.env.STUDIO_BRIDGE_RELEASES_URL) return;
+  if (updateMode() === 'source' && !process.env.STUDIO_BRIDGE_RELEASES_URL && !process.env.STUDIO_BRIDGE_INSTALL_MODE) return;
   const settings = loadSettings();
   if (!settings.checkUpdates) return;
   try {
     const found = await checkForUpdate();
     if (found.none || !found.newer) return;
     updateState = { newer: true, tag: found.tag, applied: null };
-    if (!settings.autoUpdate || !isPackaged) return;
+    if (!settings.autoUpdate || updateMode() === 'source') return;
     if (updating) return;
     updating = true;
     try {
-      const release = found.release || (await latestRelease());
+      const release = found.release || (await latestUpdate());
       await applyRelease(release, ['--no-register'], (line) => log(`[studio-bridge] auto-update: ${line}`));
       updateState = { newer: false, tag: release.tag, applied: release.tag };
       recordUpdate(`auto-updated to ${release.tag}; restart to use it`);
@@ -473,7 +473,7 @@ async function runBridgeUpdate(args) {
   if (updating) return { content: [{ type: 'text', text: 'An update is already in progress.' }], isError: true };
   let release;
   try {
-    release = await latestRelease();
+    release = await latestUpdate();
   } catch (err) {
     return { content: [{ type: 'text', text: `Could not check for updates: ${err.message}` }], isError: true };
   }
@@ -484,13 +484,14 @@ async function runBridgeUpdate(args) {
   if (args.confirm !== true) {
     return reply(`Update available: ${release.tag} (you have ${current}). Nothing was changed. Ask the user whether to install it, then call this tool again with confirm true. They run /mcp afterwards to start the new version.`);
   }
-  if (!isPackaged) return reply('This is a source checkout, so it cannot update itself: update it with git pull and run install again.');
+  if (release.mode === 'source') return reply('This is a source checkout, so it cannot update itself: update it with git pull and run install again.');
   updating = true;
   try {
     await applyRelease(release, ['--no-register']);
     updateState = { newer: false, tag: release.tag, applied: release.tag };
     recordUpdate(`updated to ${release.tag} on request; restart to use it`);
-    return reply(`Studio Bridge ${release.tag} was downloaded, verified against its published checksum and installed. Ask the user to run /mcp so Claude Code starts the new version.`);
+    const how = release.mode === 'npm' ? 'installed with npm' : 'downloaded, verified against its published checksum and installed';
+    return reply(`Studio Bridge ${release.tag} was ${how}. Ask the user to run /mcp so Claude Code starts the new version.`);
   } catch (err) {
     return reply(`Update failed: ${err.message}`, true);
   } finally {
