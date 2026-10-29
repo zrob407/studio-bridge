@@ -406,6 +406,10 @@ server.on('upgrade', (req, socket) => {
 });
 
 server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    log(`[studio-bridge] port ${PORT} is already in use, probably by an older studio-bridge. Stop it and reconnect.`);
+    process.exit(1);
+  }
   log(`[studio-bridge] HTTP server error: ${err.message}`);
 });
 

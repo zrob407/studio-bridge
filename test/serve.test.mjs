@@ -88,6 +88,19 @@ check('batch composes the embedded handlers into one chunk', !batch.result.isErr
 const scan = await rpc('tools/call', { name: 'script_scan', arguments: { path: 'game.A' } });
 check('a scanner handler also loads the scan rules', !scan.result.isError && Boolean(received[2]) && received[2].includes('local SCAN_RULES = {') && received[2].includes('scanScripts(root'));
 
+const second = spawn(command[0], command.slice(1), {
+  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port) },
+  stdio: ['pipe', 'pipe', 'pipe'],
+  windowsHide: true,
+});
+let secondError = '';
+second.stderr.on('data', (chunk) => {
+  secondError += chunk;
+});
+const secondExit = await Promise.race([new Promise((resolve) => second.once('exit', (code) => resolve(code))), sleep(6000).then(() => 'still running')]);
+check('a second server on a busy port exits with an error instead of pretending to work', secondExit === 1 && /already in use/.test(secondError), "exit " + secondExit);
+if (secondExit === 'still running') second.kill();
+
 polling = false;
 server.kill();
 await new Promise((resolve) => server.once('exit', resolve));
