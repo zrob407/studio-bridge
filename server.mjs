@@ -18,6 +18,8 @@ const STALE_MS = 40000;
 const TRANSIENT_STALE_MS = 25000;
 const DEFAULT_TIMEOUT_S = 60;
 const MAX_TIMEOUT_S = 600;
+const GRACE_MS = Number(process.env.STUDIO_BRIDGE_GRACE_MS || 10000);
+const QUEUE_WAIT_MS = Number(process.env.STUDIO_BRIDGE_QUEUE_WAIT_MS || 120000);
 
 const studios = new Map();
 const pending = new Map();
@@ -35,7 +37,7 @@ function tokenMatches(value) {
 
 function touch(info) {
   const existing = studios.get(info.id);
-  const studio = existing || { id: info.id, queue: [], waiter: null, busy: false, connectedAt: Date.now() };
+  const studio = existing || { id: info.id, queue: [], waiter: null, inflight: new Set(), connectedAt: Date.now() };
   studio.role = info.role || 'edit';
   studio.placeId = info.placeId;
   studio.placeName = info.placeName;
@@ -47,7 +49,7 @@ function touch(info) {
 
 function isActive(studio) {
   const limit = studio.role === 'edit' ? STALE_MS : TRANSIENT_STALE_MS;
-  return studio.busy || Date.now() - studio.lastSeen < limit;
+  return studio.inflight.size > 0 || Date.now() - studio.lastSeen < limit;
 }
 
 function activeStudios() {
@@ -58,7 +60,7 @@ function activeStudios() {
 }
 
 function describeStudio(studio) {
-  return `${studio.id.slice(0, 8)}  ${studio.placeName} [${studio.role}] (placeId ${studio.placeId})${studio.busy ? '  [busy]' : ''}`;
+  return `${studio.id.slice(0, 8)}  ${studio.placeName} [${studio.role}] (placeId ${studio.placeId})${studio.inflight.size > 0 ? '  [busy]' : ''}`;
 }
 
 function pickStudio(selector) {
@@ -108,19 +110,56 @@ function splitTarget(selector) {
   return { selector: rest.join(' '), target: 'client' };
 }
 
+function finish(requestId, result) {
+  const entry = pending.get(requestId);
+  if (!entry) return false;
+  clearTimeout(entry.timer);
+  pending.delete(requestId);
+  entry.studio.inflight.delete(requestId);
+  entry.resolve(result);
+  pump(entry.studio);
+  return true;
+}
+
+function takeNext(studio) {
+  while (studio.queue.length > 0) {
+    const command = studio.queue.shift();
+    const entry = pending.get(command.requestId);
+    if (!entry) continue;
+    clearTimeout(entry.timer);
+    entry.timer = setTimeout(() => {
+      finish(command.requestId, {
+        ok: false,
+        error: `Timed out after ${entry.timeoutS}s and the plugin did not answer. The code may still be running in Studio.`,
+        output: [],
+      });
+    }, entry.timeoutS * 1000 + GRACE_MS);
+    studio.inflight.add(command.requestId);
+    return command;
+  }
+  return null;
+}
+
+function pump(studio) {
+  if (!studio.waiter || studio.inflight.size > 0) return;
+  const command = takeNext(studio);
+  if (command) release(studio, command);
+}
+
 function dispatch(studio, code, timeoutS, target) {
   return new Promise((resolve) => {
     const requestId = crypto.randomUUID();
     const timer = setTimeout(() => {
-      pending.delete(requestId);
-      studio.busy = false;
-      resolve({ ok: false, error: `Timed out after ${timeoutS}s. The code may still be running in Studio.`, output: [] });
-    }, timeoutS * 1000);
-    pending.set(requestId, { resolve, timer, studio });
-    studio.busy = true;
-    const command = { requestId, code, target };
-    if (studio.waiter) release(studio, command);
-    else studio.queue.push(command);
+      studio.queue = studio.queue.filter((command) => command.requestId !== requestId);
+      finish(requestId, {
+        ok: false,
+        error: `Studio did not start this within ${Math.round(QUEUE_WAIT_MS / 1000)}s. Another command may still be running, or the plugin is not polling.`,
+        output: [],
+      });
+    }, QUEUE_WAIT_MS);
+    pending.set(requestId, { resolve, timer, studio, timeoutS });
+    studio.queue.push({ requestId, code, target, timeout: timeoutS });
+    pump(studio);
   });
 }
 
@@ -165,7 +204,10 @@ const server = http.createServer(async (req, res) => {
     if (typeof body.id !== 'string' || body.id === '') return respond(res, 400, { error: 'missing id' });
     const studio = touch(body);
     if (studio.waiter) release(studio, {});
-    if (studio.queue.length > 0) return respond(res, 200, studio.queue.shift());
+    if (studio.inflight.size === 0) {
+      const command = takeNext(studio);
+      if (command) return respond(res, 200, command);
+    }
     const timer = setTimeout(() => {
       if (studio.waiter && studio.waiter.res === res) {
         studio.waiter = null;
@@ -186,11 +228,8 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/result') {
     const entry = pending.get(body.requestId);
     if (!entry) return respond(res, 200, { ok: true, ignored: true });
-    clearTimeout(entry.timer);
-    pending.delete(body.requestId);
-    entry.studio.busy = false;
     entry.studio.lastSeen = Date.now();
-    entry.resolve(body);
+    finish(body.requestId, body);
     return respond(res, 200, { ok: true });
   }
 
