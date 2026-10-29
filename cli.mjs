@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { appDir, isPackaged, readAsset } from './paths.mjs';
+import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
 
 const PLUGIN_FILE = 'Studio Bridge.rbxmx';
 const LEGACY_FILES = ['ClaudeStudioBridge.rbxmx', 'ClaudeStudioBridge.lua'];
@@ -199,6 +199,13 @@ async function doctor() {
     for (const legacyName of LEGACY_FILES) {
       if (fs.existsSync(path.join(folder, legacyName))) note('WARN', `old plugin file ${legacyName} is still there and will load a second copy; delete it`);
     }
+  }
+  try {
+    const helper = assetFile('screenshot.ps1');
+    note('ok', `screenshot helper is available (${isPackaged ? 'extracted from the exe' : 'source file'})`);
+    if (!fs.existsSync(helper)) throw new Error('extracted file is missing');
+  } catch (err) {
+    note('FAIL', `screenshot helper is not available: ${err.message}`);
   }
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
   if (token) {
