@@ -86,7 +86,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the nine suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the eight suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
@@ -122,6 +122,14 @@ Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. 
 - You may not sell it, or charge for copies of it or for a product or service whose value comes mainly from it (a paid fork, a paid hosted version, selling the exe).
 - Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
 
-Each copy checks that its `LICENSE` file is unmodified (line endings and trailing spaces are ignored). If it was changed or removed, Studio Bridge stays up only to say so: the MCP server tells the AI client "Tampering detected" and returns that message from every tool call, it refuses to serve the plugin or accept plugin connections, and `install` and `update` refuse to run. Restoring the original `LICENSE` lifts the lock at once, and `doctor`, `version` and `licenses` keep working. This is a safeguard against casual tampering, not copy protection: the source is public, and the license text is what actually binds you.
-
 This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.
+
+### Why there is no license-tamper check
+
+For a short time the source tree contained a check that hashed the `LICENSE` file and locked Studio Bridge (the MCP server told the AI "tampering detected", the plugin was refused, `install` and `update` stopped) if the file was changed. It was never released and was reverted (see the Git history, commit "Revert Lock Studio Bridge when its license file has been tampered with"), for these reasons:
+
+- The first exe built with it was blocked by Windows Smart App Control on the maintainer's machine, while the build just before it, without the check, ran normally. The cause of that block was not confirmed, but a lock that makes the tool look suspicious to Windows is not worth having.
+- Because the source is public, anyone could remove such a check, so it could not enforce anything. The license text is what binds you.
+- It could lock out honest users after a harmless edit.
+
+The license conditions (keep the notice, do not sell it, do not present it as your own work) are unchanged.
