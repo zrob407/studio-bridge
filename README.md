@@ -123,6 +123,7 @@ Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. 
 - You must keep the copyright notice and license, and you must not present it, or a modified version, as your own original work.
 - You may not sell it, or charge for copies of it or for a product or service whose value comes mainly from it (a paid fork, a paid hosted version, selling the exe).
 - Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
+- The core stays free. The author may also offer separate add-ons or services, possibly for a fee, under separate terms; those are not covered by this license, and versions already released stay available under the terms they were released with.
 
 This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.
 
