@@ -24,7 +24,7 @@ Three layers, from least to most automatic. Only the first two are on by default
 
 1. **A notice.** When the bridge starts it asks GitHub for the latest release, at most once a day, and `studio_list` then mentions an available update. Nothing is downloaded. Turn it off with `studio-bridge settings check-updates off`.
 2. **Update on request.** Tell Claude to update Studio Bridge. The `bridge_update` tool reports the new version first and only downloads, verifies and installs it when it is called with `confirm: true`, which Claude should do only after you agree. You then run `/mcp`. You can also run `studio-bridge update` yourself.
-3. **Auto-update (off by default).** `studio-bridge settings auto-update on` makes the bridge download, verify and install new releases on its own when it starts; they take effect at the next restart and are logged in `update-log.txt` in the data folder. Because this replaces the program without asking, it is opt-in and best used once releases are code-signed.
+3. **Auto-update (off by default).** `studio-bridge settings auto-update on` makes the bridge download, verify and install new releases on its own when it starts; they take effect at the next restart and are logged in `update-log.txt` in the data folder. Because this replaces the program without asking, it is opt-in; the checksum is verified first, but releases are not code-signed.
 
 Every download is checked against the `SHA256SUMS.txt` published with the release before anything is replaced, and downloads are only accepted from GitHub. `studio-bridge settings` shows the current choices.
 
@@ -105,13 +105,13 @@ Report vulnerabilities privately through the repository's security advisory page
 
 The project collects no telemetry and has no accounts. The one request it makes on its own is the once-a-day update check to GitHub's public releases API (your IP address is visible to GitHub, as with any request); turn it off with `studio-bridge settings check-updates off`. Files it writes stay on your computer: `token.txt`, upload and owner caches, and exported files under `exports\`. Do not commit or share those; the provided `.gitignore` excludes them.
 
-## Code signing policy
+## Verifying a download
 
 Release builds are produced by the GitHub Actions workflow in `.github/workflows/release.yml` from the tagged source in this repository. Each release publishes a `SHA256SUMS.txt` and a GitHub build attestation, so you can check that a download was built from this source:
 
 `gh attestation verify <downloaded file> --repo <owner>/<repository>`
 
-If Windows executables are signed for this project, the signing policy will be listed here with the signing provider's attribution, the team roles (committers and reviewers, approvers) and the privacy statement above. Until then, release files are unsigned and Windows SmartScreen may warn on first run.
+The exe is not code-signed. If you download it in a browser, Windows SmartScreen may show "Windows protected your PC": choose "More info" and then "Run anyway" after checking the checksum. Files fetched by `studio-bridge update`, the `bridge_update` tool or command-line tools such as `gh` do not normally carry that browser mark.
 
 ## License
 
