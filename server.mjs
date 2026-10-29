@@ -9,10 +9,22 @@ import { fileURLToPath } from 'node:url';
 import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './assets.mjs';
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
+import { appDir, assetExists, assetFile, readAsset, assetOnDisk } from './paths.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
-const token = process.env.STUDIO_BRIDGE_TOKEN || fs.readFileSync(path.join(dir, 'token.txt'), 'utf8').trim();
+const dir = appDir;
+
+function readToken() {
+  try {
+    return fs.readFileSync(path.join(dir, 'token.txt'), 'utf8').trim();
+  } catch {
+    process.stderr.write(`[studio-bridge] no token found in ${dir}. Run the installer first (install).
+`);
+    process.exit(1);
+  }
+}
+
+const token = process.env.STUDIO_BRIDGE_TOKEN || readToken();
 const PORT = Number(process.env.STUDIO_BRIDGE_PORT || 3010);
 const HOLD_MS = 15000;
 const STALE_MS = 40000;
@@ -246,7 +258,7 @@ const server = http.createServer(async (req, res) => {
   if (req.url === '/plugin') {
     let source;
     try {
-      source = fs.readFileSync(path.join(dir, 'plugin.template.lua'), 'utf8').replace('__PORT__', String(PORT)).replace('__TOKEN__', token);
+      source = readAsset('plugin.template.lua').replace('__PORT__', String(PORT)).replace('__TOKEN__', token);
     } catch {
       return respond(res, 500, { error: 'plugin source unavailable' });
     }
@@ -401,19 +413,19 @@ server.listen(PORT, '127.0.0.1', () => {
   log(`[studio-bridge] listening on 127.0.0.1:${PORT}`);
 });
 
-const handlersDir = path.join(dir, 'handlers');
 
-const TOOLS_FILE = process.env.STUDIO_BRIDGE_TOOLS_FILE || path.join(dir, 'tools.json');
+const TOOLS_OVERRIDE = process.env.STUDIO_BRIDGE_TOOLS_FILE || null;
+const toolsFileOnDisk = () => TOOLS_OVERRIDE || assetOnDisk('tools.json');
 let allTools = [];
 let toolMeta = {};
 let handlerToolNames = new Set();
 let BATCHABLE = [];
 
 function loadTools() {
-  const data = JSON.parse(fs.readFileSync(TOOLS_FILE, 'utf8'));
+  const data = JSON.parse(TOOLS_OVERRIDE ? fs.readFileSync(TOOLS_OVERRIDE, 'utf8') : readAsset('tools.json'));
   if (!data || !Array.isArray(data.tools)) throw new Error('tools.json needs a "tools" array');
   const meta = data.meta && typeof data.meta === 'object' ? data.meta : {};
-  const handlers = new Set(data.tools.filter((tool) => fs.existsSync(path.join(handlersDir, `${tool.name}.luau`))).map((tool) => tool.name));
+  const handlers = new Set(data.tools.filter((tool) => assetExists(`handlers/${tool.name}.luau`)).map((tool) => tool.name));
   const batchable = [...handlers].filter((toolName) => !(meta[toolName] && meta[toolName].batchable === false));
   allTools = data.tools.map((tool) => {
     if (tool.name !== 'batch') return tool;
@@ -431,8 +443,10 @@ loadTools();
 let reloadTimer = null;
 function watchTools() {
   try {
-    const watched = path.basename(TOOLS_FILE);
-    fs.watch(path.dirname(TOOLS_FILE), (event, filename) => {
+    const file = toolsFileOnDisk();
+    if (!file) return;
+    const watched = path.basename(file);
+    fs.watch(path.dirname(file), (event, filename) => {
       if (filename !== watched) return;
       clearTimeout(reloadTimer);
       reloadTimer = setTimeout(() => {
@@ -455,9 +469,9 @@ const SCANNER_HANDLERS = new Set(['script_scan', 'import_rbxm']);
 const MAX_BATCH_OPERATIONS = 50;
 
 function buildHandlerCode(name, args) {
-  const prelude = fs.readFileSync(path.join(handlersDir, '_prelude.luau'), 'utf8');
-  const body = fs.readFileSync(path.join(handlersDir, `${name}.luau`), 'utf8');
-  const scanner = SCANNER_HANDLERS.has(name) ? fs.readFileSync(path.join(handlersDir, '_scan.luau'), 'utf8') : '';
+  const prelude = readAsset('handlers/_prelude.luau');
+  const body = readAsset(`handlers/${name}.luau`);
+  const scanner = SCANNER_HANDLERS.has(name) ? readAsset('handlers/_scan.luau') : '';
   const { studio, ...params } = args;
   const json = JSON.stringify(params);
   let level = 0;
@@ -474,11 +488,11 @@ function luaLongString(text) {
 }
 
 function buildBatchCode(operations, stopOnError) {
-  const prelude = fs.readFileSync(path.join(handlersDir, '_prelude.luau'), 'utf8');
+  const prelude = readAsset('handlers/_prelude.luau');
   const needsScanner = operations.some((operation) => SCANNER_HANDLERS.has(operation.tool));
-  const scanner = needsScanner ? fs.readFileSync(path.join(handlersDir, '_scan.luau'), 'utf8') : '';
+  const scanner = needsScanner ? readAsset('handlers/_scan.luau') : '';
   const steps = operations.map((operation) => {
-    const body = fs.readFileSync(path.join(handlersDir, `${operation.tool}.luau`), 'utf8');
+    const body = readAsset(`handlers/${operation.tool}.luau`);
     const { studio, ...params } = operation.args || {};
     return `{${JSON.stringify(operation.tool)}, ${luaLongString(JSON.stringify(params))}, function(params)\n${body}\nend}`;
   });
@@ -609,7 +623,7 @@ function render(result, studio, handler = false) {
 function takeScreenshot(titleLike, maxWidth) {
   return new Promise((resolve) => {
     const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
-    const script = path.join(dir, 'screenshot.ps1');
+    const script = assetFile('screenshot.ps1');
     const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-TitleLike', titleLike, '-MaxWidth', String(maxWidth), '-OutPath', file];
     execFile('powershell.exe', args, { timeout: 30000, windowsHide: true }, (err, stdout, stderr) => {
       const summary = String(stdout || '').trim();
@@ -632,7 +646,7 @@ function takeScreenshot(titleLike, maxWidth) {
 
 function focusStudio(titleLike) {
   return new Promise((resolve) => {
-    const script = path.join(dir, 'screenshot.ps1');
+    const script = assetFile('screenshot.ps1');
     const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-TitleLike', titleLike, '-FocusOnly'];
     execFile('powershell.exe', args, { timeout: 15000, windowsHide: true }, (err, stdout) => {
       resolve(!err && String(stdout || '').trim().startsWith('OK'));

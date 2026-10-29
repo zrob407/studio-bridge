@@ -47,5 +47,6 @@ const stubSource = fs.readFileSync(path.join(bridgeDir, 'plugin.stub.lua'), 'utf
 check('stub verifies the signature before running anything', stubSource.includes('hmacSha256Hex(TOKEN, body.source)') && stubSource.indexOf('constantTimeEquals(hmacSha256Hex') < stubSource.indexOf('return body\nend\n\nlocal current'));
 
 server.kill();
+await new Promise((resolve) => server.once('exit', resolve));
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

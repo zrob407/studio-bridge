@@ -1,0 +1,20 @@
+{
+  "name": "studio-bridge",
+  "version": "0.2.0",
+  "description": "MCP server and Roblox Studio plugin that let an AI assistant work inside Studio",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs",
+    "build": "node build/build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "postject": "1.0.0-alpha.6",
+    "rcedit": "4.0.1"
+  }
+}

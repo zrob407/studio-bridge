@@ -2,11 +2,25 @@
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. MIT licensed, no dependencies beyond Node 22.
 
+## Install
+
+Windows, Roblox Studio and Claude Code are required.
+
+**With the exe (no Node needed).** Download `studio-bridge-<version>.exe` from the releases page and double-click it, or run `studio-bridge.exe install` in a terminal. It copies itself to `%LOCALAPPDATA%StudioBridge`, creates a secret token, writes the Studio plugin, and registers itself with Claude Code (`claude mcp add --scope user`). Then restart Claude Code and Roblox Studio. If Studio asks, allow HTTP requests and Script Injection for "Studio Bridge".
+
+**From source (Node 22 or newer).** Run `node cli.mjs install` in this folder. `node install.mjs` still works and does the same.
+
+Other commands: `doctor` checks the installation, `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
+
+To change a tool without rebuilding the exe, put a replacement file under `%LOCALAPPDATA%StudioBridgeoverrides` using the same relative path (for example `handlersscript_get.luau` or `tools.json`); it wins over the embedded copy.
+
+To build the exe yourself: `npm ci` then `npm run build` (Windows, Node 24). The result is `diststudio-bridge.exe`.
+
 ## Pieces
 
 - `server.mjs` is the MCP server (no dependencies, Node 22). It also runs a bridge on `127.0.0.1:3010` that the Studio plugin talks to, over a WebSocket (`/ws`, with acknowledgements and result replay after a reconnect) with HTTP long-polling as an automatic fallback. Every connection needs the secret in `token.txt`, and browser origins are refused.
 - `plugin.stub.lua` is the small loader that `node install.mjs` fills in with the token and writes to `%LOCALAPPDATA%\Roblox\Plugins\Studio Bridge.rbxmx`. On start it asks the running bridge for `plugin.template.lua` (the real plugin), checks the source's HMAC-SHA256 signature (keyed by your token) and refuses to run anything that fails the check. While Studio is in edit mode it re-checks every 10 seconds and reloads the plugin when the file changes and no command is running, so plugin changes need no Studio restart. Restart Studio once after the first install. In Studio: Plugins > Manage Plugins, allow HTTP requests (and Script Injection) for Studio Bridge.
-- `node install.mjs --standalone` writes the full plugin instead of the loader, for people who do not want Studio to load code from the bridge. It does not update itself.
+- `install --standalone` writes the full plugin instead of the loader, for people who do not want Studio to load code from the bridge. It does not update itself.
 - `tools.json` lists every tool (name, description, input schema) plus a small `meta` section. The server watches it and tells the client the tool list changed, so edits show up without restarting the server; clients that ignore the notification pick them up on the next `/mcp` reconnect.
 - `handlers/*.luau` are the Luau bodies of the tools. They are read on every call, so editing one needs no restart.
 
@@ -17,11 +31,10 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 3. Optional, in `meta`: `"role": "server"` or `"client"` to target a play-session window, and `"batchable": false` to keep it out of `batch`.
 
 Tools that need server-side work (uploads, screenshots, the audit) are implemented in `server.mjs` and only have their schema in `tools.json`.
+- `cli.mjs` is the command line (`serve`, `install`, `uninstall`, `doctor`, `version`) and the entry point of the exe. `paths.mjs` decides where files live: the data folder, the optional `overrides` folder, the files embedded in the exe, or the source checkout.
 - `ws.mjs` is a small dependency-free WebSocket server layer.
 - `assets.mjs` is the Open Cloud upload client.
 - `screenshot.ps1` captures or focuses the Studio window.
-
-Install: run `node install.mjs` in this folder, then register with Claude Code once (the installer prints the exact command): `claude mcp add --scope user studio-bridge -- node "<full path to server.mjs>"`
 
 ## Windows
 
@@ -60,7 +73,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`node test/reliability.test.mjs` and `node test/ws-transport.test.mjs` start the server with a random token and drive it with a fake plugin: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results. They need no Studio and take under a minute each.
+`npm test` runs six suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, and the MCP handshake. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
