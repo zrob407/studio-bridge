@@ -48,6 +48,10 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 - Playtests run the game for real. A game that touches live services can have real effects.
 - Roblox's own asset guide says Animation uploads take `.rbxm` or `.rbxmx` (`model/x-rbxm`, 20 MB max), which is what the tool sends. Still not tried against the real API: an exported KeyframeSequence. Payloads up to about 5 MB raw went through Studio's HTTP without trouble. Files edited outside Studio may be rejected.
 
+## Tests
+
+`node test/reliability.test.mjs` and `node test/ws-transport.test.mjs` start the server with a random token and drive it with a fake plugin: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results. They need no Studio and take under a minute each.
+
 ## Security
 
 This tool lets an AI assistant run arbitrary Luau inside your Studio, which is its purpose. Treat it like giving that assistant a console.

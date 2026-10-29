@@ -27,6 +27,12 @@ jobs:
             node --check "$file"
           done
 
+      - name: Run tests
+        shell: bash
+        run: |
+          node test/reliability.test.mjs
+          node test/ws-transport.test.mjs
+
       - name: Package source
         shell: bash
         run: |

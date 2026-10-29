@@ -12,7 +12,7 @@ import { runAudit } from './audit.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const token = fs.readFileSync(path.join(dir, 'token.txt'), 'utf8').trim();
+const token = process.env.STUDIO_BRIDGE_TOKEN || fs.readFileSync(path.join(dir, 'token.txt'), 'utf8').trim();
 const PORT = Number(process.env.STUDIO_BRIDGE_PORT || 3010);
 const HOLD_MS = 15000;
 const STALE_MS = 40000;
