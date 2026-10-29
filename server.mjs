@@ -258,6 +258,14 @@ const server = http.createServer(async (req, res) => {
     return respond(res, 400, { error: 'bad request' });
   }
 
+  if (req.url === '/shutdown') {
+    if (!isNewer(String(body.version || ''), currentVersion())) return respond(res, 409, { error: 'only a newer version may replace this server' });
+    respond(res, 200, { ok: true });
+    log('[studio-bridge] a newer studio-bridge asked this server to stop and take over its port');
+    setTimeout(() => process.exit(0), 200);
+    return;
+  }
+
   if (req.url === '/plugin') {
     let source;
     try {
@@ -412,18 +420,47 @@ server.on('upgrade', (req, socket) => {
   resetSilence();
 });
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    log(`[studio-bridge] port ${PORT} is already in use, probably by an older studio-bridge. Stop it and reconnect.`);
-    process.exit(1);
+async function askOlderServerToStop() {
+  try {
+    const response = await fetch(`http://127.0.0.1:${PORT}/shutdown`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Bridge-Token': token },
+      body: JSON.stringify({ version: currentVersion() }),
+      signal: AbortSignal.timeout(3000),
+    });
+    return response.status === 200;
+  } catch {
+    return false;
   }
-  log(`[studio-bridge] HTTP server error: ${err.message}`);
+}
+
+let takeover = null;
+let listenAttempts = 0;
+
+server.on('error', async (err) => {
+  if (err.code !== 'EADDRINUSE') {
+    log(`[studio-bridge] HTTP server error: ${err.message}`);
+    return;
+  }
+  if (takeover === null) {
+    takeover = await askOlderServerToStop();
+    if (takeover) log(`[studio-bridge] port ${PORT} was held by an older studio-bridge; it was asked to stop and this one is taking over`);
+  }
+  if (takeover && listenAttempts < 10) {
+    listenAttempts++;
+    setTimeout(() => server.listen(PORT, '127.0.0.1'), 500);
+    return;
+  }
+  log(`[studio-bridge] port ${PORT} is already in use, by another studio-bridge that is not older or does not share this token. Stop it and reconnect.`);
+  process.exit(1);
 });
 
-server.listen(PORT, '127.0.0.1', () => {
+server.on('listening', () => {
   log(`[studio-bridge] listening on 127.0.0.1:${PORT}`);
   runUpdateWatcher();
 });
+
+server.listen(PORT, '127.0.0.1');
 
 const SUPPORTED_PROTOCOLS = ['2025-06-18', '2025-03-26', '2024-11-05'];
 const SERVER_INSTRUCTIONS =

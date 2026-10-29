@@ -11,6 +11,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_SETTINGS = { checkUpdates: true, autoUpdate: false };
 
 export function currentVersion() {
+  if (process.env.STUDIO_BRIDGE_TEST_VERSION) return process.env.STUDIO_BRIDGE_TEST_VERSION;
   try {
     return JSON.parse(readAsset('package.json')).version;
   } catch {
