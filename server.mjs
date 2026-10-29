@@ -388,519 +388,58 @@ server.listen(PORT, '127.0.0.1', () => {
   log(`[studio-bridge] listening on 127.0.0.1:${PORT}`);
 });
 
-const tools = [
-  {
-    name: 'studio_list',
-    description: 'List the Roblox Studio windows currently connected to the bridge plugin.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'screenshot',
-    description:
-      'Capture the Roblox Studio window as an image (brings the window to the front first). Pass "studio" to choose the window by place name when several Studio windows are open.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        studio: { type: 'string', description: 'Place name fragment (or other selector) to choose the Studio window.' },
-        max_width: { type: 'number', description: 'Downscale to this width in pixels (default 1280, 0 keeps full size).' },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_upload',
-    description:
-      'Upload a local file to Roblox through Open Cloud (animations as .rbxm exported with export_rbxm, models, images, audio, meshes). Needs an API key in ~/.roblox-key.txt or ROBLOX_API_KEY. Uploads run one at a time; the same file is refused for 24 hours unless force is true. If it does not finish within wait_seconds you get an operation id: poll it with asset_status and NEVER upload again (a repeat creates a duplicate asset).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', description: 'Absolute path to the file (.rbxm .rbxmx .fbx .png .jpg .jpeg .bmp .tga .mp3 .ogg .wav .mp4).' },
-        asset_type: { type: 'string', enum: ['Animation', 'Model', 'Decal', 'Audio', 'Mesh', 'Video'] },
-        creator_type: { type: 'string', enum: ['user', 'group'], description: 'Who owns the asset.' },
-        creator_id: { type: 'string', description: 'Numeric user or group id.' },
-        display_name: { type: 'string', description: 'Asset name (max 50 chars).' },
-        description: { type: 'string' },
-        wait_seconds: { type: 'number', description: 'How long to wait for processing (default 20, max 180).' },
-        force: { type: 'boolean', description: 'Upload even if the identical file was uploaded in the last 24 hours.' },
-      },
-      required: ['file', 'asset_type', 'creator_type', 'creator_id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_audit',
-    description:
-      'Find every asset id a game references (mesh, texture, sound, animation and other asset properties, string attributes, and ids written in script source) in the open Studio place, then look up who owns each one and report which are yours, Roblox\'s, someone else\'s, or unavailable. Open the .rbxl in Studio first (File > Open from File). Owner lookups are keyless and cached; big games may need a second call, passing the scan_file from the first. Results go to a report file.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        own_group_id: { type: 'string', description: 'Your group id (assets owned by it count as yours).' },
-        own_user_id: { type: 'string', description: 'Your user id.' },
-        studio: { type: 'string', description: 'Which Studio window (the edit window by default).' },
-        root: { type: 'string', description: 'Only scan under this path (default the whole game).' },
-        include_weak: { type: 'boolean', description: 'Also report bare long numbers inside scripts that might be asset ids (noisy).' },
-        scan_file: { type: 'string', description: 'Skip scanning and reuse a scan file from an earlier call (to continue lookups).' },
-        time_budget_seconds: { type: 'number', description: 'How long to spend on owner lookups per call (default 100, max 600).' },
-      },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'import_rbxm',
-    description:
-      'Load a .rbxm or .rbxmx file from this computer (for example one saved by export_rbxm in another place) into the open Studio place. The contents are first unpacked into a hidden holder and scanned for risky script code; if anything high-risk is found nothing is imported unless block_high is false. Use scan_only to just inspect a file. Max 12 MB. Use this to move models, rigs and animations between places.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        file: { type: 'string', description: 'Full path to the .rbxm or .rbxmx file.' },
-        parent: { type: 'string', description: 'Where to put the contents, e.g. game.Workspace.' },
-        scan_only: { type: 'boolean', description: 'Only list the contents and the scan result; import nothing.' },
-        block_high: { type: 'boolean', description: 'Refuse to import when high-risk code is found (default true).' },
-        max_findings: { type: 'number', description: 'Default 100.' },
-        studio: { type: 'string', description: 'Which Studio window (the edit window by default).' },
-      },
-      required: ['file'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_upload_batch',
-    description:
-      'Upload many local files to Roblox through Open Cloud, one at a time, without waiting on each, then check them all in one polling pass. Results (label, display name, operation id, asset id, errors) go to a JSON results file instead of the conversation. Identical files already uploaded in the last 24 hours are reused, so re-running a batch after an interruption resumes instead of duplicating. If some are still processing when it returns, finish checking with asset_batch_status and NEVER upload them again.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        items: {
-          type: 'array',
-          description: 'Files to upload.',
-          items: {
-            type: 'object',
-            properties: {
-              file: { type: 'string', description: 'Absolute path.' },
-              display_name: { type: 'string', description: 'Asset name (max 50 chars).' },
-              description: { type: 'string' },
-              label: { type: 'string', description: 'Your own key for this item (shown in results).' },
-            },
-            required: ['file'],
-          },
-        },
-        asset_type: { type: 'string', enum: ['Animation', 'Model', 'Decal', 'Audio', 'Mesh', 'Video'] },
-        creator_type: { type: 'string', enum: ['user', 'group'] },
-        creator_id: { type: 'string', description: 'Numeric user or group id.' },
-        description: { type: 'string', description: 'Default description for items without their own.' },
-        wait_seconds: { type: 'number', description: 'How long to poll for processing afterwards (default 60, max 600).' },
-        force: { type: 'boolean', description: 'Upload even identical files uploaded in the last 24 hours.' },
-      },
-      required: ['items', 'asset_type', 'creator_type', 'creator_id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_batch_status',
-    description: 'Finish checking a batch: re-polls every unfinished item of a results file written by asset_upload_batch or asset_publish_instances, updates the file, and summarizes it. Never uploads anything.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        results_file: { type: 'string', description: 'Path of the results JSON file.' },
-        wait_seconds: { type: 'number', description: 'How long to keep polling (default 30, max 600).' },
-      },
-      required: ['results_file'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_publish_instances',
-    description:
-      'Export instances from Studio (for example KeyframeSequences from a rig\'s AnimSaves folder) as separate .rbxm files and upload them all to Roblox. Each asset is named "{instance name} {suffix}" (put the rig name in suffix so it comes last). Results go to a results file; see asset_batch_status for unfinished items. Needs the same key and creator settings as asset_upload_batch.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        paths: { type: 'array', items: { type: 'string' }, description: 'Instance paths to publish, each as its own asset.' },
-        parent: { type: 'string', description: 'Alternative to paths: publish every child of this instance of the given class.' },
-        class: { type: 'string', description: 'With parent: only children of this class (default KeyframeSequence).' },
-        suffix: { type: 'string', description: 'Added after the name, e.g. the rig name.' },
-        asset_type: { type: 'string', enum: ['Animation', 'Model', 'Decal', 'Audio', 'Mesh', 'Video'], description: 'Default Animation.' },
-        creator_type: { type: 'string', enum: ['user', 'group'] },
-        creator_id: { type: 'string' },
-        description: { type: 'string' },
-        wait_seconds: { type: 'number' },
-        studio: { type: 'string', description: 'Which Studio window (the edit window by default).' },
-      },
-      required: ['creator_type', 'creator_id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'asset_key_check',
-    description: 'Check that an Open Cloud API key is set up (in ~/.roblox-key.txt or ROBLOX_API_KEY) and accepted by Roblox, without printing it or uploading anything. Run this before the first upload.',
-    inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-  },
-  {
-    name: 'asset_status',
-    description: 'Check an Open Cloud upload by operation id (returns the asset id when done, plus the moderation state).',
-    inputSchema: {
-      type: 'object',
-      properties: { operation_id: { type: 'string' } },
-      required: ['operation_id'],
-      additionalProperties: false,
-    },
-  },
-  {
-    name: 'run_luau',
-    description:
-      'Run Luau code inside a connected Roblox Studio window (plugin context). print/warn output and returned values come back. Changes are grouped into one undo step. Windows: the edit window (default), "server" (the running game server during a play session), and "client" (the player client, reached through a relay). If several windows are connected, pass "studio" (id prefix, placeId, part of the place name, or the role).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        code: { type: 'string', description: 'Luau source to run.' },
-        studio: { type: 'string', description: 'Which Studio window: id prefix, placeId, or place name fragment.' },
-        timeout_seconds: { type: 'number', description: `Max seconds to wait (default ${DEFAULT_TIMEOUT_S}, max ${MAX_TIMEOUT_S}).` },
-      },
-      required: ['code'],
-      additionalProperties: false,
-    },
-  },
-];
-
 const handlersDir = path.join(dir, 'handlers');
 
-const str = (description) => ({ type: 'string', description });
-const num = (description) => ({ type: 'number', description });
-const bool = (description) => ({ type: 'boolean', description });
-const strList = (description) => ({ type: 'array', items: { type: 'string' }, description });
-const map = (description) => ({ type: 'object', additionalProperties: true, description });
+const TOOLS_FILE = process.env.STUDIO_BRIDGE_TOOLS_FILE || path.join(dir, 'tools.json');
+let allTools = [];
+let toolMeta = {};
+let handlerToolNames = new Set();
+let BATCHABLE = [];
 
-const VALUE_FORMS =
-  'Values: plain string/number/boolean, or typed objects such as {"Vector3":[x,y,z]}, {"Vector2":[x,y]}, {"Color3":[r,g,b]} (0-255), {"CFrame":[12 numbers]}, {"UDim2":[xs,xo,ys,yo]}, {"UDim":[s,o]}, {"Enum":"Enum.Material.Plastic"}, {"BrickColor":"Bright red"}, {"NumberRange":[min,max]}, {"Instance":"game.Workspace.Part"}, {"Number":"inf"}.';
-const PATH_FORMS = 'Paths look like game.Workspace.Model["Name With Spaces"].Part.';
-
-function handlerTool(name, description, properties, required = []) {
-  return {
-    name,
-    description,
-    inputSchema: {
-      type: 'object',
-      properties: {
-        ...properties,
-        studio: str('Which Studio window when several are connected: id prefix, placeId, or place name fragment.'),
-      },
-      required,
-      additionalProperties: false,
-    },
-  };
+function loadTools() {
+  const data = JSON.parse(fs.readFileSync(TOOLS_FILE, 'utf8'));
+  if (!data || !Array.isArray(data.tools)) throw new Error('tools.json needs a "tools" array');
+  const meta = data.meta && typeof data.meta === 'object' ? data.meta : {};
+  const handlers = new Set(data.tools.filter((tool) => fs.existsSync(path.join(handlersDir, `${tool.name}.luau`))).map((tool) => tool.name));
+  const batchable = [...handlers].filter((toolName) => !(meta[toolName] && meta[toolName].batchable === false));
+  allTools = data.tools.map((tool) => {
+    if (tool.name !== 'batch') return tool;
+    const copy = structuredClone(tool);
+    copy.inputSchema.properties.operations.items.properties.tool.enum = batchable;
+    return copy;
+  });
+  toolMeta = meta;
+  handlerToolNames = handlers;
+  BATCHABLE = batchable;
 }
 
-const handlerTools = [
-  handlerTool(
-    'script_get',
-    `Read a script's source with line numbers, optionally a line range. ${PATH_FORMS}`,
-    {
-      path: str('Script path.'),
-      start_line: num('First line (1-based).'),
-      end_line: num('Last line (inclusive).'),
-      numbered: bool('Prefix lines with numbers (default true).'),
-    },
-    ['path'],
-  ),
-  handlerTool(
-    'script_set',
-    'Replace the whole source of an existing script. Reports a syntax error if the new source does not compile.',
-    { path: str('Script path.'), source: str('New full source.') },
-    ['path', 'source'],
-  ),
-  handlerTool(
-    'script_edit',
-    'Apply line edits to a script. All line numbers refer to the script as it is BEFORE the edits, so several edits in one call never drift. ops: replace (start_line, end_line, text), delete (start_line, end_line), insert (after_line, text; after_line 0 inserts at the top).',
-    {
-      path: str('Script path.'),
-      edits: {
-        type: 'array',
-        description: 'Edits to apply together.',
-        items: {
-          type: 'object',
-          properties: {
-            op: { type: 'string', enum: ['replace', 'delete', 'insert'] },
-            start_line: num('For replace/delete.'),
-            end_line: num('For replace/delete; defaults to start_line.'),
-            after_line: num('For insert.'),
-            text: str('New text for replace/insert (may be multi-line).'),
-          },
-          required: ['op'],
-        },
-      },
-    },
-    ['path', 'edits'],
-  ),
-  handlerTool(
-    'script_search',
-    'Search script sources (default whole game) for text. Returns script paths with matching line numbers.',
-    {
-      pattern: str('Text to find.'),
-      root: str('Only search under this path.'),
-      plain: bool('Plain text match (default true). False uses a Lua pattern.'),
-      case_sensitive: bool('Default false.'),
-      context_lines: num('Lines of context around each match.'),
-      max_results: num('Default 100.'),
-    },
-    ['pattern'],
-  ),
-  handlerTool(
-    'script_validate',
-    'Check Luau syntax of a script (by path) or of a source string, without running it.',
-    { path: str('Script path.'), source: str('Source to check instead of a path.') },
-  ),
-  handlerTool(
-    'instance_find',
-    'Find instances under a root by name (substring, or * and ? wildcards), class, tag or property value.',
-    {
-      root: str('Search root (default game).'),
-      name: str('Name fragment or wildcard pattern.'),
-      exact: bool('Require the whole name to match.'),
-      class: str('Class name; subclasses match unless exact_class.'),
-      exact_class: bool('Match the class exactly.'),
-      tag: str('CollectionService tag.'),
-      property: str('Property name to compare.'),
-      value: { description: `Value for property. ${VALUE_FORMS}` },
-      max_results: num('Default 100.'),
-    },
-  ),
-  handlerTool(
-    'instance_children',
-    `List children of an instance, optionally as a tree. ${PATH_FORMS}`,
-    {
-      path: str('Instance path.'),
-      recursive: bool('Show descendants too.'),
-      max_depth: num('Tree depth when recursive (default 3).'),
-      max_results: num('Default 300.'),
-    },
-    ['path'],
-  ),
-  handlerTool(
-    'instance_get',
-    `Get properties, attributes, tags and child count of an instance. Without "properties" every readable property is returned (Source omitted). ${VALUE_FORMS}`,
-    {
-      path: str('Instance path.'),
-      properties: strList('Only these properties.'),
-      include_source: bool('Include Source for scripts.'),
-    },
-    ['path'],
-  ),
-  handlerTool(
-    'instance_set',
-    `Set properties, attributes and tags on one or many instances. ${VALUE_FORMS}`,
-    {
-      path: str('Single instance path.'),
-      paths: strList('Several instance paths.'),
-      properties: map('Property name to value.'),
-      attributes: map('Attribute name to value.'),
-      remove_attributes: strList('Attribute names to remove.'),
-      add_tags: strList('Tags to add.'),
-      remove_tags: strList('Tags to remove.'),
-    },
-  ),
-  handlerTool(
-    'instance_create',
-    `Create instances of a class under a parent. ${VALUE_FORMS}`,
-    {
-      class: str('Class name, e.g. Part, Folder, Script.'),
-      parent: str('Parent path.'),
-      name: str('Name.'),
-      count: num('How many (default 1).'),
-      properties: map('Property name to value.'),
-      attributes: map('Attribute name to value.'),
-      tags: strList('Tags to add.'),
-      source: str('Source for script classes.'),
-    },
-    ['class', 'parent'],
-  ),
-  handlerTool(
-    'camera_set',
-    'Move the Studio editor camera (not the player camera). The first move remembers the original view; call again with restore true to put it back.',
-    {
-      position: { type: 'array', items: { type: 'number' }, description: '[x, y, z] camera position.' },
-      target: { type: 'array', items: { type: 'number' }, description: '[x, y, z] point to look at.' },
-      fov: num('Field of view in degrees.'),
-      restore: bool('Restore the view saved before the first camera change.'),
-    },
-  ),
-  handlerTool(
-    'camera_frame',
-    `Point the Studio editor camera at instances so they fill the view, from a chosen angle. The first move remembers the original view (camera_set with restore true brings it back). ${PATH_FORMS}`,
-    {
-      paths: strList('Instances (models, parts or folders of parts) to frame.'),
-      yaw: num('Horizontal angle in degrees around the object (default 35).'),
-      pitch: num('Height angle in degrees (default 20).'),
-      margin: num('Extra distance multiplier (default 1.15).'),
-      fov: num('Field of view in degrees.'),
-    },
-    ['paths'],
-  ),
-  handlerTool(
-    'viewport_screenshot',
-    'Capture only the 3D viewport of Studio (no panels) as an image. With frame_paths it first frames those instances from the given angle, takes the picture, then restores your camera (unless restore is false). Works without focusing the window.',
-    {
-      max_width: num('Downscale to this width (default 1000, 0 keeps the full size).'),
-      frame_paths: strList('Optional: frame these instances before capturing.'),
-      yaw: num('Angle for frame_paths (default 35).'),
-      pitch: num('Angle for frame_paths (default 20).'),
-      margin: num('Distance multiplier for frame_paths (default 1.15).'),
-      fov: num('Field of view for frame_paths.'),
-      restore: bool('Restore the camera after framing (default true).'),
-    },
-  ),
-  handlerTool('selection_get', 'List what is currently selected in Studio (use it when the user says "this" or "the selected one").', {
-    max_results: num('Default 100.'),
-  }),
-  handlerTool(
-    'selection_set',
-    `Select instances in Studio so the user can see them (an empty list clears the selection). ${PATH_FORMS}`,
-    { paths: strList('Instances to select.') },
-    ['paths'],
-  ),
-  handlerTool(
-    'export_rbxm',
-    `Serialize instances (for example a KeyframeSequence or a model) to a binary .rbxm file saved on this computer. The reply gives the saved path; pass it to asset_upload. ${PATH_FORMS}`,
-    {
-      paths: strList('Instances to export together.'),
-      file_name: str('File name (default: the instance name + .rbxm).'),
-    },
-    ['paths'],
-  ),
-  handlerTool(
-    'script_scan',
-    `Scan scripts for risky code: require by asset id, loadstring, LoadAsset, getfenv/setfenv, obfuscated strings, HTTP calls, teleports, kicks, DataStore access. Findings are ranked high, medium, low with path and line. Use it on any model taken from the Creator Store or another place before trusting it. ${PATH_FORMS}`,
-    {
-      root: str('Scan under this path (default the whole place).'),
-      max_findings: num('Default 100.'),
-    },
-  ),
-  handlerTool(
-    'logs_get',
-    'Read the Output log of a Studio window. In a play session pass studio "server" or "client" to read that side (use studio_list to see which windows exist).',
-    {
-      count: num('Last N lines (default 50).'),
-      types: strList('Only these types: output, info, warning, error.'),
-      pattern: str('Only lines containing this text (case-insensitive).'),
-    },
-  ),
-  handlerTool(
-    'ui_build',
-    `Build a whole GUI (or any instance tree) from one nested description. A node is {"class": "Frame", "name": "Menu", "properties": {...}, "attributes": {...}, "tags": [...], "source": "...", "children": [nodes]}. ${VALUE_FORMS} Example: {"class":"ScreenGui","name":"Menu","children":[{"class":"Frame","properties":{"Size":{"UDim2":[0,300,0,200]},"BackgroundColor3":{"Color3":[30,30,40]}},"children":[{"class":"UICorner","properties":{"CornerRadius":{"UDim":[0,8]}}}]}]}. ${PATH_FORMS}`,
-    {
-      parent: str('Where to build it, e.g. game.StarterGui.'),
-      tree: { type: 'object', additionalProperties: true, description: 'The root node of the tree.' },
-      replace: bool('Delete an existing sibling with the same name as the root first.'),
-    },
-    ['parent', 'tree'],
-  ),
-  handlerTool(
-    'ui_check',
-    'Check the on-screen GUI of a running play session for layout problems: off-screen or clipped elements, overlapping buttons and text, text that does not fit, small text, small touch targets, zero-size elements and low text contrast. Runs in the player client automatically, at the current viewport size (so start a play session first).',
-    {
-      root: str('Only check under this path (default the whole PlayerGui).'),
-      min_text_size: num('Smallest allowed text size (default 12).'),
-      min_touch_size: num('Smallest allowed button size in pixels (default 40).'),
-      max_findings: num('Default 100.'),
-    },
-  ),
-  handlerTool(
-    'gui_snapshot',
-    'List the on-screen GUI of the player in a running play session (runs in the client window automatically): path, class, text, whether it is a button or input, and its center and size in screen pixels. Use it to find what to click.',
-    {
-      root: str('Only under this path (default PlayerGui).'),
-      visible_only: bool('Skip hidden objects (default true).'),
-      max_results: num('Default 200.'),
-    },
-  ),
-  handlerTool(
-    'gui_click',
-    'Click a GUI object (by path) or a screen position in the player client of a running play session, using virtual input.',
-    {
-      path: str('GUI object path; its center is clicked.'),
-      x: num('Screen x when no path is given.'),
-      y: num('Screen y when no path is given.'),
-      button: { type: 'string', enum: ['left', 'right'], description: 'Default left.' },
-    },
-  ),
-  handlerTool(
-    'play_start',
-    'Start a play session from the edit window. mode "play" is Play Solo (server plus client); "run" is Run mode. Warning: the game runs for real, so scripts that touch live services (DataStores with API access on, HTTP) can have real effects.',
-    { mode: { type: 'string', enum: ['play', 'run'], description: 'Default play.' } },
-  ),
-  handlerTool(
-    'run_test',
-    'Run a test in a fresh play session and return the result. Your Luau runs inside a temporary server script (deleted afterwards) with a "test" table: test.signal(name, data) records a named result, test.fail(message) fails the test. An error fails the test, a normal finish passes it, the return value is reported, task.wait is allowed. Returns PASS/FAIL, duration, error, signals and the log lines produced during the session. The game runs for real, so scripts that touch live services have real effects.',
-    {
-      script: str('Luau test body.'),
-      test_name: str('Label for the result.'),
-      mode: { type: 'string', enum: ['play', 'run'], description: 'Default play (server plus a client character).' },
-      timeout_seconds: num('Fail the test after this long (default 60, max 300).'),
-      log_lines: num('How many trailing log lines to include (default 40).'),
-    },
-    ['script'],
-  ),
-  handlerTool(
-    'play_stop',
-    'Stop the running play session (targets the server window automatically).',
-    { result: str('Optional text recorded as the test result.') },
-  ),
-  handlerTool('instance_delete', 'Delete instances (services and top-level children of game are refused).', { paths: strList('Paths to delete.') }, ['paths']),
-  handlerTool('instance_move', 'Reparent instances.', { paths: strList('Paths to move.'), parent: str('New parent path.') }, ['paths', 'parent']),
-  handlerTool(
-    'instance_clone',
-    'Clone an instance.',
-    { path: str('Instance to clone.'), parent: str('Parent for the clone (default same parent).'), name: str('Name for the clone.'), count: num('Copies (default 1).') },
-    ['path'],
-  ),
-];
+loadTools();
 
-const handlerToolNames = new Set(handlerTools.map((tool) => tool.name));
+let reloadTimer = null;
+function watchTools() {
+  try {
+    const watched = path.basename(TOOLS_FILE);
+    fs.watch(path.dirname(TOOLS_FILE), (event, filename) => {
+      if (filename !== watched) return;
+      clearTimeout(reloadTimer);
+      reloadTimer = setTimeout(() => {
+        try {
+          loadTools();
+          send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+          log('[studio-bridge] tools reloaded: ' + allTools.length + ' tools');
+        } catch (err) {
+          log('[studio-bridge] tools.json not reloaded: ' + err.message);
+        }
+      }, 300);
+    });
+  } catch (err) {
+    log('[studio-bridge] cannot watch tools.json: ' + err.message);
+  }
+}
+watchTools();
 
 const SCANNER_HANDLERS = new Set(['script_scan', 'import_rbxm']);
-
-const NOT_BATCHABLE = new Set([
-  'play_start',
-  'play_stop',
-  'run_test',
-  'ui_check',
-  'viewport_screenshot',
-  'export_rbxm',
-  'import_rbxm',
-  'asset_scan',
-  'instance_paths',
-]);
-const BATCHABLE = [...handlerToolNames].filter((toolName) => !NOT_BATCHABLE.has(toolName) && !toolName.startsWith('gui_'));
 const MAX_BATCH_OPERATIONS = 50;
-
-const batchTool = {
-  name: 'batch',
-  description:
-    'Run several edit-window tools in one call and one undo step. Results come back numbered in order. Use it for read-then-edit sequences instead of separate calls. Not for playtests, GUI testing, screenshots or uploads.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      operations: {
-        type: 'array',
-        description: `Up to ${MAX_BATCH_OPERATIONS} operations, run in order.`,
-        items: {
-          type: 'object',
-          properties: {
-            tool: { type: 'string', enum: BATCHABLE },
-            args: { type: 'object', additionalProperties: true, description: "That tool's arguments." },
-          },
-          required: ['tool'],
-        },
-      },
-      stop_on_error: bool('Stop at the first failing operation (default true).'),
-      studio: str('Which Studio window when several are connected.'),
-      timeout_seconds: num('Max seconds for the whole batch (default 60, max 600).'),
-    },
-    required: ['operations'],
-    additionalProperties: false,
-  },
-};
-
-const allTools = [...tools, ...handlerTools, batchTool];
 
 function buildHandlerCode(name, args) {
   const prelude = fs.readFileSync(path.join(handlersDir, '_prelude.luau'), 'utf8');
@@ -1334,7 +873,7 @@ async function callTool(name, args) {
   if (name === 'batch') return runBatch(args);
   if (name === 'viewport_screenshot') return viewportScreenshot(args);
   if (handlerToolNames.has(name)) {
-    const forcedRole = name === 'play_stop' ? 'server' : name.startsWith('gui_') || name === 'ui_check' ? 'client' : null;
+    const forcedRole = (toolMeta[name] && toolMeta[name].role) || null;
     const base = forcedRole ? [args.studio, forcedRole].filter(Boolean).join(' ') : args.studio;
     const { selector, target } = splitTarget(base);
     const picked = pickStudio(selector);
@@ -1367,7 +906,7 @@ async function handle(message) {
         id,
         result: {
           protocolVersion: params?.protocolVersion || '2024-11-05',
-          capabilities: { tools: {} },
+          capabilities: { tools: { listChanged: true } },
           serverInfo: { name: 'studio-bridge', version: '0.1.0' },
         },
       });

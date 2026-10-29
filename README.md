@@ -6,7 +6,16 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 
 - `server.mjs` is the MCP server (no dependencies, Node 22). It also runs a bridge on `127.0.0.1:3010` that the Studio plugin talks to, over a WebSocket (`/ws`, with acknowledgements and result replay after a reconnect) with HTTP long-polling as an automatic fallback. Every connection needs the secret in `token.txt`, and browser origins are refused.
 - `plugin.template.lua` is the Studio plugin source. `node install.mjs` fills in the token and writes `%LOCALAPPDATA%\Roblox\Plugins\ClaudeStudioBridge.rbxmx`. Restart Studio after installing. In Studio: Plugins > Manage Plugins, allow HTTP requests (and Script Injection) for ClaudeStudioBridge.
-- `handlers/*.luau` are the Luau bodies of the tools. They are read on every call, so editing one does not need a restart. A new tool or schema change needs a Claude Code restart.
+- `tools.json` lists every tool (name, description, input schema) plus a small `meta` section. The server watches it and tells the client the tool list changed, so edits show up without restarting the server; clients that ignore the notification pick them up on the next `/mcp` reconnect.
+- `handlers/*.luau` are the Luau bodies of the tools. They are read on every call, so editing one needs no restart.
+
+### Adding a tool
+
+1. Write `handlers/<name>.luau`. The arguments arrive as the table `params`, and whatever the file returns is the result. Shared helpers such as `resolve`, `pathOf` and `requireScript` come from `handlers/_prelude.luau`.
+2. Add an entry to `tools.json` with the same `name`, a short description and an input schema. A tool that has a handler file runs in the edit window by default and can be used inside `batch`.
+3. Optional, in `meta`: `"role": "server"` or `"client"` to target a play-session window, and `"batchable": false` to keep it out of `batch`.
+
+Tools that need server-side work (uploads, screenshots, the audit) are implemented in `server.mjs` and only have their schema in `tools.json`.
 - `ws.mjs` is a small dependency-free WebSocket server layer.
 - `assets.mjs` is the Open Cloud upload client.
 - `screenshot.ps1` captures or focuses the Studio window.
