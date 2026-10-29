@@ -53,13 +53,26 @@ function claudeMissing(result) {
   return result.error !== undefined || /not recognized|not found|no such file/.test(text);
 }
 
+function removeOldCopies() {
+  let names = [];
+  try {
+    names = fs.readdirSync(appDir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (!/^studio-bridge\.exe\.old(-\d+)?$/.test(name)) continue;
+    try {
+      fs.rmSync(path.join(appDir, name), { force: true });
+    } catch {}
+  }
+}
+
 function stableServerCommand() {
   if (!isPackaged) return [process.execPath, fileURLToPath(import.meta.url), 'serve'];
   const target = path.join(appDir, 'studio-bridge.exe');
-  const aside = `${target}.old`;
-  try {
-    fs.rmSync(aside, { force: true });
-  } catch {}
+  removeOldCopies();
+  const aside = `${target}.old-${Date.now()}`;
   if (path.resolve(target) !== path.resolve(process.execPath)) {
     try {
       fs.copyFileSync(process.execPath, target);
