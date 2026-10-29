@@ -123,18 +123,59 @@ function register(command, port) {
     console.log(`  ${manual}`);
     return false;
   }
-  console.log('Registered with Claude Code (user scope).');
+  console.log(existing.status === 0 ? 'Registered with Claude Code (user scope), replacing the previous registration.' : 'Registered with Claude Code (user scope).');
   return true;
+}
+
+function parseRegistration(text) {
+  const command = /^\s*Command:\s*(.+?)\s*$/m.exec(text);
+  const args = /^\s*Args:\s*(.*?)\s*$/m.exec(text);
+  return { command: command ? command[1] : '', args: args ? args[1] : '' };
+}
+
+function previousSourceFolder() {
+  const found = runClaude(['mcp', 'get', MCP_NAME]);
+  if (found.status !== 0) return null;
+  const { command, args } = parseRegistration(found.stdout || '');
+  if (!/(^|[\\/])node(\.exe)?$/i.test(command)) return null;
+  const script = /[A-Za-z]:\\[^"]*?\.mjs/.exec(args);
+  return script ? path.dirname(script[0]) : null;
+}
+
+function migrateFrom(folder) {
+  const notes = [];
+  if (!folder || !fs.existsSync(folder) || path.resolve(folder) === path.resolve(appDir)) return notes;
+  fs.mkdirSync(appDir, { recursive: true });
+  const copyIfMissing = (name, valid) => {
+    const from = path.join(folder, name);
+    const to = path.join(appDir, name);
+    if (!fs.existsSync(from) || fs.existsSync(to)) return false;
+    if (valid && !valid(fs.readFileSync(from, 'utf8'))) return false;
+    fs.copyFileSync(from, to);
+    return true;
+  };
+  if (copyIfMissing('token.txt', (text) => /^[0-9a-f]{32,}\s*$/i.test(text))) {
+    notes.push(`Reused the token from ${folder}, so a Studio window that is already open keeps working without a restart.`);
+  }
+  for (const name of ['uploads.json', 'asset-owners.json']) {
+    if (copyIfMissing(name, (text) => text.trim().startsWith('{') || text.trim().startsWith('['))) notes.push(`Carried over ${name} from ${folder}.`);
+  }
+  if (notes.length > 0) notes.push(`Your old folder ${folder} was left untouched; delete it when you no longer need it.`);
+  return notes;
 }
 
 function install(args) {
   const standalone = args.includes('--standalone');
   const skipRegister = args.includes('--no-register');
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
+  const fromIndex = args.indexOf('--migrate-from');
+  const explicitFolder = fromIndex >= 0 ? args[fromIndex + 1] : null;
+  const migrationNotes = migrateFrom(explicitFolder || (skipRegister ? null : previousSourceFolder()));
   const token = ensureToken();
   const command = stableServerCommand();
   const target = writePlugin(token, port, standalone);
   console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}.`);
+  for (const note of migrationNotes) console.log(note);
   if (!skipRegister) register(command, port);
   console.log('');
   console.log('Next steps:');
@@ -227,7 +268,15 @@ async function doctor(args) {
   else {
     note('ok', `claude ${(claude.stdout || '').trim()}`);
     const registered = runClaude(['mcp', 'get', MCP_NAME]);
-    note(registered.status === 0 ? 'ok' : 'WARN', registered.status === 0 ? `registered with Claude Code as ${MCP_NAME}` : `not registered with Claude Code; run install`);
+    if (registered.status !== 0) {
+      note('WARN', 'not registered with Claude Code; run install');
+    } else {
+      const { command: registeredCommand } = parseRegistration(registered.stdout || '');
+      const installedExe = path.join(appDir, 'studio-bridge.exe');
+      if (/(^|[\\/])node(\.exe)?$/i.test(registeredCommand)) note('WARN', 'Claude Code still starts the old source version of Studio Bridge; run install to switch it to this install');
+      else if (isPackaged && registeredCommand && path.resolve(registeredCommand).toLowerCase() !== installedExe.toLowerCase()) note('WARN', `Claude Code starts ${registeredCommand}, not this install (${installedExe}); run install to point it here`);
+      else note('ok', `registered with Claude Code as ${MCP_NAME}`);
+    }
   }
   const preferences = loadSettings();
   note('info', `update check: ${preferences.checkUpdates ? 'on' : 'off'}, auto-update: ${preferences.autoUpdate ? 'on' : 'off'}`);
@@ -310,6 +359,7 @@ Usage: studio-bridge <command>
   install [options]      Install the Studio plugin and register with Claude Code
       --standalone       Install the full plugin instead of the self-updating loader
       --no-register      Do not touch the Claude Code configuration
+      --migrate-from <folder>  Carry the token and upload records over from an old source install
   uninstall [options]    Remove the plugin and the Claude Code registration
       --purge            Also delete the data folder (token, upload records, exports)
       --no-register      Leave the Claude Code configuration alone

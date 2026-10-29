@@ -69,6 +69,84 @@ run('install', '--no-register');
 const purge = run('uninstall', '--no-register', '--purge');
 check('uninstall --purge also deletes the data folder', purge.status === 0 && !fs.existsSync(home) && !fs.existsSync(pluginPath));
 
+const oldFolder = path.join(sandbox, 'old-source-install');
+fs.mkdirSync(path.join(oldFolder, 'exports'), { recursive: true });
+const oldToken = 'ab'.repeat(32);
+fs.writeFileSync(path.join(oldFolder, 'token.txt'), oldToken);
+fs.writeFileSync(path.join(oldFolder, 'uploads.json'), '{"records":[1]}');
+fs.writeFileSync(path.join(oldFolder, 'asset-owners.json'), '{"owners":[2]}');
+fs.writeFileSync(path.join(oldFolder, 'exports', 'keep.rbxm'), 'x');
+const migrateRun = (homeName, ...args) => {
+  const migrateHome = path.join(sandbox, homeName);
+  const finished = spawnSync(command[0], [...command.slice(1), 'install', '--no-register', ...args], { env: { ...env, STUDIO_BRIDGE_HOME: migrateHome }, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+  return { home: migrateHome, status: finished.status, out: `${finished.stdout || ''}${finished.stderr || ''}` };
+};
+
+const migrated = migrateRun('migrated', '--migrate-from', oldFolder);
+check('installing over an old source install reuses its token', migrated.status === 0 && fs.readFileSync(path.join(migrated.home, 'token.txt'), 'utf8').trim() === oldToken && /Reused the token/.test(migrated.out));
+check('the new plugin loader carries that same token', fs.readFileSync(pluginPath, 'utf8').includes(oldToken));
+check('upload and owner records are carried over', fs.readFileSync(path.join(migrated.home, 'uploads.json'), 'utf8') === '{"records":[1]}' && fs.readFileSync(path.join(migrated.home, 'asset-owners.json'), 'utf8') === '{"owners":[2]}');
+check('the old folder is left untouched', fs.existsSync(path.join(oldFolder, 'token.txt')) && fs.existsSync(path.join(oldFolder, 'exports', 'keep.rbxm')) && /left untouched/.test(migrated.out));
+check('large exports are not copied', !fs.existsSync(path.join(migrated.home, 'exports')));
+
+fs.writeFileSync(path.join(migrated.home, 'uploads.json'), '{"records":["newer"]}');
+migrateRun('migrated', '--migrate-from', oldFolder);
+check('installing again never overwrites files that already exist', fs.readFileSync(path.join(migrated.home, 'uploads.json'), 'utf8') === '{"records":["newer"]}');
+
+const homeWithToken = path.join(sandbox, 'has-token');
+fs.mkdirSync(homeWithToken, { recursive: true });
+fs.writeFileSync(path.join(homeWithToken, 'token.txt'), 'cd'.repeat(32));
+const keptToken = migrateRun('has-token', '--migrate-from', oldFolder);
+check('an existing token in the new location is kept', fs.readFileSync(path.join(homeWithToken, 'token.txt'), 'utf8').trim() === 'cd'.repeat(32) && !/Reused the token/.test(keptToken.out));
+
+const garbageFolder = path.join(sandbox, 'garbage-old');
+fs.mkdirSync(garbageFolder, { recursive: true });
+fs.writeFileSync(path.join(garbageFolder, 'token.txt'), 'not a token');
+const garbage = migrateRun('garbage-home', '--migrate-from', garbageFolder);
+check('a token file that is not a real token is ignored', garbage.status === 0 && fs.readFileSync(path.join(garbage.home, 'token.txt'), 'utf8').trim().length === 64 && !/Reused the token/.test(garbage.out));
+
+const absent = migrateRun('absent-home', '--migrate-from', path.join(sandbox, 'does-not-exist'));
+check('a missing old folder is not an error', absent.status === 0);
+
+const fakeBin = path.join(sandbox, 'fake-bin');
+const claudeLog = path.join(sandbox, 'claude-calls.log');
+fs.mkdirSync(fakeBin, { recursive: true });
+const oldScript = path.join(oldFolder, 'server.mjs');
+fs.writeFileSync(
+  path.join(fakeBin, 'claude.cmd'),
+  [
+    '@echo off',
+    'if "%1"=="mcp" if "%2"=="get" goto get',
+    'if "%1"=="mcp" if "%2"=="remove" goto remove',
+    'if "%1"=="mcp" if "%2"=="add" goto add',
+    'exit /b 1',
+    ':get',
+    'echo studio-bridge:',
+    'echo   Scope: User config (available in all your projects)',
+    'echo   Type: stdio',
+    'echo   Command: node',
+    `echo   Args: ${oldScript}`,
+    'exit /b 0',
+    ':remove',
+    `echo remove %* >> "${claudeLog}"`,
+    'exit /b 0',
+    ':add',
+    `echo add %* >> "${claudeLog}"`,
+    'exit /b 0',
+    '',
+  ].join('\r\n'),
+);
+const registerHome = path.join(sandbox, 'register-home');
+const registerEnv = { ...env, STUDIO_BRIDGE_HOME: registerHome, PATH: `${fakeBin}${path.delimiter}${process.env.PATH}` };
+const registered = spawnSync(command[0], [...command.slice(1), 'install'], { env: registerEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+const registeredOut = `${registered.stdout || ''}${registered.stderr || ''}`;
+const calls = fs.existsSync(claudeLog) ? fs.readFileSync(claudeLog, 'utf8') : '';
+check('the installer finds the old source install from its Claude Code registration', registered.status === 0 && fs.existsSync(path.join(registerHome, 'token.txt')) && fs.readFileSync(path.join(registerHome, 'token.txt'), 'utf8').trim() === oldToken, registeredOut.split('\n').slice(0, 3).join(' | '));
+check('it replaces the old registration instead of adding a second one', /remove/.test(calls) && /add/.test(calls) && calls.indexOf('remove') < calls.indexOf('add') && /replacing the previous registration/.test(registeredOut));
+check('the new registration is a user-scope entry named studio-bridge', /add .*--scope user.* studio-bridge -- /.test(calls));
+const oldDoctor = spawnSync(command[0], [...command.slice(1), 'doctor'], { env: { ...registerEnv, STUDIO_BRIDGE_OFFLINE: '1' }, encoding: 'utf8', windowsHide: true, timeout: 60000 });
+check('doctor warns when Claude Code still starts the old source version', /WARN\s+Claude Code still starts the old source version/.test(oldDoctor.stdout || ''));
+
 if (target) {
   const lockHome = path.join(sandbox, 'lockhome');
   fs.mkdirSync(lockHome, { recursive: true });
