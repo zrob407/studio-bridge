@@ -2,6 +2,8 @@
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. MIT licensed, no dependencies beyond Node 22.
 
+OpenAI support (for example Codex CLI) is coming soon. Studio Bridge speaks standard MCP, so it is not tied to one assistant; today it is set up and tested with Claude Code.
+
 ## Install
 
 Windows, Roblox Studio and Claude Code are required.
