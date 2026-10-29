@@ -301,6 +301,13 @@ local relay
 if ROLE == "server" then
 	relay = Instance.new("RemoteFunction")
 	relay.Name = RELAY_NAME
+	relay.OnServerInvoke = function(_, request)
+		if request == "plugin" then
+			return context.clientBody
+		end
+
+		return nil
+	end
 	relay.Parent = game:GetService("ReplicatedStorage")
 elseif ROLE == "client" then
 	task.spawn(function()
