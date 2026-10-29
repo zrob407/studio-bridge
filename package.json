@@ -1,6 +1,6 @@
 {
   "name": "studio-bridge",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "MCP server and Roblox Studio plugin that let an AI assistant work inside Studio",
   "license": "MIT",
   "private": true,
