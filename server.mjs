@@ -711,9 +711,52 @@ const handlerTools = [
 ];
 
 const handlerToolNames = new Set(handlerTools.map((tool) => tool.name));
-const allTools = [...tools, ...handlerTools];
 
 const SCANNER_HANDLERS = new Set(['script_scan', 'import_rbxm']);
+
+const NOT_BATCHABLE = new Set([
+  'play_start',
+  'play_stop',
+  'run_test',
+  'ui_check',
+  'viewport_screenshot',
+  'export_rbxm',
+  'import_rbxm',
+  'asset_scan',
+  'instance_paths',
+]);
+const BATCHABLE = [...handlerToolNames].filter((toolName) => !NOT_BATCHABLE.has(toolName) && !toolName.startsWith('gui_'));
+const MAX_BATCH_OPERATIONS = 50;
+
+const batchTool = {
+  name: 'batch',
+  description:
+    'Run several edit-window tools in one call and one undo step. Results come back numbered in order. Use it for read-then-edit sequences instead of separate calls. Not for playtests, GUI testing, screenshots or uploads.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      operations: {
+        type: 'array',
+        description: `Up to ${MAX_BATCH_OPERATIONS} operations, run in order.`,
+        items: {
+          type: 'object',
+          properties: {
+            tool: { type: 'string', enum: BATCHABLE },
+            args: { type: 'object', additionalProperties: true, description: "That tool's arguments." },
+          },
+          required: ['tool'],
+        },
+      },
+      stop_on_error: bool('Stop at the first failing operation (default true).'),
+      studio: str('Which Studio window when several are connected.'),
+      timeout_seconds: num('Max seconds for the whole batch (default 60, max 600).'),
+    },
+    required: ['operations'],
+    additionalProperties: false,
+  },
+};
+
+const allTools = [...tools, ...handlerTools, batchTool];
 
 function buildHandlerCode(name, args) {
   const prelude = fs.readFileSync(path.join(handlersDir, '_prelude.luau'), 'utf8');
@@ -725,6 +768,95 @@ function buildHandlerCode(name, args) {
   while (json.includes(']' + '='.repeat(level) + ']')) level++;
   const equals = '='.repeat(level);
   return `${prelude}\n${scanner}\nlocal params = HttpService:JSONDecode([${equals}[${json}]${equals}])\n${body}`;
+}
+
+function luaLongString(text) {
+  let level = 0;
+  while (text.includes(']' + '='.repeat(level) + ']')) level++;
+  const equals = '='.repeat(level);
+  return `[${equals}[${text}]${equals}]`;
+}
+
+function buildBatchCode(operations, stopOnError) {
+  const prelude = fs.readFileSync(path.join(handlersDir, '_prelude.luau'), 'utf8');
+  const needsScanner = operations.some((operation) => SCANNER_HANDLERS.has(operation.tool));
+  const scanner = needsScanner ? fs.readFileSync(path.join(handlersDir, '_scan.luau'), 'utf8') : '';
+  const steps = operations.map((operation) => {
+    const body = fs.readFileSync(path.join(handlersDir, `${operation.tool}.luau`), 'utf8');
+    const { studio, ...params } = operation.args || {};
+    return `{${JSON.stringify(operation.tool)}, ${luaLongString(JSON.stringify(params))}, function(params)\n${body}\nend}`;
+  });
+  return `${prelude}
+${scanner}
+local steps = {
+${steps.join(',\n')}
+}
+local stopOnError = ${stopOnError ? 'true' : 'false'}
+local out = {}
+local failures = 0
+
+local function describe(value)
+	if type(value) == "string" then
+		return value
+	elseif type(value) == "table" then
+		local ok, encoded = pcall(HttpService.JSONEncode, HttpService, value)
+
+		return if ok then encoded else tostring(value)
+	end
+
+	return tostring(value)
+end
+
+for index, step in ipairs(steps) do
+	local ok, value = pcall(step[3], HttpService:JSONDecode(step[2]))
+	local text = if ok then describe(value) else "FAILED: " .. tostring(value)
+
+	if not ok then
+		failures += 1
+	end
+
+	if string.find(text, "\\n", 1, true) then
+		table.insert(out, "[" .. index .. "] " .. step[1] .. ":\\n" .. text)
+	else
+		table.insert(out, "[" .. index .. "] " .. step[1] .. ": " .. text)
+	end
+
+	if not ok and stopOnError then
+		if index < #steps then
+			table.insert(out, "[stopped: " .. (#steps - index) .. " operation(s) not run]")
+		end
+
+		break
+	end
+end
+
+return table.concat(out, "\\n")`;
+}
+
+async function runBatch(args) {
+  const operations = args.operations;
+  if (!Array.isArray(operations) || operations.length === 0) return textResult('operations must be a non-empty array.', true);
+  if (operations.length > MAX_BATCH_OPERATIONS) return textResult(`At most ${MAX_BATCH_OPERATIONS} operations per batch.`, true);
+  for (const [index, operation] of operations.entries()) {
+    if (!operation || typeof operation.tool !== 'string' || !BATCHABLE.includes(operation.tool)) {
+      return textResult(`Operation ${index + 1}: "${operation && operation.tool}" cannot be batched. Allowed: ${BATCHABLE.join(', ')}.`, true);
+    }
+    if (operation.args !== undefined && (operation.args === null || typeof operation.args !== 'object' || Array.isArray(operation.args))) {
+      return textResult(`Operation ${index + 1}: args must be an object.`, true);
+    }
+  }
+  const picked = pickStudio(args.studio);
+  if (picked.error) return textResult(picked.error, true);
+  let code;
+  try {
+    code = buildBatchCode(operations, args.stop_on_error !== false);
+  } catch (err) {
+    return textResult(`Could not build the batch: ${err.message}`, true);
+  }
+  const requested = Number(args.timeout_seconds);
+  const timeoutS = Number.isFinite(requested) && requested > 0 ? Math.min(requested, MAX_TIMEOUT_S) : DEFAULT_TIMEOUT_S;
+  const result = await dispatch(picked.studio, code, timeoutS);
+  return textResult(render(result, picked.studio, true), !result.ok);
 }
 
 function saveFilesDetailed(result) {
@@ -1048,6 +1180,7 @@ async function callTool(name, args) {
   if (name === 'asset_batch_status') return batchStatus(args);
   if (name === 'asset_publish_instances') return publishInstances(args);
   if (name === 'gui_click') return guiClick(args);
+  if (name === 'batch') return runBatch(args);
   if (name === 'viewport_screenshot') return viewportScreenshot(args);
   if (handlerToolNames.has(name)) {
     const forcedRole = name === 'play_stop' ? 'server' : name.startsWith('gui_') || name === 'ui_check' ? 'client' : null;
