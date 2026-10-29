@@ -11,7 +11,7 @@ const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const target = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const base = target ? [target] : [process.execPath, path.join(bridgeDir, 'cli.mjs')];
 const { LICENSE_SHA256, licenseHash } = await import(pathToFileURL(path.join(bridgeDir, 'license.mjs')).href);
-const realLicense = fs.readFileSync(path.join(bridgeDir, 'LICENSE'), 'utf8');
+const realLicense = fs.readFileSync(path.join(bridgeDir, 'LICENSE'), 'utf8').replace(/\r\n/g, '\n');
 
 let failures = 0;
 const check = (name, condition, detail = '') => {
@@ -96,6 +96,14 @@ const intactList = await intact.rpc('tools/call', { name: 'studio_list', argumen
 check('and its tools work', !intactList.result.isError);
 check('and it serves the plugin', (await post('/plugin')).status === 200);
 await intact.stop();
+
+const windowsHome = makeHome('windows-endings', realLicense.replace(/\n/g, '\r\n'));
+const windows = startServer(windowsHome);
+await windows.ready;
+const windowsInit = await windows.rpc('initialize', {});
+const windowsCall = await windows.rpc('tools/call', { name: 'studio_list', arguments: {} });
+check('an intact license saved with Windows line endings is not treated as tampering', !/Tampering detected/.test(windowsInit.result.instructions || '') && !windowsCall.result.isError);
+await windows.stop();
 
 const tamperedHome = makeHome('tampered', realLicense + '\nCopyright (c) someone else\n');
 const locked = startServer(tamperedHome);
