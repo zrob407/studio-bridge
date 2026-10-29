@@ -14,9 +14,9 @@ jobs:
   package:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
 
@@ -62,7 +62,7 @@ jobs:
           sha256sum "studio-bridge-${GITHUB_REF_NAME}.exe" "studio-bridge-${GITHUB_REF_NAME}-source.zip" > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: |
             dist/studio-bridge-*.exe
