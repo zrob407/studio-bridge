@@ -2,11 +2,13 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
+local context = ({...})[1] or {}
+
 local ROLE = if not RunService:IsRunning() then "edit" elseif RunService:IsServer() then "server" else "client"
 
 local URL = "http://127.0.0.1:__PORT__"
 local TOKEN = "__TOKEN__"
-local CLIENT_ID = HttpService:GenerateGUID(false)
+local CLIENT_ID = context.clientId or HttpService:GenerateGUID(false)
 local MAX_OUTPUT_CHARS = 30000
 local MAX_TABLE_ENTRIES = 60
 local MAX_DEPTH = 3
@@ -277,6 +279,8 @@ end
 local socket
 local unacked = {}
 local seen = {}
+local stopped = false
+local running = 0
 
 local function sendText(session, text)
 	return (pcall(function()
@@ -470,7 +474,13 @@ local function acceptCommand(command, session)
 	end
 
 	seen[requestId] = true
-	task.spawn(runCommand, command)
+	running += 1
+
+	task.spawn(function()
+		pcall(runCommand, command)
+
+		running -= 1
+	end)
 end
 
 local function flushUnacked()
@@ -614,7 +624,7 @@ local function runSocketSession()
 
 	local nextBeat = os.clock() + HEARTBEAT_SECONDS
 
-	while not session.closed do
+	while not session.closed and not stopped do
 		task.wait(0.25)
 
 		if os.clock() >= nextBeat then
@@ -642,7 +652,7 @@ end
 
 if ROLE ~= "client" then
 	task.spawn(function()
-		while true do
+		while not stopped do
 			local session = socket
 
 			if session and session.ready then
@@ -661,7 +671,7 @@ if ROLE ~= "client" then
 	task.spawn(function()
 		local failures = 0
 
-		while true do
+		while not stopped do
 			local alive, completed = pcall(runSocketSession)
 
 			if alive and completed then
@@ -674,3 +684,23 @@ if ROLE ~= "client" then
 		end
 	end)
 end
+
+local function stop()
+	stopped = true
+
+	local session = socket
+
+	if session then
+		session.closed = true
+
+		pcall(function()
+			session.client:Close()
+		end)
+	end
+end
+
+local function busy()
+	return running > 0 or next(unacked) ~= nil
+end
+
+return {stop = stop, busy = busy}

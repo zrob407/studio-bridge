@@ -33,6 +33,7 @@ jobs:
           node test/reliability.test.mjs
           node test/ws-transport.test.mjs
           node test/tools.test.mjs
+          node test/plugin.test.mjs
 
       - name: Package source
         shell: bash
@@ -41,7 +42,7 @@ jobs:
           version="${GITHUB_REF_NAME}"
           7z a -tzip "dist/studio-bridge-${version}.zip" \
             server.mjs assets.mjs audit.mjs install.mjs png.mjs ws.mjs screenshot.ps1 \
-            tools.json plugin.template.lua handlers README.md LICENSE
+            tools.json plugin.template.lua plugin.stub.lua handlers README.md LICENSE
 
       - name: Checksums
         shell: bash

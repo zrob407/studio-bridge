@@ -5,7 +5,8 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 ## Pieces
 
 - `server.mjs` is the MCP server (no dependencies, Node 22). It also runs a bridge on `127.0.0.1:3010` that the Studio plugin talks to, over a WebSocket (`/ws`, with acknowledgements and result replay after a reconnect) with HTTP long-polling as an automatic fallback. Every connection needs the secret in `token.txt`, and browser origins are refused.
-- `plugin.template.lua` is the Studio plugin source. `node install.mjs` fills in the token and writes `%LOCALAPPDATA%\Roblox\Plugins\ClaudeStudioBridge.rbxmx`. Restart Studio after installing. In Studio: Plugins > Manage Plugins, allow HTTP requests (and Script Injection) for ClaudeStudioBridge.
+- `plugin.stub.lua` is the small loader that `node install.mjs` fills in with the token and writes to `%LOCALAPPDATA%\Roblox\Plugins\ClaudeStudioBridge.rbxmx`. On start it asks the running bridge for `plugin.template.lua` (the real plugin), checks the source's HMAC-SHA256 signature (keyed by your token) and refuses to run anything that fails the check. While Studio is in edit mode it re-checks every 10 seconds and reloads the plugin when the file changes and no command is running, so plugin changes need no Studio restart. Restart Studio once after the first install. In Studio: Plugins > Manage Plugins, allow HTTP requests (and Script Injection) for ClaudeStudioBridge.
+- `node install.mjs --standalone` writes the full plugin instead of the loader, for people who do not want Studio to load code from the bridge. It does not update itself.
 - `tools.json` lists every tool (name, description, input schema) plus a small `meta` section. The server watches it and tells the client the tool list changed, so edits show up without restarting the server; clients that ignore the notification pick them up on the next `/mcp` reconnect.
 - `handlers/*.luau` are the Luau bodies of the tools. They are read on every call, so editing one needs no restart.
 
@@ -66,6 +67,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 This tool lets an AI assistant run arbitrary Luau inside your Studio, which is its purpose. Treat it like giving that assistant a console.
 
 - The bridge listens only on `127.0.0.1`, rejects requests with a foreign `Host` header, and requires the random secret in `token.txt` on every request. The secret is created on install and never leaves your machine.
+- The plugin loader only runs plugin source whose HMAC-SHA256 signature, keyed by that secret, matches. A different program that took over the port could not make Studio run its code without the secret.
 - Nothing is sent anywhere except what you ask for: Roblox Open Cloud uploads (using a key you create) and the public Roblox economy API for `asset_audit`.
 - The Open Cloud key is read from `%USERPROFILE%\.roblox-key.txt` or `ROBLOX_API_KEY` and is never printed. Give it only the permissions you need and revoke it when you are done.
 - `import_rbxm` and `script_scan` flag risky code (require by id, loadstring, LoadAsset, obfuscation, HTTP, teleports, kicks, DataStore) before it enters a place.
