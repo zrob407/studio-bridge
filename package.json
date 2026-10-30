@@ -19,7 +19,7 @@
     "ws.mjs",
     "paths.mjs",
     "updater.mjs",
-    "license.mjs",
+    "checks.mjs",
     "screenshot.ps1",
     "tools.json",
     "plugin.template.lua",
@@ -56,7 +56,7 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs && node test/package.test.mjs && node test/npm-update.test.mjs && node test/license.test.mjs && node test/takeover.test.mjs && node test/marketplace.test.mjs && node test/docs.test.mjs && node test/profiles.test.mjs",
+    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs && node test/package.test.mjs && node test/npm-update.test.mjs && node test/checks.test.mjs && node test/takeover.test.mjs && node test/marketplace.test.mjs && node test/docs.test.mjs && node test/profiles.test.mjs",
     "build": "node build/build.mjs"
   },
   "devDependencies": {

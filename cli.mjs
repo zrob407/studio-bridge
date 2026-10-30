@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { checkLicense, licenseHash, TAMPER_MESSAGE } from './license.mjs';
+import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
 const PLUGIN_FILE = 'Studio Bridge.rbxmx';
