@@ -121,9 +121,13 @@ Tools that need server-side work (uploads, screenshots, the audit) are implement
 - `assets.mjs` is the Open Cloud upload client.
 - `screenshot.ps1` captures or focuses the Studio window.
 
-## Status window
+## The Studio Bridge window
 
-The plugin adds a Studio Bridge button to the Plugins toolbar. It opens a small window showing whether the bridge is connected and over which transport, the plugin version, how many commands have run and failed, how long ago the last one ran, and a short log of connection events. It follows Studio's light or dark theme and does nothing else.
+The plugin adds a Studio Bridge button to the Plugins toolbar that opens a themed panel (it follows Studio's light or dark theme):
+
+- **Status:** whether the bridge is connected and over which transport, how many commands have run and failed, the last command and how long ago it ran, and how long the plugin has been up.
+- **Tools:** a summary of how many tools are offered and their approximate token cost, one-click presets (Everything, Essentials, World builder, UI designer, Animator, Publisher) and a switch for each tool group. Changes are saved to the bridge straight away; your AI client may need `/mcp` to refresh its tool list. If the profile is fixed by the `STUDIO_BRIDGE_TOOLS` environment variable, the switches are read-only.
+- **Log:** a short log of connection events and commands.
 
 ## Windows
 

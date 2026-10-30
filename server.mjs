@@ -13,7 +13,7 @@ import { readDocs, searchDocs } from './docs.mjs';
 import { formatSearch, searchAssets } from './marketplace.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
-import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, updateMode } from './updater.mjs';
+import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
 const dir = appDir;
@@ -272,6 +272,19 @@ const server = http.createServer(async (req, res) => {
     log('[studio-bridge] a newer studio-bridge asked this server to stop and take over its port');
     setTimeout(() => process.exit(0), 200);
     return;
+  }
+
+  if (req.url === '/profile') {
+    if (body.action === 'set') {
+      if (process.env.STUDIO_BRIDGE_TOOLS) return respond(res, 409, { error: 'the tool profile is set by the STUDIO_BRIDGE_TOOLS environment variable, so it cannot be changed here' });
+      const next = normalizeProfile(body.profile);
+      if (next.error) return respond(res, 400, { error: next.error });
+      saveSettings({ toolProfile: next.profile });
+      lastProfile = profileText();
+      send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+      log(`[studio-bridge] tool profile is now ${lastProfile}`);
+    }
+    return respond(res, 200, profileInfo());
   }
 
   if (req.url === '/plugin') {
@@ -575,6 +588,8 @@ let toolMeta = {};
 let handlerToolNames = new Set();
 let BATCHABLE = [];
 let toolGroups = {};
+let toolGroupInfo = {};
+let toolPresets = [];
 
 function loadTools() {
   const data = JSON.parse(TOOLS_OVERRIDE ? fs.readFileSync(TOOLS_OVERRIDE, 'utf8') : readAsset('tools.json'));
@@ -592,6 +607,8 @@ function loadTools() {
   handlerToolNames = handlers;
   BATCHABLE = batchable;
   toolGroups = data.groups && typeof data.groups === 'object' ? data.groups : {};
+  toolGroupInfo = data.groupInfo && typeof data.groupInfo === 'object' ? data.groupInfo : {};
+  toolPresets = Array.isArray(data.presets) ? data.presets : [];
 }
 
 function profileText() {
@@ -633,6 +650,43 @@ function listedTools() {
       items.enum = items.enum.filter((name) => visible.has(name));
       return copy;
     });
+}
+
+function normalizeProfile(text) {
+  const wanted = String(text || '')
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  if (wanted.length === 0) return { error: 'profile is empty' };
+  if (wanted.includes('all')) return { profile: 'all' };
+  const unknown = wanted.filter((entry) => entry !== 'core' && !toolGroups[entry]);
+  if (unknown.length > 0) return { error: `unknown tool group ${unknown.join(', ')}` };
+  const groups = Object.keys(toolGroups).filter((group) => group !== 'core' && wanted.includes(group));
+  return { profile: groups.length > 0 ? groups.join(',') : 'core' };
+}
+
+function tokensOf(names) {
+  const wanted = new Set(names);
+  return Math.round(allTools.filter((tool) => wanted.has(tool.name)).reduce((total, tool) => total + JSON.stringify(tool).length, 0) / 3.6);
+}
+
+function profileInfo() {
+  const visible = visibleTools();
+  const names = visible === null ? allTools.map((tool) => tool.name) : [...visible];
+  return {
+    version: currentVersion(),
+    profile: profileText(),
+    locked: Boolean(process.env.STUDIO_BRIDGE_TOOLS),
+    groups: Object.keys(toolGroups).map((name) => ({
+      name,
+      title: (toolGroupInfo[name] && toolGroupInfo[name].title) || name,
+      summary: (toolGroupInfo[name] && toolGroupInfo[name].summary) || '',
+      tools: toolGroups[name].length,
+      tokens: tokensOf(toolGroups[name]),
+    })),
+    presets: toolPresets,
+    total: { tools: names.length, tokens: tokensOf(names) },
+  };
 }
 
 function hiddenToolMessage(name) {
