@@ -74,6 +74,7 @@ function stripSignature(file) {
 if (stripSignature(exePath)) console.log("Removed node.exe's code signature (the copy is modified, so it would no longer be valid).");
 
 await rcedit(exePath, {
+  icon: path.join(root, 'build', 'icon.ico'),
   'version-string': {
     ProductName: 'Studio Bridge',
     FileDescription: 'Studio Bridge: MCP server and installer for Roblox Studio',
