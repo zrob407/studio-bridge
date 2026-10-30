@@ -105,6 +105,16 @@ const windowsCall = await windows.rpc('tools/call', { name: 'studio_list', argum
 check('an intact license saved with Windows line endings is not treated as tampering', !/Tampering detected/.test(windowsInit.result.instructions || '') && !windowsCall.result.isError);
 await windows.stop();
 
+const midHome = makeHome('mid-run', realLicense);
+const mid = startServer(midHome);
+await mid.ready;
+const midBefore = await mid.rpc('tools/call', { name: 'studio_list', arguments: {} });
+fs.appendFileSync(path.join(midHome, 'overrides', 'LICENSE'), 'edited while running');
+await sleep(5600);
+const midAfter = await mid.rpc('tools/call', { name: 'studio_list', arguments: {} });
+check('editing the license while the server is running locks it', !midBefore.result.isError && midAfter.result.isError === true && /Tampering detected/.test(midAfter.result.content[0].text));
+await mid.stop();
+
 const tamperedHome = makeHome('tampered', realLicense + '\nCopyright (c) someone else\n');
 const locked = startServer(tamperedHome);
 await locked.ready;

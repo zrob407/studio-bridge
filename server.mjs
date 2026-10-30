@@ -163,6 +163,11 @@ function takeNext(studio) {
 function sendCommand(studio, command) {
   const entry = pending.get(command.requestId);
   if (!entry) return;
+  if (!checkLicense().ok) {
+    studio.inflight.delete(command.requestId);
+    finish(command.requestId, { ok: false, error: TAMPER_MESSAGE, output: [] });
+    return;
+  }
   entry.acked = false;
   entry.socket = studio.socket;
   const sent = studio.socket.send(JSON.stringify({ type: 'command', ...command }));
@@ -213,6 +218,7 @@ function requeue(studio, requestId) {
 
 function dispatch(studio, code, timeoutS, target) {
   return new Promise((resolve) => {
+    if (!checkLicense().ok) return resolve({ ok: false, error: TAMPER_MESSAGE, output: [] });
     const requestId = crypto.randomUUID();
     pending.set(requestId, { resolve, timer: queueTimer(studio, requestId), studio, timeoutS, code, target, acked: false, socket: null });
     studio.queue.push({ requestId, code, target, timeout: timeoutS });
@@ -455,8 +461,24 @@ server.on('error', async (err) => {
   process.exit(1);
 });
 
+let tamperLogged = false;
+
+function licenseWatchdog() {
+  if (checkLicense().ok) {
+    tamperLogged = false;
+    return;
+  }
+  if (!tamperLogged) {
+    tamperLogged = true;
+    log(`[studio-bridge] ${TAMPER_MESSAGE}`);
+  }
+  for (const studio of studios.values()) if (studio.socket) studio.socket.close(1008);
+}
+
 server.on('listening', () => {
   log(`[studio-bridge] listening on 127.0.0.1:${PORT}`);
+  licenseWatchdog();
+  setInterval(licenseWatchdog, 10000).unref();
   runUpdateWatcher();
 });
 
@@ -513,6 +535,7 @@ function updateNotice() {
 }
 
 async function runBridgeUpdate(args) {
+  if (!checkLicense().ok) return { content: [{ type: 'text', text: TAMPER_MESSAGE }], isError: true };
   if (updating) return { content: [{ type: 'text', text: 'An update is already in progress.' }], isError: true };
   let release;
   try {
