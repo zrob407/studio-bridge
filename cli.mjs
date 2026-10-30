@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { isHyprland, isWindows, pluginsDir, wineRobloxFolders } from './platform.mjs';
+import { isHyprland, isWindows, pluginsDirs, wineRobloxFolders } from './platform.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
@@ -85,22 +85,33 @@ function writePlugin(token, port, standalone) {
   const template = readAsset(standalone ? 'plugin.template.lua' : 'plugin.stub.lua');
   const source = template.replace('__PORT__', port).replace('__TOKEN__', token);
   if (source.includes(']]>')) throw new Error('plugin source contains a CDATA terminator');
-  const model = `<roblox version="4">\n\t<Item class="Script" referent="RBX0">\n\t\t<Properties>\n\t\t\t<string name="Name">Studio Bridge</string>\n\t\t\t<ProtectedString name="Source"><![CDATA[${source}]]></ProtectedString>\n\t\t</Properties>\n\t</Item>\n</roblox>\n`;
-  const folder = pluginsDir();
-  fs.mkdirSync(folder, { recursive: true });
-  const target = path.join(folder, PLUGIN_FILE);
-  fs.writeFileSync(target, model);
-  for (const legacyName of LEGACY_FILES) {
-    const legacy = path.join(folder, legacyName);
-    if (!fs.existsSync(legacy)) continue;
-    try {
-      fs.unlinkSync(legacy);
-      console.log(`Removed the old plugin file ${legacyName}`);
-    } catch (err) {
-      console.log(`Could not remove ${legacy} (${err.code}); close Studio and delete it, or two copies of the plugin will load.`);
+  const model = `<roblox version="4">
+	<Item class="Script" referent="RBX0">
+		<Properties>
+			<string name="Name">Studio Bridge</string>
+			<ProtectedString name="Source"><![CDATA[${source}]]></ProtectedString>
+		</Properties>
+	</Item>
+</roblox>
+`;
+  const targets = [];
+  for (const folder of pluginsDirs()) {
+    fs.mkdirSync(folder, { recursive: true });
+    const target = path.join(folder, PLUGIN_FILE);
+    fs.writeFileSync(target, model);
+    targets.push(target);
+    for (const legacyName of LEGACY_FILES) {
+      const legacy = path.join(folder, legacyName);
+      if (!fs.existsSync(legacy)) continue;
+      try {
+        fs.unlinkSync(legacy);
+        console.log(`Removed the old plugin file ${legacyName}`);
+      } catch (err) {
+        console.log(`Could not remove ${legacy} (${err.code}); close Studio and delete it, or two copies of the plugin will load.`);
+      }
     }
   }
-  return target;
+  return targets;
 }
 
 function register(command, port) {
@@ -268,8 +279,8 @@ function install(args) {
   const migrationNotes = migrateFrom(explicitFolder || (skipRegister || client === 'codex' ? null : previousSourceFolder()));
   const token = ensureToken();
   const command = stableServerCommand();
-  const target = writePlugin(token, port, standalone);
-  console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}.`);
+  const targets = writePlugin(token, port, standalone);
+  for (const target of targets) console.log(standalone ? `Standalone plugin written to ${target} (it does not update itself).` : `Plugin loader written to ${target}.`);
   for (const note of migrationNotes) console.log(note);
   if (!skipRegister && client !== 'codex') register(command, port);
   if (!skipRegister && client !== 'claude') registerCodex(command, port);
@@ -282,8 +293,8 @@ function install(args) {
     const prefixes = wineRobloxFolders();
     console.log('');
     console.log('Linux notes:');
-    console.log(`  - The plugin went into ${path.dirname(target)}, inside your Wine prefix. Start Studio from the launcher that owns that prefix (Vinegar or Grapejuice).`);
-    if (prefixes.length > 1) console.log(`  - ${prefixes.length} Studio prefixes were found and the first was used. To use another, run install again with STUDIO_BRIDGE_PLUGINS_DIR set to its Roblox/Plugins folder.`);
+    console.log(`  - The plugin was written to ${targets.length} Studio ${targets.length === 1 ? 'folder' : 'folders'} (listed above). Start Studio from the Vinegar or Grapejuice launcher that owns ${targets.length === 1 ? 'it' : 'one of them'}.`);
+    if (prefixes.length === 0 || process.env.STUDIO_BRIDGE_PLUGINS_DIR) console.log('  - STUDIO_BRIDGE_PLUGINS_DIR was used, so only that folder was written.');
     if (isHyprland()) console.log('  - Hyprland detected: hyprctl focuses Studio for input_keyboard, input_mouse and gui_click, and install grim to enable the screenshot tool.');
     else console.log('  - Install xdotool (X11) if you want input_keyboard, input_mouse and gui_click to focus Studio for you. The screenshot tool is Windows and Hyprland only; use viewport_screenshot.');
     console.log('  - Run studio-bridge doctor if the Studio window does not show up.');
@@ -291,15 +302,16 @@ function install(args) {
 }
 
 function uninstall(args) {
-  const folder = pluginsDir();
-  for (const name of [PLUGIN_FILE, ...LEGACY_FILES]) {
-    const file = path.join(folder, name);
-    if (!fs.existsSync(file)) continue;
-    try {
-      fs.unlinkSync(file);
-      console.log(`Removed ${file}`);
-    } catch (err) {
-      console.log(`Could not remove ${file} (${err.code}); close Studio and try again.`);
+  for (const folder of pluginsDirs()) {
+    for (const name of [PLUGIN_FILE, ...LEGACY_FILES]) {
+      const file = path.join(folder, name);
+      if (!fs.existsSync(file)) continue;
+      try {
+        fs.unlinkSync(file);
+        console.log(`Removed ${file}`);
+      } catch (err) {
+        console.log(`Could not remove ${file} (${err.code}); close Studio and try again.`);
+      }
     }
   }
   if (!args.includes('--no-register')) {
@@ -344,16 +356,16 @@ async function doctor(args) {
   const tokenFile = path.join(appDir, 'token.txt');
   const token = fs.existsSync(tokenFile) ? fs.readFileSync(tokenFile, 'utf8').trim() : null;
   note(token ? 'ok' : 'FAIL', token ? 'token.txt exists' : 'token.txt is missing; run install');
-  let folder = null;
+  let folders = [];
   try {
-    folder = pluginsDir();
+    folders = pluginsDirs();
   } catch (err) {
     note('FAIL', err.message);
   }
-  if (folder) {
+  for (const folder of folders) {
     const pluginPath = path.join(folder, PLUGIN_FILE);
     if (!fs.existsSync(pluginPath)) note('FAIL', `${PLUGIN_FILE} is not in ${folder}; run install`);
-    else note('ok', `${PLUGIN_FILE} is installed (${fs.readFileSync(pluginPath, 'utf8').includes('hmacSha256Hex') ? 'loader' : 'standalone'})`);
+    else note('ok', `${PLUGIN_FILE} is installed in ${folder} (${fs.readFileSync(pluginPath, 'utf8').includes('hmacSha256Hex') ? 'loader' : 'standalone'})`);
     for (const legacyName of LEGACY_FILES) {
       if (fs.existsSync(path.join(folder, legacyName))) note('WARN', `old plugin file ${legacyName} is still there and will load a second copy; delete it`);
     }
@@ -390,9 +402,12 @@ async function doctor(args) {
     if (registered.status !== 0) {
       note('WARN', 'not registered with Claude Code; run install');
     } else {
-      const { command: registeredCommand } = parseRegistration(registered.stdout || '');
+      const { command: registeredCommand, args: registeredArgs } = parseRegistration(registered.stdout || '');
       const installedExe = path.join(appDir, 'studio-bridge.exe');
-      if (/(^|[\\/])node(\.exe)?$/i.test(registeredCommand)) note('WARN', 'Claude Code still starts the old source version of Studio Bridge; run install to switch it to this install');
+      const thisCli = fileURLToPath(import.meta.url);
+      const runsNode = /(^|[\\/])node(\.exe)?$/i.test(registeredCommand);
+      if (runsNode && !isPackaged && registeredArgs.toLowerCase().includes(thisCli.toLowerCase())) note('ok', `registered with Claude Code as ${MCP_NAME}`);
+      else if (runsNode) note('WARN', `Claude Code starts a different copy of Studio Bridge (${registeredArgs || registeredCommand}) than this one; run install to point it here`);
       else if (isPackaged && registeredCommand && path.resolve(registeredCommand).toLowerCase() !== installedExe.toLowerCase()) note('WARN', `Claude Code starts ${registeredCommand}, not this install (${installedExe}); run install to point it here`);
       else note('ok', `registered with Claude Code as ${MCP_NAME}`);
     }
