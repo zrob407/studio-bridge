@@ -1985,6 +1985,412 @@
         "required": [],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "animation_inspect",
+      "description": "Describe a KeyframeSequence (length, loop, priority, joints, markers, keyframe times, and with detail every pose as position, rotation in degrees, weight and easing), or list every KeyframeSequence and count Animation instances under a container.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "A KeyframeSequence, or a container to list."
+          },
+          "detail": {
+            "type": "boolean",
+            "description": "Include every pose of every keyframe."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "animation_create",
+      "description": "Build a KeyframeSequence from a description. Give the rig so the poses are nested to match its Motor6D joints, then keyframes with a time and poses keyed by part name (position in studs, rotation in degrees as an offset from the rest pose). Intermediate joints are added automatically.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "rig": {
+            "type": "string",
+            "description": "The rig model the animation is for."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the KeyframeSequence."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Where to put it (default ServerStorage)."
+          },
+          "loop": {
+            "type": "boolean"
+          },
+          "priority": {
+            "type": "string",
+            "description": "Enum.AnimationPriority name (default Action)."
+          },
+          "keyframes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "time": {
+                  "type": "number",
+                  "description": "Seconds from the start."
+                },
+                "poses": {
+                  "type": "object",
+                  "description": "Poses by part name, for example {\"RightUpperArm\": {\"rotation\": [0, 0, 45]}}.",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "position": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "Offset in studs [x, y, z]."
+                      },
+                      "rotation": {
+                        "type": "array",
+                        "items": {
+                          "type": "number"
+                        },
+                        "minItems": 3,
+                        "maxItems": 3,
+                        "description": "Rotation in degrees [x, y, z]."
+                      },
+                      "weight": {
+                        "type": "number"
+                      },
+                      "easingStyle": {
+                        "type": "string",
+                        "description": "Enum.PoseEasingStyle name (default Linear)."
+                      },
+                      "easingDirection": {
+                        "type": "string",
+                        "description": "Enum.PoseEasingDirection name (default In)."
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "markers": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "time"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "rig",
+          "keyframes"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "animation_edit",
+      "description": "Edit a KeyframeSequence with a list of operations: scale_time {factor}, shift_time {seconds}, reverse, delete_keyframes {times or from and to}, add_marker {time, name, value}, set {loop, priority, name}. Pass copyName to edit a copy and leave the original alone.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The KeyframeSequence."
+          },
+          "operations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "op": {
+                  "type": "string",
+                  "enum": [
+                    "scale_time",
+                    "shift_time",
+                    "reverse",
+                    "delete_keyframes",
+                    "add_marker",
+                    "set"
+                  ]
+                },
+                "factor": {
+                  "type": "number"
+                },
+                "seconds": {
+                  "type": "number"
+                },
+                "times": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  }
+                },
+                "from": {
+                  "type": "number"
+                },
+                "to": {
+                  "type": "number"
+                },
+                "time": {
+                  "type": "number"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "string"
+                },
+                "loop": {
+                  "type": "boolean"
+                },
+                "priority": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "op"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "copyName": {
+            "type": "string",
+            "description": "Clone the sequence under this name and edit the clone."
+          },
+          "copyParent": {
+            "type": "string",
+            "description": "Where to put the clone (default beside the original)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path",
+          "operations"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "animation_pose",
+      "description": "Pose a rig from a KeyframeSequence at a time (interpolating between keyframes) by setting its Motor6D transforms, so you can take a screenshot of the result; or reset the rig to its rest pose. The pose is not saved with the place.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "pose",
+              "reset"
+            ]
+          },
+          "rig": {
+            "type": "string",
+            "description": "The rig model."
+          },
+          "path": {
+            "type": "string",
+            "description": "The KeyframeSequence (pose only)."
+          },
+          "time": {
+            "type": "number",
+            "description": "Seconds into the animation (default 0)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action",
+          "rig"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "animation_ids",
+      "description": "Animation instances and their AnimationIds. list: every Animation with its id. set: give one Animation an id. remap: replace ids across the place using a map of old id to new id (for example after re-uploading animations); dryRun shows what would change.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "set",
+              "remap"
+            ]
+          },
+          "root": {
+            "type": "string",
+            "description": "Where to look (default the whole place)."
+          },
+          "path": {
+            "type": "string",
+            "description": "The Animation to change (set)."
+          },
+          "id": {
+            "type": "string",
+            "description": "The asset id (set)."
+          },
+          "map": {
+            "type": "object",
+            "description": "Old id to new id, for example {\"111\": \"222\"} (remap).",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Report without changing anything (remap)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "audio_manage",
+      "description": "Sounds in the place. list: sounds with id, volume, speed, looping, rolloff and group. create: a Sound with an asset id and properties. set: change properties, scale the volume or assign a SoundGroup on many sounds (by paths, or by root and a name filter). group: create a SoundGroup and optionally assign sounds to it. effect: add a reverb, echo, equalizer or other SoundEffect to a Sound or SoundGroup. remap: replace SoundIds using a map of old id to new id (dryRun to preview).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "create",
+              "set",
+              "group",
+              "effect",
+              "remap"
+            ]
+          },
+          "root": {
+            "type": "string",
+            "description": "Where to look (default the whole place)."
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Specific Sounds to act on."
+          },
+          "nameContains": {
+            "type": "string",
+            "description": "Only sounds whose name contains this."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Parent for create (required) or group (default SoundService)."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for create or group."
+          },
+          "soundId": {
+            "type": "string",
+            "description": "Asset id for create."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Properties to set, using the same value forms as instance_set."
+          },
+          "volumeScale": {
+            "type": "number",
+            "description": "Multiply the volume of each sound (set)."
+          },
+          "soundGroup": {
+            "type": "string",
+            "description": "A SoundGroup to assign (create, set)."
+          },
+          "path": {
+            "type": "string",
+            "description": "The Sound or SoundGroup to add an effect to."
+          },
+          "effect": {
+            "type": "string",
+            "enum": [
+              "ChorusSoundEffect",
+              "CompressorSoundEffect",
+              "DistortionSoundEffect",
+              "EchoSoundEffect",
+              "EqualizerSoundEffect",
+              "FlangeSoundEffect",
+              "PitchShiftSoundEffect",
+              "ReverbSoundEffect",
+              "TremoloSoundEffect"
+            ]
+          },
+          "map": {
+            "type": "object",
+            "description": "Old id to new id (remap).",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Report without changing anything (remap)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most rows for list (default 100)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
     }
   ],
   "meta": {

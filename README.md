@@ -20,7 +20,7 @@ Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injec
 - "Run a playtest, click Play, and tell me what errors show up in the output."
 - "Rename these 40 parts, fix the tween in ShopController, and publish the animations to my group."
 
-Studio Bridge exposes fifty tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
+Studio Bridge exposes fifty-six tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, animation authoring and posing, audio, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
 
 ## Why Studio Bridge
 
@@ -113,6 +113,8 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 - Building UI: `ui_build` (a whole GUI from one nested description), `ui_check` (layout checks in a running play session)
 - Instances: `instance_find`, `instance_children`, `instance_get`, `instance_set`, `instance_create`, `instance_delete`, `instance_move`, `instance_clone`, `selection_get`, `selection_set`
 - World building: `terrain` (fill blocks, balls and cylinders; clear; read; generate noise terrain with a biome, height, water level and seed), `environment` (lighting presets day, sunset, night, overcast, foggy, horror and space, plus per-section overrides), `scatter` (drop copies of a model onto the ground with slope alignment, random spin and scale, minimum spacing and a seed), `tween_play` (preview a tween and restore the values)
+- Animation: `animation_create` (build a KeyframeSequence from keyframes of poses keyed by part name, nested to match the rig's joints), `animation_edit` (scale or shift time, reverse, delete keyframes, add markers, set loop and priority; all or nothing, and it can edit a copy), `animation_inspect` (a sequence's length, joints, markers and poses, or every sequence under a container), `animation_pose` (pose a rig at a time in the animation so you can screenshot it, or reset it), `animation_ids` (list, set and remap AnimationIds)
+- Audio: `audio_manage` (list, create, bulk set properties or scale volume, SoundGroups, SoundEffects such as reverb and echo, and remap SoundIds), `audio_report`
 - Queries and checks: `raycast` (one ray or many), `spatial_query` (parts in a radius or box, nearest first, or the bounds of an instance), `tag_manage` (list, find, get, add and remove CollectionService tags), `physics_report` (loose, void, oversized and invisible-collidable parts), `audio_report` (missing, silent, loud and duplicated sounds)
 - Playtests: `play_start`, `play_stop`, `run_test`, `logs_get`
 - Camera and pictures: `camera_set`, `camera_frame`, `viewport_screenshot` (3D view only, works with the screen locked, can frame instances and restore your camera), `screenshot` (whole Studio window; needs an unlocked desktop)
