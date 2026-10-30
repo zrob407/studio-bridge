@@ -2469,7 +2469,7 @@
     },
     {
       "name": "ui_responsive_check",
-      "description": "Check how a GUI lays out at different screen sizes without playtesting. Copies it into a probe at each device size (phone-small, phone, phone-landscape, tablet, tablet-landscape, laptop, desktop, or your own width and height) and reports elements that extend past the screen, touch targets under the minimum size, tiny text, text wider than its box and collapsed elements. The probe is removed afterwards.",
+      "description": "Check how a GUI lays out at different screen sizes without playtesting. Copies it into a probe at each size and reports elements that extend past the screen, touch targets under the minimum size, tiny text, text wider than its box and collapsed elements. By default it uses size presets (phone-small, phone, phone-landscape, tablet, tablet-landscape, laptop, desktop, or your own width and height). With emulator: true it switches Studio to real devices from device_emulator (for example iphone_14, ipad_10th_generation, samsung_galaxy_a16) so the sizes are exact, then restores the emulator. The probe is removed afterwards.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2479,7 +2479,7 @@
           },
           "devices": {
             "type": "array",
-            "description": "Preset names, or objects with name, width, height and touch. Default phone, tablet, desktop.",
+            "description": "Preset names or objects with name, width, height and touch; with emulator: true, device ids or objects with id, orientation and touch. Default phone, tablet, desktop.",
             "items": {
               "anyOf": [
                 {
@@ -2499,12 +2499,20 @@
                     },
                     "touch": {
                       "type": "boolean"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "orientation": {
+                      "type": "string",
+                      "enum": [
+                        "portrait",
+                        "landscape",
+                        "landscapeRight",
+                        "landscapeLeft"
+                      ]
                     }
                   },
-                  "required": [
-                    "width",
-                    "height"
-                  ],
                   "additionalProperties": false
                 }
               ]
@@ -2521,10 +2529,72 @@
           "studio": {
             "type": "string",
             "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          },
+          "emulator": {
+            "type": "boolean",
+            "description": "Use Studio's real device emulator for the sizes (devices are device ids)."
           }
         },
         "required": [
           "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "device_emulator",
+      "description": "Studio's device emulator. list: the device ids (iPhones, Galaxy phones, iPads, tablets, Xbox, PlayStation, Quest, laptops and more); detail adds each name and resolution and filter narrows by id. get: the current device, resolution, orientation and the size GUIs see. set: switch to a device id, orientation (portrait, landscape, landscapeRight, landscapeLeft) or a custom resolution. stop: go back to the normal viewport. info: the full record for a device. After set, viewport and window screenshots show the emulated screen.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "get",
+              "set",
+              "stop",
+              "info"
+            ]
+          },
+          "device": {
+            "type": "string",
+            "description": "Device id for set and info, for example iphone_14."
+          },
+          "orientation": {
+            "type": "string",
+            "enum": [
+              "portrait",
+              "landscape",
+              "landscapeRight",
+              "landscapeLeft"
+            ],
+            "description": "Screen orientation for set."
+          },
+          "resolution": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Custom resolution [width, height] for set."
+          },
+          "filter": {
+            "type": "string",
+            "description": "Only device ids containing this text (list)."
+          },
+          "detail": {
+            "type": "boolean",
+            "description": "Include each device name and resolution (list)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
         ],
         "additionalProperties": false
       }

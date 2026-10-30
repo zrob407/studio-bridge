@@ -2,6 +2,8 @@ local root = resolve(params.path)
 local StarterGui = game:GetService("StarterGui")
 local minTouch = params.minTouch or 44
 local minText = params.minText or 10
+local emulator = params.emulator == true
+local simulator = if emulator then game:GetService("StudioDeviceSimulatorService") else nil
 local TOPBAR = 36
 local EXAMPLES = 4
 
@@ -15,23 +17,56 @@ local PRESETS = {
 	desktop = {1920, 1080, false},
 }
 
+local TOUCH_FRAGMENTS = {"iphone", "ipad", "samsung", "xiaomi", "amazon_fire", "handheld"}
+
 if not root:IsA("GuiBase2d") then
 	error(pathOf(root) .. " is not a GUI object or container")
 end
 
+local function touchByName(id)
+	local lowered = string.lower(id)
+
+	for _, fragment in ipairs(TOUCH_FRAGMENTS) do
+		if string.find(lowered, fragment, 1, true) then
+			return true
+		end
+	end
+
+	return false
+end
+
 local devices = {}
 
-for _, entry in ipairs(params.devices or {"phone", "tablet", "desktop"}) do
-	if type(entry) == "string" then
-		local preset = PRESETS[entry]
+if emulator then
+	if type(params.devices) ~= "table" or #params.devices == 0 then
+		error("emulator mode needs devices: a list of device ids (see device_emulator list)")
+	end
 
-		if not preset then
-			error("unknown device " .. entry .. "; use phone-small, phone, phone-landscape, tablet, tablet-landscape, laptop or desktop")
+	for _, entry in ipairs(params.devices) do
+		if type(entry) == "string" then
+			table.insert(devices, {name = entry, deviceId = entry, touch = touchByName(entry)})
+		else
+			table.insert(devices, {
+				name = entry.id,
+				deviceId = entry.id,
+				orientation = entry.orientation,
+				touch = if entry.touch ~= nil then entry.touch else touchByName(entry.id),
+			})
 		end
+	end
+else
+	for _, entry in ipairs(params.devices or {"phone", "tablet", "desktop"}) do
+		if type(entry) == "string" then
+			local preset = PRESETS[entry]
 
-		table.insert(devices, {name = entry, width = preset[1], height = preset[2], touch = preset[3]})
-	else
-		table.insert(devices, {name = entry.name or (entry.width .. "x" .. entry.height), width = entry.width, height = entry.height, touch = entry.touch == true})
+			if not preset then
+				error("unknown device " .. entry .. "; use phone-small, phone, phone-landscape, tablet, tablet-landscape, laptop or desktop")
+			end
+
+			table.insert(devices, {name = entry, width = preset[1], height = preset[2], touch = preset[3]})
+		else
+			table.insert(devices, {name = entry.name or (entry.width .. "x" .. entry.height), width = entry.width, height = entry.height, touch = entry.touch == true})
+		end
 	end
 end
 
@@ -63,6 +98,13 @@ local frame = Instance.new("Frame")
 frame.BackgroundTransparency = 1
 frame.BorderSizePixel = 0
 frame.Parent = probe
+
+local ORIENTATIONS = {
+	portrait = Enum.ScreenOrientation.Portrait,
+	landscape = Enum.ScreenOrientation.LandscapeRight,
+	landscaperight = Enum.ScreenOrientation.LandscapeRight,
+	landscapeleft = Enum.ScreenOrientation.LandscapeLeft,
+}
 
 local function relativeName(item)
 	local names = {}
@@ -109,6 +151,25 @@ local function hasText(item)
 end
 
 local function checkDevice(device)
+	if emulator then
+		simulator:SetDeviceAsync(device.deviceId)
+
+		if device.orientation then
+			local orientation = ORIENTATIONS[string.lower(device.orientation)]
+
+			if not orientation then
+				error("orientation must be portrait, landscape, landscapeRight or landscapeLeft")
+			end
+
+			simulator:SetOrientationAsync(orientation)
+		end
+
+		task.wait(0.5)
+
+		device.width = math.floor(probe.AbsoluteSize.X + 0.5)
+		device.height = math.floor(probe.AbsoluteSize.Y + 0.5)
+	end
+
 	for _, child in ipairs(frame:GetChildren()) do
 		child:Destroy()
 	end
@@ -174,6 +235,8 @@ local LABELS = {
 }
 
 local lines = {}
+local originalDevice = if emulator then simulator:GetDeviceAsync() else nil
+local originalOrientation = if emulator and originalDevice ~= "default" then simulator:GetOrientationAsync() else nil
 
 local ran, problem = pcall(function()
 	for _, device in ipairs(devices) do
@@ -203,6 +266,17 @@ local ran, problem = pcall(function()
 end)
 
 probe:Destroy()
+
+if emulator then
+	pcall(function()
+		if originalDevice == "default" then
+			simulator:StopSimulationAsync()
+		else
+			simulator:SetDeviceAsync(originalDevice)
+			simulator:SetOrientationAsync(originalOrientation)
+		end
+	end)
+end
 
 if not ran then
 	error(tostring(problem))
