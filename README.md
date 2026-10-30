@@ -4,13 +4,38 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 
 Studio Bridge speaks standard MCP, so it is not tied to one assistant. It is used and tested with Claude Code. Setup for OpenAI's Codex CLI is included (see Install), but it has not yet been tried with Codex itself.
 
+## Quick start
+
+```
+npm install -g @zrob407/studio-bridge
+studio-bridge install
+```
+
+Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested).
+
+## What you can ask for
+
+- "Find every script that uses DataStore and list the risky ones."
+- "Build a main menu with Play and Settings buttons and show me a screenshot."
+- "Run a playtest, click Play, and tell me what errors show up in the output."
+- "Rename these 40 parts, fix the tween in ShopController, and publish the animations to my group."
+
+Studio Bridge exposes about forty tools: scripts, instances, UI building, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
+
+## Why Studio Bridge
+
+- **It does not time out and force a Studio restart.** Every command has a deadline and can be cancelled, results survive a reconnect, and the plugin reloads itself when it changes.
+- **Fewer calls and tokens.** `batch` runs up to 50 edits in one call, and the server instructions are a few hundred characters.
+- **It is easy to trust.** It listens only on `127.0.0.1`, needs a secret on every request, verifies the plugin's signature, collects no telemetry, and ships with build provenance.
+- **Free for commercial games.** See License.
+
 ## Install
 
 Windows, Roblox Studio and Claude Code are required.
 
 **With npm (recommended).** Needs Node 22 or newer: `npm install -g @zrob407/studio-bridge`, then `studio-bridge install`. It runs on Node, which is signed by the OpenJS Foundation, so Windows protections such as Smart App Control do not block it the way they can block an unsigned exe. Data lives in `%LOCALAPPDATA%\StudioBridge` like the exe's, and `studio-bridge update` upgrades it through npm. The package is published on npm with build provenance, which `npm audit signatures` can verify.
 
-**With the exe (no Node needed).** The exe is not code-signed, so Windows may warn about or block it (see Verifying a download); use npm or the source if that happens. Download `studio-bridge-<version>.exe` from the releases page and double-click it, or run `studio-bridge.exe install` in a terminal. It copies itself to `%LOCALAPPDATA%StudioBridge`, creates a secret token, writes the Studio plugin, and registers itself with Claude Code (`claude mcp add --scope user`). Then restart Claude Code and Roblox Studio. If Studio asks, allow HTTP requests and Script Injection for "Studio Bridge".
+**With the exe (no Node needed).** The exe is not code-signed, so Windows may warn about or block it (see Verifying a download); use npm or the source if that happens. Download `studio-bridge-<version>.exe` from the releases page and double-click it, or run `studio-bridge.exe install` in a terminal. It copies itself to `%LOCALAPPDATA%\StudioBridge`, creates a secret token, writes the Studio plugin, and registers itself with Claude Code (`claude mcp add --scope user`). Then restart Claude Code and Roblox Studio. If Studio asks, allow HTTP requests and Script Injection for "Studio Bridge".
 
 If an earlier source install is registered with Claude Code (`node server.mjs`), the installer finds it, switches the registration to the exe, reuses its token (so an open Studio window keeps working) and copies over `uploads.json` and `asset-owners.json` if the new location has none. It never overwrites existing files and leaves the old folder alone; `--migrate-from <folder>` does the same for a folder you point it at. Old plugin files such as `ClaudeStudioBridge.rbxmx` are removed so only one copy loads.
 
@@ -32,9 +57,9 @@ Only one bridge runs at a time, because it owns port 3010 and the Studio plugin 
 
 Other commands: `update` downloads the latest release, checks it against the release's `SHA256SUMS.txt` and installs it over the old one (`update --check` only reports), `doctor` checks the installation and mentions when an update is available (`--offline` skips that), `uninstall` removes the plugin and the registration (`--purge` also deletes the data folder), `version` prints the version. `install --no-register` leaves the Claude Code configuration alone and prints the command to run yourself; `install --standalone` writes the full plugin instead of the self-updating loader.
 
-To change a tool without rebuilding the exe, put a replacement file under `%LOCALAPPDATA%StudioBridgeoverrides` using the same relative path (for example `handlersscript_get.luau` or `tools.json`); it wins over the embedded copy.
+To change a tool without rebuilding the exe, put a replacement file under `%LOCALAPPDATA%\StudioBridge\overrides` using the same relative path (for example `handlers\script_get.luau` or `tools.json`); it wins over the embedded copy.
 
-To build the exe yourself: `npm ci` then `npm run build` (Windows, Node 24). The result is `diststudio-bridge.exe`.
+To build the exe yourself: `npm ci` then `npm run build` (Windows, Node 24). The result is `dist\studio-bridge.exe`.
 
 ## Updates
 

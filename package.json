@@ -1,7 +1,7 @@
 {
   "name": "@zrob407/studio-bridge",
   "version": "0.3.3",
-  "description": "MCP server and Roblox Studio plugin that let an AI assistant work inside Studio",
+  "description": "MCP server and Roblox Studio plugin that let Claude Code, Codex and other AI assistants read and edit a place, run Luau, drive playtests and take screenshots",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
   "bin": {
@@ -28,12 +28,16 @@
   ],
   "keywords": [
     "mcp",
+    "mcp-server",
     "model-context-protocol",
     "roblox",
     "roblox-studio",
     "luau",
     "claude",
-    "codex"
+    "claude-code",
+    "codex",
+    "ai",
+    "gamedev"
   ],
   "homepage": "https://github.com/zrob407/studio-bridge#readme",
   "bugs": {

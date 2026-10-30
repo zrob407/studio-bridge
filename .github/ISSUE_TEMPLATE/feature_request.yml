@@ -1,0 +1,14 @@
+name: Feature request
+description: Suggest a tool or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: want
+    attributes:
+      label: What do you want the assistant to be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What do you do today instead?
