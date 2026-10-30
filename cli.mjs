@@ -392,7 +392,7 @@ async function doctor(args) {
     }
   }
   const preferences = loadSettings();
-  note('info', `update check: ${preferences.checkUpdates ? 'on' : 'off'}, auto-update: ${preferences.autoUpdate ? 'on' : 'off'}`);
+  note('info', `update check: ${preferences.checkUpdates ? 'on' : 'off'}, auto-update: ${preferences.autoUpdate ? 'on' : 'off'}, tools: ${process.env.STUDIO_BRIDGE_TOOLS || preferences.toolProfile}`);
   if (!args.includes('--offline') && !process.env.STUDIO_BRIDGE_OFFLINE) {
     const [state, text] = await updateNotice();
     note(state, text);
@@ -445,12 +445,39 @@ async function updateNotice() {
   }
 }
 
+function toolGroups() {
+  try {
+    return JSON.parse(readAsset('tools.json')).groups || {};
+  } catch {
+    return {};
+  }
+}
+
 function settingsCommand(args) {
   const names = { 'check-updates': 'checkUpdates', 'auto-update': 'autoUpdate' };
   const [key, value] = args;
+  if (key === 'tools') {
+    const groups = toolGroups();
+    const known = Object.keys(groups);
+    if (value === undefined) {
+      const current = loadSettings();
+      console.log(`tools          ${current.toolProfile}  (which tool groups are offered: all, or core plus any of ${known.filter((group) => group !== 'core').join(', ')})`);
+      for (const group of known) console.log(`  ${group.padEnd(11)} ${groups[group].length} tools`);
+      return 0;
+    }
+    const wanted = value.split(',').map((entry) => entry.trim().toLowerCase()).filter(Boolean);
+    const unknown = wanted.filter((entry) => entry !== 'all' && !known.includes(entry));
+    if (wanted.length === 0 || unknown.length > 0) {
+      console.log(`Unknown tool group${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ') || value}. Use all, core, or a comma-separated list of: ${known.filter((group) => group !== 'core').join(', ')}`);
+      return 1;
+    }
+    saveSettings({ toolProfile: wanted.join(',') });
+    console.log(`Tool profile set to ${wanted.join(',')}. A running bridge picks it up within a second or two; your AI client may need /mcp to refresh its tool list.`);
+    return 0;
+  }
   if (key) {
     if (!names[key] || !['on', 'off'].includes(value)) {
-      console.log('Usage: studio-bridge settings [check-updates|auto-update on|off]');
+      console.log('Usage: studio-bridge settings [check-updates|auto-update on|off] | settings tools [all|group,group]');
       return 1;
     }
     const changes = { [names[key]]: value === 'on' };
@@ -460,6 +487,7 @@ function settingsCommand(args) {
   const current = loadSettings();
   console.log(`check-updates  ${current.checkUpdates ? 'on' : 'off'}  (look for a newer release once a day when the bridge starts)`);
   console.log(`auto-update    ${current.autoUpdate ? 'on' : 'off'}  (download, verify and install new releases yourself; applies at the next restart)`);
+  console.log(`tools          ${current.toolProfile}  (settings tools lists the groups)`);
   return 0;
 }
 
@@ -481,6 +509,7 @@ Usage: studio-bridge <command>
   doctor                 Check the installation (--offline skips the update check)
   update [--check]       Download and install the latest release (--check only reports)
   settings [name on|off] Show or change check-updates and auto-update
+  settings tools [list]  Choose which tool groups are offered (all, or core plus building,ui,...)
   version                Print the version`);
 }
 

@@ -574,6 +574,7 @@ let allTools = [];
 let toolMeta = {};
 let handlerToolNames = new Set();
 let BATCHABLE = [];
+let toolGroups = {};
 
 function loadTools() {
   const data = JSON.parse(TOOLS_OVERRIDE ? fs.readFileSync(TOOLS_OVERRIDE, 'utf8') : readAsset('tools.json'));
@@ -590,6 +591,54 @@ function loadTools() {
   toolMeta = meta;
   handlerToolNames = handlers;
   BATCHABLE = batchable;
+  toolGroups = data.groups && typeof data.groups === 'object' ? data.groups : {};
+}
+
+function profileText() {
+  return String(process.env.STUDIO_BRIDGE_TOOLS || loadSettings().toolProfile || 'all').trim();
+}
+
+function visibleTools() {
+  const wanted = profileText()
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  if (wanted.length === 0 || wanted.includes('all')) return null;
+  const visible = new Set(toolGroups.core || []);
+  for (const group of wanted) {
+    if (group === 'core') continue;
+    if (!toolGroups[group]) {
+      log(`[studio-bridge] unknown tool group "${group}" ignored; groups are ${Object.keys(toolGroups).join(', ')}`);
+      continue;
+    }
+    for (const name of toolGroups[group]) visible.add(name);
+  }
+  return visible;
+}
+
+function isVisible(name) {
+  const visible = visibleTools();
+  return visible === null || visible.has(name);
+}
+
+function listedTools() {
+  const visible = visibleTools();
+  if (visible === null) return allTools;
+  return allTools
+    .filter((tool) => visible.has(tool.name))
+    .map((tool) => {
+      if (tool.name !== 'batch') return tool;
+      const copy = structuredClone(tool);
+      const items = copy.inputSchema.properties.operations.items.properties.tool;
+      items.enum = items.enum.filter((name) => visible.has(name));
+      return copy;
+    });
+}
+
+function hiddenToolMessage(name) {
+  const group = Object.keys(toolGroups).find((entry) => toolGroups[entry].includes(name));
+  const current = profileText();
+  return `The ${name} tool is not enabled in the current tool profile (${current}). It belongs to the "${group}" group. Enable it with: studio-bridge settings tools ${current === 'core' ? group : `${current},${group}`}`;
 }
 
 loadTools();
@@ -618,6 +667,24 @@ function watchTools() {
   }
 }
 watchTools();
+
+let lastProfile = profileText();
+let profileTimer = null;
+try {
+  fs.watch(appDir, (event, filename) => {
+    if (filename !== 'settings.json') return;
+    clearTimeout(profileTimer);
+    profileTimer = setTimeout(() => {
+      const next = profileText();
+      if (next === lastProfile) return;
+      lastProfile = next;
+      send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+      log(`[studio-bridge] tool profile is now ${next}`);
+    }, 300);
+  });
+} catch (err) {
+  log('[studio-bridge] cannot watch settings.json: ' + err.message);
+}
 
 const HANDLER_INCLUDES = {
   script_scan: ['_scan'],
@@ -724,8 +791,8 @@ async function runBatch(args) {
   if (!Array.isArray(operations) || operations.length === 0) return textResult('operations must be a non-empty array.', true);
   if (operations.length > MAX_BATCH_OPERATIONS) return textResult(`At most ${MAX_BATCH_OPERATIONS} operations per batch.`, true);
   for (const [index, operation] of operations.entries()) {
-    if (!operation || typeof operation.tool !== 'string' || !BATCHABLE.includes(operation.tool)) {
-      return textResult(`Operation ${index + 1}: "${operation && operation.tool}" cannot be batched. Allowed: ${BATCHABLE.join(', ')}.`, true);
+    if (!operation || typeof operation.tool !== 'string' || !BATCHABLE.includes(operation.tool) || !isVisible(operation.tool)) {
+      return textResult(`Operation ${index + 1}: "${operation && operation.tool}" cannot be batched. Allowed: ${BATCHABLE.filter(isVisible).join(', ')}.`, true);
     }
     if (operation.args !== undefined && (operation.args === null || typeof operation.args !== 'object' || Array.isArray(operation.args))) {
       return textResult(`Operation ${index + 1}: args must be an object.`, true);
@@ -1070,6 +1137,7 @@ async function viewportScreenshot(args) {
 }
 
 async function callTool(name, args) {
+  if (allTools.some((tool) => tool.name === name) && !isVisible(name)) return textResult(hiddenToolMessage(name), true);
   if (name === 'studio_list') {
     const active = activeStudios();
     const listing = active.length ? active.map(describeStudio).join('\n') : 'No Studio window is connected.';
@@ -1151,7 +1219,7 @@ async function handle(message) {
       });
     }
     if (method === 'ping' && isRequest) return send({ jsonrpc: '2.0', id, result: {} });
-    if (method === 'tools/list') return send({ jsonrpc: '2.0', id, result: { tools: allTools } });
+    if (method === 'tools/list') return send({ jsonrpc: '2.0', id, result: { tools: listedTools() } });
     if (method === 'tools/call') {
       if (!checkLicense().ok) return send({ jsonrpc: '2.0', id, result: { content: [{ type: 'text', text: TAMPER_MESSAGE }], isError: true } });
       const result = await callTool(params?.name, params?.arguments || {});
