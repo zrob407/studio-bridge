@@ -129,6 +129,10 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 - Auditing: `asset_audit` (every asset id a place references, plus who owns each; open the .rbxl in Studio first, then it reports yours, Roblox, Studio template, other owners and unavailable; keyless lookups, cached, resumable)
 - Bulk publishing: `asset_publish_instances` (export many instances from Studio and upload them, named "{name} {rig}"), `asset_upload_batch` (many local files), `asset_batch_status` (finish checking a results file). Results go to a JSON file in `exports\`; identical files are reused for 24 hours so a rerun resumes instead of duplicating.
 
+## Tool groups
+
+All seventy-nine tools are offered by default. Their definitions cost roughly 23,000 tokens of context in a client that loads every tool at once, so you can offer fewer: `studio-bridge settings tools core` keeps just the 28 everyday tools (about 5,700 tokens), and a list adds groups to it, for example `studio-bridge settings tools building,ui`. The groups are `core` (always on: scripts, instances, selection, screenshots, camera, playtest start and stop, logs, batch and the docs), `building` (terrain, lighting, scatter, spatial tools, effects, tweens, collision groups, bulk editing, asset search and insert, generation), `ui` (building, scaling and checking GUIs, the device emulator), `playtest` (keyboard, mouse and character control), `media` (animation and audio), `publishing` (uploads, audits, exports) and `analysis` (script, physics and audio checks). `studio-bridge settings tools all` turns everything back on, and the `STUDIO_BRIDGE_TOOLS` environment variable overrides the setting. A running bridge picks the change up within a second or two; your AI client may need `/mcp` to refresh its list. A tool outside the chosen groups is not listed, cannot be batched, and says which group to enable if it is called anyway.
+
 ## Open Cloud key
 
 Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets): `Set-Content "$env:USERPROFILE\.roblox-key.txt" -Value 'YOUR_KEY' -NoNewline`. The key needs Assets read and write for the target creator. Revoke it when you are done. Uploads always need an explicit `creator_type` and `creator_id`.
@@ -142,7 +146,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the fifteen suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the sixteen suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 

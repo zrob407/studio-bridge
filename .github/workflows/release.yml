@@ -61,6 +61,7 @@ jobs:
           node test/takeover.test.mjs dist/studio-bridge.exe
           node test/marketplace.test.mjs dist/studio-bridge.exe
           node test/docs.test.mjs dist/studio-bridge.exe
+          node test/profiles.test.mjs dist/studio-bridge.exe
 
       - name: Package
         shell: bash

@@ -31,7 +31,7 @@
         "properties": {
           "studio": {
             "type": "string",
-            "description": "Place name fragment (or other selector) to choose the Studio window."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "max_width": {
             "type": "number",
@@ -115,7 +115,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window (the edit window by default)."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "root": {
             "type": "string",
@@ -165,7 +165,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window (the edit window by default)."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -327,7 +327,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window (the edit window by default)."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -374,7 +374,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "timeout_seconds": {
             "type": "number",
@@ -411,7 +411,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -436,7 +436,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -494,7 +494,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -536,7 +536,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -561,7 +561,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -611,7 +611,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -642,7 +642,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -674,7 +674,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -733,7 +733,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -785,7 +785,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -825,7 +825,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -863,7 +863,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -911,7 +911,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -930,7 +930,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -952,7 +952,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -980,7 +980,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1005,7 +1005,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1035,7 +1035,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1063,7 +1063,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1097,7 +1097,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1124,7 +1124,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1159,7 +1159,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1182,7 +1182,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1221,7 +1221,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1242,7 +1242,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1264,7 +1264,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1292,7 +1292,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1326,7 +1326,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1368,7 +1368,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "timeout_seconds": {
             "type": "number",
@@ -1425,7 +1425,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1542,7 +1542,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -1618,7 +1618,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1708,7 +1708,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -1827,7 +1827,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "from": {
             "type": "string",
@@ -1907,7 +1907,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "sky": {
             "type": "object",
@@ -1980,7 +1980,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2006,7 +2006,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -2029,7 +2029,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -2052,7 +2052,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2161,7 +2161,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2247,7 +2247,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2284,7 +2284,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2333,7 +2333,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2437,7 +2437,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "seconds": {
             "type": "number",
@@ -2503,7 +2503,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "designSize": {
             "type": "array",
@@ -2586,7 +2586,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           },
           "emulator": {
             "type": "boolean",
@@ -2648,7 +2648,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2764,7 +2764,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2859,7 +2859,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2925,7 +2925,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -2989,7 +2989,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -3059,7 +3059,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3115,7 +3115,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3164,7 +3164,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3208,7 +3208,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3254,7 +3254,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3349,7 +3349,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3418,7 +3418,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -3456,7 +3456,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3528,7 +3528,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3569,7 +3569,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3607,7 +3607,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3661,7 +3661,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3748,7 +3748,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3799,7 +3799,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3877,7 +3877,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [
@@ -3922,7 +3922,7 @@
           },
           "studio": {
             "type": "string",
-            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+            "description": "Studio window: id prefix, placeId, name fragment or role."
           }
         },
         "required": [],
@@ -3930,6 +3930,101 @@
       }
     }
   ],
+  "groups": {
+    "core": [
+      "studio_list",
+      "bridge_update",
+      "run_luau",
+      "batch",
+      "instance_find",
+      "instance_children",
+      "instance_get",
+      "instance_set",
+      "instance_create",
+      "instance_delete",
+      "instance_move",
+      "instance_clone",
+      "script_get",
+      "script_set",
+      "script_edit",
+      "script_search",
+      "script_validate",
+      "selection_get",
+      "selection_set",
+      "logs_get",
+      "screenshot",
+      "viewport_screenshot",
+      "camera_set",
+      "camera_frame",
+      "play_start",
+      "play_stop",
+      "run_test",
+      "roblox_docs"
+    ],
+    "building": [
+      "terrain",
+      "environment",
+      "scatter",
+      "spatial_find",
+      "spatial_check",
+      "spatial_map",
+      "snap_grid",
+      "raycast",
+      "spatial_query",
+      "effects",
+      "physics_groups",
+      "tween_play",
+      "instance_duplicate",
+      "instance_rename",
+      "instance_pivot",
+      "instance_bulk",
+      "instance_info",
+      "tag_manage",
+      "asset_search",
+      "asset_insert",
+      "generate_model",
+      "import_rbxm"
+    ],
+    "ui": [
+      "ui_build",
+      "ui_check",
+      "ui_autoscale",
+      "ui_responsive_check",
+      "device_emulator",
+      "gui_snapshot",
+      "gui_click"
+    ],
+    "playtest": [
+      "input_keyboard",
+      "input_mouse",
+      "character_move"
+    ],
+    "media": [
+      "animation_inspect",
+      "animation_create",
+      "animation_edit",
+      "animation_pose",
+      "animation_play",
+      "animation_ids",
+      "audio_manage",
+      "audio_report"
+    ],
+    "publishing": [
+      "asset_upload",
+      "asset_upload_batch",
+      "asset_batch_status",
+      "asset_status",
+      "asset_key_check",
+      "asset_audit",
+      "asset_publish_instances",
+      "export_rbxm"
+    ],
+    "analysis": [
+      "script_scan",
+      "script_dependencies",
+      "physics_report"
+    ]
+  },
   "meta": {
     "import_rbxm": {
       "batchable": false
