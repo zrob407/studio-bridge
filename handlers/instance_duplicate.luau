@@ -22,6 +22,7 @@ local function place(instance, frame)
 end
 
 local base = frameOf(source)
+local escapedName = (string.gsub(source.Name, "%%", "%%%%"))
 local frames = {}
 
 if mode == "array" then
@@ -86,7 +87,7 @@ for index, frame in ipairs(frames) do
 		error(pathOf(source) .. " cannot be cloned")
 	end
 
-	copy.Name = string.gsub(string.gsub(pattern, "{name}", source.Name), "{n}", tostring(index))
+	copy.Name = (string.gsub((string.gsub(pattern, "{name}", escapedName)), "{n}", tostring(index)))
 	copy.Parent = parent
 	place(copy, frame)
 	table.insert(created, pathOf(copy))

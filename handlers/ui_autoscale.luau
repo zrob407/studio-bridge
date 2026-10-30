@@ -95,16 +95,33 @@ for _, descendant in ipairs(root:GetDescendants()) do
 	end
 end
 
+local function relativeBasis(item, basis)
+	if item.SizeConstraint == Enum.SizeConstraint.RelativeXX then
+		return Vector2.new(basis.X, basis.X)
+	elseif item.SizeConstraint == Enum.SizeConstraint.RelativeYY then
+		return Vector2.new(basis.Y, basis.Y)
+	end
+
+	return basis
+end
+
 local snapshot = {}
 
 for _, item in ipairs(items) do
 	local parent = item.Parent
-
-	snapshot[item] = {
+	local entry = {
 		size = item.AbsoluteSize,
 		position = item.AbsolutePosition,
 		parent = if parent and parent:IsA("GuiBase2d") then measureParent(parent) else nil,
 	}
+
+	if designSize and parent and parent:IsA("ScreenGui") then
+		local relative = relativeBasis(item, entry.parent.basis)
+
+		entry.designed = Vector2.new(item.Size.X.Scale * relative.X + item.Size.X.Offset, item.Size.Y.Scale * relative.Y + item.Size.Y.Offset)
+	end
+
+	snapshot[item] = entry
 end
 
 local topLevel = {}
@@ -129,16 +146,6 @@ local function note(line)
 	end
 end
 
-local function relativeBasis(item, basis)
-	if item.SizeConstraint == Enum.SizeConstraint.RelativeXX then
-		return Vector2.new(basis.X, basis.X)
-	elseif item.SizeConstraint == Enum.SizeConstraint.RelativeYY then
-		return Vector2.new(basis.Y, basis.Y)
-	end
-
-	return basis
-end
-
 for _, item in ipairs(items) do
 	local info = snapshot[item]
 	local parent = info.parent
@@ -158,7 +165,13 @@ for _, item in ipairs(items) do
 				skipped.gridSized += 1
 			else
 				local relative = relativeBasis(item, parent.basis)
-				local after = UDim2.new(round(info.size.X / relative.X), 0, round(info.size.Y / relative.Y), 0)
+				local after
+
+				if info.designed then
+					after = UDim2.new(round(before.X.Scale + before.X.Offset / relative.X), 0, round(before.Y.Scale + before.Y.Offset / relative.Y), 0)
+				else
+					after = UDim2.new(round(info.size.X / relative.X), 0, round(info.size.Y / relative.Y), 0)
+				end
 
 				counts.size += 1
 				note(pathOf(item) .. " size " .. describeUDim2(before) .. " -> " .. describeUDim2(after))
@@ -179,9 +192,16 @@ for _, item in ipairs(items) do
 			elseif parent.layout then
 				skipped.layoutPlaced += 1
 			else
-				local anchor = item.AnchorPoint
-				local offset = info.position - parent.origin + Vector2.new(anchor.X * info.size.X, anchor.Y * info.size.Y)
-				local after = UDim2.new(round(offset.X / parent.basis.X), 0, round(offset.Y / parent.basis.Y), 0)
+				local after
+
+				if info.designed then
+					after = UDim2.new(round(placed.X.Scale + placed.X.Offset / parent.basis.X), 0, round(placed.Y.Scale + placed.Y.Offset / parent.basis.Y), 0)
+				else
+					local anchor = item.AnchorPoint
+					local offset = info.position - parent.origin + Vector2.new(anchor.X * info.size.X, anchor.Y * info.size.Y)
+
+					after = UDim2.new(round(offset.X / parent.basis.X), 0, round(offset.Y / parent.basis.Y), 0)
+				end
 
 				counts.position += 1
 				note(pathOf(item) .. " position " .. describeUDim2(placed) .. " -> " .. describeUDim2(after))
@@ -221,26 +241,28 @@ for _, item in ipairs(items) do
 		end
 	end
 
-	if topLevel[item] and aspectMode ~= "none" and not item:FindFirstChildOfClass("UIAspectRatioConstraint") and info.size.X > 0 and info.size.Y > 0 and info.parent then
-		local share = Vector2.new(info.size.X / info.parent.basis.X, info.size.Y / info.parent.basis.Y)
+	local shape = info.designed or info.size
+
+	if topLevel[item] and aspectMode ~= "none" and not item:FindFirstChildOfClass("UIAspectRatioConstraint") and shape.X > 0 and shape.Y > 0 and info.parent then
+		local share = Vector2.new(shape.X / info.parent.basis.X, shape.Y / info.parent.basis.Y)
 
 		if aspectMode == "all" or (share.X < 0.9 and share.Y < 0.9) then
 			counts.aspect += 1
 
 			if not dryRun then
 				local constraint = Instance.new("UIAspectRatioConstraint")
-				constraint.AspectRatio = info.size.X / info.size.Y
+				constraint.AspectRatio = shape.X / shape.Y
 				constraint.Parent = item
 			end
 		end
 	end
 
-	if topLevel[item] and limitSize and not item:FindFirstChildOfClass("UISizeConstraint") and info.size.X > 0 and info.size.Y > 0 then
+	if topLevel[item] and limitSize and not item:FindFirstChildOfClass("UISizeConstraint") and shape.X > 0 and shape.Y > 0 then
 		counts.limit += 1
 
 		if not dryRun then
 			local constraint = Instance.new("UISizeConstraint")
-			constraint.MaxSize = info.size
+			constraint.MaxSize = shape
 			constraint.Parent = item
 		end
 	end
@@ -290,6 +312,10 @@ local lines = {
 		counts.limit
 	),
 }
+
+if designSize then
+	table.insert(lines, string.format("top-level panels were scaled against the %dx%d design size; items inside them were converted from the layout at the current viewport", designSize.X, designSize.Y))
+end
 
 local skippedParts = {}
 

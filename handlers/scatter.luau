@@ -97,7 +97,7 @@ while #placed < count and attempts < count * 12 do
 
 			if copy:IsA("Model") then
 				if scale ~= 1 then
-					copy:ScaleTo(scale)
+					copy:ScaleTo(copy:GetScale() * scale)
 				end
 
 				copy:PivotTo(rotation + result.Position)

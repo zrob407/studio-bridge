@@ -70,6 +70,10 @@ else
 	end
 end
 
+if emulator and #devices > 10 then
+	error("emulator mode checks at most 10 devices per call so it finishes before the command timeout; split the list")
+end
+
 local gui = if root:IsA("ScreenGui") then root else root:FindFirstAncestorOfClass("ScreenGui")
 local inset = if gui and not gui.IgnoreGuiInset then TOPBAR else 0
 local sources = {}
@@ -88,8 +92,18 @@ if #sources == 0 then
 	error(pathOf(root) .. " has nothing to check")
 end
 
+for _, leftover in ipairs(StarterGui:GetChildren()) do
+	if leftover.Name == "__ResponsiveProbe" then
+		leftover:Destroy()
+	end
+end
+
+local originalDevice = if emulator then simulator:GetDeviceAsync() else nil
+local originalOrientation = if emulator and originalDevice ~= "default" then simulator:GetOrientationAsync() else nil
+
 local probe = Instance.new("ScreenGui")
 probe.Name = "__ResponsiveProbe"
+probe.Archivable = false
 probe.IgnoreGuiInset = true
 probe.ResetOnSpawn = false
 probe.Parent = StarterGui
@@ -235,9 +249,6 @@ local LABELS = {
 }
 
 local lines = {}
-local originalDevice = if emulator then simulator:GetDeviceAsync() else nil
-local originalOrientation = if emulator and originalDevice ~= "default" then simulator:GetOrientationAsync() else nil
-
 local ran, problem = pcall(function()
 	for _, device in ipairs(devices) do
 		local found, total = checkDevice(device)

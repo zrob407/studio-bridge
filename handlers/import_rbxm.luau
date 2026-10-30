@@ -58,7 +58,7 @@ for _, instance in ipairs(imported) do
 	instance.Parent = container
 end
 
-local report = scanScripts(container, params.max_findings or 100)
+local report, counts = scanScripts(container, params.max_findings or 100)
 local names = {}
 
 for _, instance in ipairs(imported) do
@@ -71,7 +71,7 @@ if params.scan_only then
 	return string.format("file holds %d top-level instance(s): %s\n%s", #imported, table.concat(names, ", "), report)
 end
 
-if params.block_high ~= false and string.find(report, "%d+ high") and not string.find(report, " 0 high,") then
+if params.block_high ~= false and counts.high > 0 then
 	container:Destroy()
 
 	return string.format("NOT imported (high-risk code found; rerun with block_high false to force). Instances: %s\n%s", table.concat(names, ", "), report)
