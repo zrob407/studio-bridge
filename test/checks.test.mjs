@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const base = target ? [target] : [process.execPath, path.join(bridgeDir, 'cli.mjs')];
-const { LICENSE_SHA256, licenseHash } = await import(pathToFileURL(path.join(bridgeDir, 'license.mjs')).href);
+const { LICENSE_SHA256, licenseHash } = await import(pathToFileURL(path.join(bridgeDir, 'checks.mjs')).href);
 const realLicense = fs.readFileSync(path.join(bridgeDir, 'LICENSE'), 'utf8').replace(/\r\n/g, '\n');
 
 let failures = 0;

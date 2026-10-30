@@ -12,7 +12,7 @@ import { runAudit } from './audit.mjs';
 import { readDocs, searchDocs } from './docs.mjs';
 import { formatSearch, searchAssets } from './marketplace.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
-import { checkLicense, TAMPER_MESSAGE } from './license.mjs';
+import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
 
