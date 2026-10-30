@@ -1380,6 +1380,611 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "tag_manage",
+      "description": "CollectionService tags. list: every tag in use with its count. find: instances with a tag. get: the tags on instances. add / remove: change tags on instances.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "find",
+              "get",
+              "add",
+              "remove"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "One instance (get, add, remove)."
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several instances (get, add, remove)."
+          },
+          "tag": {
+            "type": "string",
+            "description": "One tag (find, add, remove)."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several tags (find, add, remove)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most results for find (default 200)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "raycast",
+      "description": "Cast one ray, or several with rays, through the place. Give an origin and either a target point or a direction (its length is the distance). Reports what was hit, where, the surface normal and the material.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Ray start [x, y, z]."
+          },
+          "target": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Point to cast toward."
+          },
+          "direction": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Direction and length [x, y, z]."
+          },
+          "maxDistance": {
+            "type": "number",
+            "description": "Rescale the ray to this length."
+          },
+          "rays": {
+            "type": "array",
+            "description": "Several rays, each with origin and target or direction (and optionally maxDistance), instead of the single-ray fields.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "origin": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Ray start."
+                },
+                "target": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Point to cast toward."
+                },
+                "direction": {
+                  "type": "array",
+                  "items": {
+                    "type": "number"
+                  },
+                  "minItems": 3,
+                  "maxItems": 3,
+                  "description": "Direction and length."
+                },
+                "maxDistance": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "origin"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to ignore."
+          },
+          "only": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Only hit these instances (and their descendants)."
+          },
+          "ignoreWater": {
+            "type": "boolean",
+            "description": "Pass through water (default true)."
+          },
+          "respectCanCollide": {
+            "type": "boolean",
+            "description": "Skip parts whose CanCollide is off (default false)."
+          },
+          "collisionGroup": {
+            "type": "string",
+            "description": "Collision group to cast as."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "spatial_query",
+      "description": "Find what is near a point or inside a box, nearest first, or measure the world bounds of an instance. mode radius: parts within radius of center. mode box: parts in a box at center with size and optional yaw degrees. mode bounds: center, size, min and max of path. group collapses parts into their outermost model.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "radius",
+              "box",
+              "bounds"
+            ]
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Search center [x, y, z] (radius, box)."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Search radius (radius)."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Box size [x, y, z] (box)."
+          },
+          "yaw": {
+            "type": "number",
+            "description": "Box rotation around Y in degrees (box)."
+          },
+          "path": {
+            "type": "string",
+            "description": "Instance to measure (bounds)."
+          },
+          "class": {
+            "type": "string",
+            "description": "Only things that are this class (IsA)."
+          },
+          "group": {
+            "type": "boolean",
+            "description": "Report the outermost model instead of each part."
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to ignore."
+          },
+          "includeTerrain": {
+            "type": "boolean",
+            "description": "Include Terrain in results (default false)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most results (default 50)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "scatter",
+      "description": "Scatter copies of a model or part across an area, dropped onto whatever ground is below, into a new folder. Handles slope alignment, random spin and scale, minimum spacing and a seed for repeatable results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "template": {
+            "type": "string",
+            "description": "Model or BasePart to copy."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Where the new folder goes (default Workspace)."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Area center [x, y, z]; rays start above this height."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Area [width, depth]."
+          },
+          "count": {
+            "type": "number",
+            "description": "Copies to place (1 to 2000, default 10)."
+          },
+          "seed": {
+            "type": "number",
+            "description": "Random seed."
+          },
+          "minSpacing": {
+            "type": "number",
+            "description": "Minimum distance between copies in studs."
+          },
+          "align": {
+            "type": "boolean",
+            "description": "Tilt to the ground normal (default true)."
+          },
+          "randomYaw": {
+            "type": "boolean",
+            "description": "Random spin around the up axis (default true)."
+          },
+          "scaleMin": {
+            "type": "number",
+            "description": "Smallest scale (default 1)."
+          },
+          "scaleMax": {
+            "type": "number",
+            "description": "Largest scale (default scaleMin)."
+          },
+          "offsetY": {
+            "type": "number",
+            "description": "Lift above the ground in studs."
+          },
+          "rayHeight": {
+            "type": "number",
+            "description": "How far above and below center to look for ground (default 200)."
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Extra instances to ignore when finding ground."
+          },
+          "groupName": {
+            "type": "string",
+            "description": "Name for the new folder."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "template",
+          "center",
+          "size"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "terrain",
+      "description": "Edit terrain. fill: a block, ball or cylinder of a material. clear: a region, or everything with all: true. read: which materials fill a region. generate: procedural noise terrain over an area with a biome (grassland, desert, snow, volcanic, tropical), height, optional water level and a seed; it overwrites the area.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "fill",
+              "clear",
+              "read",
+              "generate"
+            ]
+          },
+          "shape": {
+            "type": "string",
+            "enum": [
+              "block",
+              "ball",
+              "cylinder"
+            ],
+            "description": "Shape for fill (default block)."
+          },
+          "material": {
+            "type": "string",
+            "description": "Enum.Material name for fill, such as Grass, Sand, Rock, Water."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Center [x, y, z]."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "description": "Block or region size [x, y, z] for fill, clear and read; [width, depth] for generate."
+          },
+          "radius": {
+            "type": "number",
+            "description": "Radius for ball and cylinder."
+          },
+          "height": {
+            "type": "number",
+            "description": "Height for cylinder."
+          },
+          "rotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Rotation in degrees [x, y, z] for block and cylinder."
+          },
+          "all": {
+            "type": "boolean",
+            "description": "clear every voxel in the place."
+          },
+          "biome": {
+            "type": "string",
+            "enum": [
+              "grassland",
+              "desert",
+              "snow",
+              "volcanic",
+              "tropical"
+            ],
+            "description": "Material set for generate (default grassland)."
+          },
+          "amplitude": {
+            "type": "number",
+            "description": "Hill height in studs for generate (default 40)."
+          },
+          "scale": {
+            "type": "number",
+            "description": "Feature size in studs for generate (default 120)."
+          },
+          "octaves": {
+            "type": "number",
+            "description": "Noise detail layers 1 to 6 (default 4)."
+          },
+          "seed": {
+            "type": "number",
+            "description": "Noise seed for generate; reported back so it can be repeated."
+          },
+          "waterLevel": {
+            "type": "number",
+            "description": "Fill water up to this Y for generate."
+          },
+          "depth": {
+            "type": "number",
+            "description": "How far below center the ground goes for generate (default 16)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "environment",
+      "description": "Lighting and atmosphere. list: the presets (day, sunset, night, overcast, foggy, horror, space). get: current Lighting, Atmosphere, Bloom, ColorCorrection, SunRays and DepthOfField values. apply: a preset and/or per-section property overrides; missing effects are created.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "get",
+              "apply"
+            ]
+          },
+          "preset": {
+            "type": "string",
+            "description": "Preset name for apply."
+          },
+          "lighting": {
+            "type": "object",
+            "description": "Lighting properties to set, for example {\"ClockTime\": 17}."
+          },
+          "atmosphere": {
+            "type": "object",
+            "description": "Atmosphere properties to set."
+          },
+          "bloom": {
+            "type": "object",
+            "description": "BloomEffect properties to set."
+          },
+          "colorCorrection": {
+            "type": "object",
+            "description": "ColorCorrectionEffect properties to set."
+          },
+          "sunRays": {
+            "type": "object",
+            "description": "SunRaysEffect properties to set."
+          },
+          "depthOfField": {
+            "type": "object",
+            "description": "DepthOfFieldEffect properties to set."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "tween_play",
+      "description": "Preview a tween on an instance in the edit window. By default it waits for the tween to finish and then restores the original values, so it leaves the place unchanged; pass restore: false to keep the end state.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Instance to tween."
+          },
+          "properties": {
+            "type": "object",
+            "description": "Goal values by property name, for example {\"Position\": {\"Vector3\": [0, 10, 0]}}."
+          },
+          "duration": {
+            "type": "number",
+            "description": "Seconds (default 1)."
+          },
+          "easingStyle": {
+            "type": "string",
+            "description": "Enum.EasingStyle name (default Quad)."
+          },
+          "easingDirection": {
+            "type": "string",
+            "description": "In, Out or InOut (default Out)."
+          },
+          "repeatCount": {
+            "type": "number"
+          },
+          "reverses": {
+            "type": "boolean"
+          },
+          "delay": {
+            "type": "number"
+          },
+          "wait": {
+            "type": "boolean",
+            "description": "Wait for it to finish (default true)."
+          },
+          "restore": {
+            "type": "boolean",
+            "description": "Put the original values back afterwards (default true when waiting)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path",
+          "properties"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "physics_report",
+      "description": "Scan parts for physics problems: loose unanchored parts, parts below the void, oversized or tiny parts, invisible collidable parts and MeshParts without a mesh. Reports counts with sample paths.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "description": "Where to scan (default Workspace)."
+          },
+          "samples": {
+            "type": "number",
+            "description": "Sample paths per problem (default 8)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "audio_report",
+      "description": "Scan Sound instances: missing SoundId, volume 0 or above 5, sounds set to Playing, and SoundIds used more than once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "root": {
+            "type": "string",
+            "description": "Where to scan (default the whole place)."
+          },
+          "samples": {
+            "type": "number",
+            "description": "Sample paths per problem (default 8)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
     }
   ],
   "meta": {

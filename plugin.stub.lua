@@ -263,7 +263,7 @@ local function load(body)
 
 	current = nil
 
-	local ran, api = pcall(fn, {clientId = CLIENT_ID, version = body.version, clientBody = body.clientBody})
+	local ran, api = pcall(fn, {clientId = CLIENT_ID, version = body.version, clientBody = body.clientBody, plugin = plugin})
 
 	if not ran then
 		report("the plugin failed to start: " .. tostring(api))
