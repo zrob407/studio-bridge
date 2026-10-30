@@ -3615,6 +3615,319 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "input_keyboard",
+      "description": "Send keyboard input to a running playtest through the edit window, which Studio Bridge brings to the front first. steps run in order: press (a key down then up, with an optional hold in seconds), down, up, text (types a string), release_all and wait (seconds). Keys use Roblox key names such as W, Space, LeftShift, Return, One or Escape. Held keys are released if a step fails. A call can run for at most 50 seconds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "press",
+                    "down",
+                    "up",
+                    "text",
+                    "release_all",
+                    "wait"
+                  ],
+                  "description": "Default press."
+                },
+                "key": {
+                  "type": "string",
+                  "description": "Key name for press, down and up."
+                },
+                "hold": {
+                  "type": "number",
+                  "description": "press: seconds to hold the key (default 0.08)."
+                },
+                "text": {
+                  "type": "string",
+                  "description": "text: what to type."
+                },
+                "seconds": {
+                  "type": "number",
+                  "description": "wait: how long."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "input_mouse",
+      "description": "Send mouse input to a running playtest through the edit window, which Studio Bridge brings to the front first. Coordinates are pixels in the viewport. steps run in order: move, click, double_click, down, up (hold a button), drag (fromX, fromY to toX, toY over a duration), delta (relative movement; Roblox allows it only while the cursor is locked, such as first person or shift lock) and wait. To turn the camera otherwise, drag with the right button. To click a GUI element by path use gui_click. A held button is released if a step fails. A call can run for at most 50 seconds.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "move",
+                    "click",
+                    "double_click",
+                    "down",
+                    "up",
+                    "drag",
+                    "delta",
+                    "wait"
+                  ],
+                  "description": "Default click."
+                },
+                "x": {
+                  "type": "number"
+                },
+                "y": {
+                  "type": "number"
+                },
+                "button": {
+                  "type": "string",
+                  "enum": [
+                    "left",
+                    "right",
+                    "middle"
+                  ],
+                  "description": "Default left."
+                },
+                "fromX": {
+                  "type": "number",
+                  "description": "drag start."
+                },
+                "fromY": {
+                  "type": "number",
+                  "description": "drag start."
+                },
+                "toX": {
+                  "type": "number",
+                  "description": "drag end."
+                },
+                "toY": {
+                  "type": "number",
+                  "description": "drag end."
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "drag: seconds (default 0.4)."
+                },
+                "dx": {
+                  "type": "number",
+                  "description": "delta: horizontal movement."
+                },
+                "dy": {
+                  "type": "number",
+                  "description": "delta: vertical movement."
+                },
+                "seconds": {
+                  "type": "number",
+                  "description": "wait: how long."
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "steps"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "character_move",
+      "description": "Control the player's character in a running playtest (it runs in the client window). get: position, state, health and walk speed. move_to: walk to a position or to an instance, using pathfinding around obstacles and falling back to a straight walk, and report whether it arrived. jump. stop.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "move_to",
+              "jump",
+              "stop"
+            ]
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "move_to: where to walk [x, y, z]."
+          },
+          "path": {
+            "type": "string",
+            "description": "move_to: a model or part to walk to."
+          },
+          "pathfind": {
+            "type": "boolean",
+            "description": "move_to: route around obstacles (default true)."
+          },
+          "timeout": {
+            "type": "number",
+            "description": "move_to: give up after this many seconds (default 20, at most 45)."
+          },
+          "stopDistance": {
+            "type": "number",
+            "description": "move_to: how close counts as arrived (default 3 studs)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "generate_model",
+      "description": "Generate a 3D model from a text prompt (and optionally a reference image) with Roblox's own generation service in Studio, and place it in the place. schema Body1 makes a single mesh, Car5 a five-part vehicle chassis, or give groups for your own part names. It can take a minute or more; use timeout_seconds for longer. Generation is subject to Roblox's content rules and rate limits, and errors from the service are reported as they are.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "prompt": {
+            "type": "string",
+            "description": "What to generate."
+          },
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Body1",
+              "Car5"
+            ],
+            "description": "Default Body1."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Custom part names instead of a predefined schema."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Approximate size [x, y, z] in studs."
+          },
+          "maxTriangles": {
+            "type": "number",
+            "description": "Fewer triangles give a more low-poly look."
+          },
+          "textures": {
+            "type": "boolean",
+            "description": "Generate textures (default true)."
+          },
+          "imageAssetId": {
+            "type": "string",
+            "description": "A reference image, by asset id."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Where to put it (default Workspace)."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Place it at [x, y, z]."
+          },
+          "name": {
+            "type": "string",
+            "description": "Name for the result (default the start of the prompt)."
+          },
+          "timeout_seconds": {
+            "type": "number",
+            "description": "How long to wait, up to 300 (default 180)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "prompt"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "roblox_docs",
+      "description": "Roblox's official documentation from create.roblox.com. search: find pages and API reference entries for a question, with their paths. read: the markdown of a page by path (for example reference/engine/classes/Part, reference/engine/datatypes/RaycastParams or workspace/raycasting), returned in chunks you can page through with offset. Only create.roblox.com can be read.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "search",
+              "read"
+            ],
+            "description": "Default search."
+          },
+          "query": {
+            "type": "string",
+            "description": "search: what you want to know."
+          },
+          "limit": {
+            "type": "number",
+            "description": "search: most results (default 8, at most 25)."
+          },
+          "path": {
+            "type": "string",
+            "description": "read: the page path or a create.roblox.com URL."
+          },
+          "offset": {
+            "type": "number",
+            "description": "read: where to continue from."
+          },
+          "maxChars": {
+            "type": "number",
+            "description": "read: characters to return (default 12000, at most 40000)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
     }
   ],
   "meta": {
@@ -3644,6 +3957,19 @@
     "play_stop": {
       "batchable": false,
       "role": "server"
+    },
+    "input_keyboard": {
+      "batchable": false
+    },
+    "input_mouse": {
+      "batchable": false
+    },
+    "character_move": {
+      "batchable": false,
+      "role": "client"
+    },
+    "generate_model": {
+      "batchable": false
     }
   }
 }

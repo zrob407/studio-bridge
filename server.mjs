@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './assets.mjs';
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
+import { readDocs, searchDocs } from './docs.mjs';
 import { formatSearch, searchAssets } from './marketplace.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
 import { checkLicense, TAMPER_MESSAGE } from './license.mjs';
@@ -627,6 +628,7 @@ const HANDLER_INCLUDES = {
   terrain: ['_geometry'],
   instance_pivot: ['_geometry'],
   snap_grid: ['_geometry'],
+  character_move: ['_geometry'],
   spatial_find: ['_geometry', '_spatial'],
   spatial_check: ['_geometry', '_spatial'],
   spatial_map: ['_geometry', '_spatial'],
@@ -911,6 +913,29 @@ async function importRbxm(args) {
   return textResult(render(outcome.result, outcome.studio, true), !outcome.result.ok);
 }
 
+async function docsTool(args) {
+  try {
+    const text = args.mode === 'read' ? await readDocs(args) : await searchDocs(args);
+    return textResult(text, false);
+  } catch (err) {
+    return textResult('Documentation lookup failed: ' + err.message, true);
+  }
+}
+
+async function inputTool(name, args) {
+  const picked = pickStudio([args.studio ? String(args.studio) : '', 'edit'].filter(Boolean).join(' '));
+  if (picked.error) return textResult(picked.error, true);
+  await focusStudio(picked.studio.placeName);
+  let code;
+  try {
+    code = buildHandlerCode(name, args);
+  } catch (err) {
+    return textResult(err.message, true);
+  }
+  const result = await dispatch(picked.studio, code, DEFAULT_TIMEOUT_S);
+  return textResult(render(result, picked.studio, true), !result.ok);
+}
+
 async function assetSearchTool(args) {
   try {
     return textResult(formatSearch(await searchAssets(args)), false);
@@ -1074,6 +1099,8 @@ async function callTool(name, args) {
   if (name === 'asset_key_check') return keyCheck();
   if (name === 'asset_audit') return assetAudit(args);
   if (name === 'asset_search') return assetSearchTool(args);
+  if (name === 'roblox_docs') return docsTool(args);
+  if (name === 'input_keyboard' || name === 'input_mouse') return inputTool(name, args);
   if (name === 'import_rbxm') return importRbxm(args);
   if (name === 'asset_upload_batch') return uploadBatch(args);
   if (name === 'asset_batch_status') return batchStatus(args);
@@ -1095,7 +1122,8 @@ async function callTool(name, args) {
       return { content: [{ type: 'text', text: `Could not load handler ${name}: ${err.message}` }], isError: true };
     }
     const requestedTimeout = Number(args.timeout_seconds);
-    const handlerTimeout = name === 'run_test' ? Math.min(300, Number.isFinite(requestedTimeout) && requestedTimeout > 0 ? requestedTimeout : 60) + 60 : DEFAULT_TIMEOUT_S;
+    const longRun = { run_test: 60, generate_model: 180 }[name];
+    const handlerTimeout = longRun ? Math.min(300, Number.isFinite(requestedTimeout) && requestedTimeout > 0 ? requestedTimeout : longRun) + 60 : DEFAULT_TIMEOUT_S;
     const result = await dispatch(picked.studio, code, handlerTimeout, target);
     return { content: [{ type: 'text', text: render(result, picked.studio, true) }], isError: !result.ok };
   }
