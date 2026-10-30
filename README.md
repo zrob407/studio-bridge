@@ -1,4 +1,6 @@
-# studio-bridge
+<p align="center"><img src="https://raw.githubusercontent.com/zrob407/studio-bridge/main/assets/logo.png" width="128" alt="Studio Bridge logo"></p>
+
+# Studio Bridge
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. Free to use, including for commercial games, under the Studio Bridge License (source-available, see License below); no dependencies beyond Node 22.
 
@@ -13,21 +15,49 @@ studio-bridge install
 
 Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested).
 
+## Everyday time-savers
+
+These are the things that take the most clicking by hand and the least time with Studio Bridge.
+
+- **Publish assets in bulk.** `asset_publish_instances` exports many instances at once (for example every KeyframeSequence in a rig's AnimSaves folder) and uploads them all, named "{name} {rig}". `asset_upload_batch` uploads many files at once, skips anything already uploaded in the last 24 hours so an interrupted run resumes instead of duplicating, and writes the results to a file instead of flooding the chat. After re-uploading, `animation_ids` and `audio_manage` swap every old id in the place for the new one in a single call.
+- **Audit the whole place in seconds.** `asset_audit` lists every asset id the place references and who owns each, so you find the ones that will break or that you do not own. `script_scan` ranks risky code (require by id, loadstring, obfuscation, DataStore, teleports), `script_dependencies` finds unused modules and `require(assetId)` calls, and `physics_report` and `audio_report` catch loose parts, void parts, missing sounds and duplicates.
+- **Edit hundreds of things in one step.** `batch` runs up to 50 edits as one undo. `instance_bulk` sets, adjusts (add or multiply relative to the current value) or deletes across everything that matches a filter, with dry runs. `instance_rename`, `instance_duplicate` (rows, grids and circles of copies), `snap_grid` and `instance_pivot` replace a lot of dragging.
+- **Build a world quickly.** `terrain` generates hills with a biome, water level and seed, then smooths, fills and recolors; `environment` switches lighting between day, sunset, night, fog and more; `scatter` drops trees, rocks or props across the ground with spacing, slope alignment and random scale; `spatial_find` finds flat spots, free space and spawn points; `spatial_check` tells you whether something floats or overlaps, what it touches, and how much of an area a character can walk on.
+- **UI that fits every device.** `ui_build` makes a whole GUI from one description, `ui_autoscale` converts a pixel-based GUI to responsive Scale (respecting padding, anchors and layouts), and `ui_responsive_check` lays it out on real phones, tablets and consoles through Studio's device emulator and reports what runs off the screen, is too small to tap or has tiny text. `device_emulator` switches devices for screenshots.
+- **Playtest without touching the keyboard.** `character_move` walks the character to a spot with pathfinding, `input_keyboard` and `input_mouse` send real key and mouse input, `gui_click` presses buttons by path, and `run_test` and screenshots report what happened.
+- **Find and insert assets safely.** `asset_search` looks through the free Creator Store and `asset_insert` brings a model in after scanning it; scripts are removed unless you keep them, because free models can hide malicious code. `generate_model` makes a model from a text prompt using Roblox's own generation.
+- **Animation without the editor.** `animation_create` builds keyframes from a description, `animation_edit` retimes, reverses and adds markers, `animation_play` previews it on a rig while you screenshot, and `animation_pose` freezes any frame.
+- **Documentation at hand.** `roblox_docs` searches and reads the official Roblox documentation, so answers come from the current API reference.
+- **Keep the AI's context small.** `studio-bridge settings tools core` offers only the 28 everyday tools and adds groups on demand (see Tool groups).
+
 ## What you can ask for
 
+- "Export every animation in this rig's AnimSaves folder and publish them to my group."
 - "Find every script that uses DataStore and list the risky ones."
-- "Build a main menu with Play and Settings buttons and show me a screenshot."
-- "Run a playtest, click Play, and tell me what errors show up in the output."
-- "Rename these 40 parts, fix the tween in ShopController, and publish the animations to my group."
+- "List every asset this place uses that I do not own."
+- "Generate a rocky island with a beach, scatter palm trees on it, and switch the lighting to sunset."
+- "Build a main menu, make it responsive, and check it on an iPhone, an iPad and an Xbox."
+- "Run a playtest, walk the character to the shop door, click Buy and tell me what errors show up."
+- "Rename these 40 parts, space them out in a circle, and snap them to the grid."
 
-Studio Bridge exposes seventy-nine tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, animation authoring and posing, audio, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
+Studio Bridge exposes seventy-nine tools, listed under Tools below. Roblox's own Studio MCP server is a separate server, so you can register both (they have not been tested together). As of this writing it has 26 tools centered on scripts, search, playtesting and generation; Studio Bridge adds terrain, lighting, spatial tools, animation and audio editing, UI scaling and device checks, bulk editing and publishing, audits and more.
 
 ## Why Studio Bridge
 
 - **It does not time out and force a Studio restart.** Every command has a deadline and can be cancelled, results survive a reconnect, and the plugin reloads itself when it changes.
-- **Fewer calls and tokens.** `batch` runs up to 50 edits in one call, and the server instructions are a few hundred characters.
+- **Fewer calls and tokens.** `batch` runs up to 50 edits in one call, the server instructions are a few hundred characters, and tool groups keep the tool list small.
 - **It is easy to trust.** It listens only on `127.0.0.1`, needs a secret on every request, verifies the plugin's signature, collects no telemetry, and ships with build provenance.
 - **Free for commercial games.** See License.
+
+## Recently added
+
+- Tool groups (`studio-bridge settings tools`), a Studio status window, and tokenless publishing to npm with provenance.
+- Terrain, lighting presets, scatter, spatial and physics tools, effects, tweens.
+- Animation authoring, editing and preview; audio management with preview.
+- UI autoscale, responsive checks on real devices, and the device emulator.
+- Playtest control: character movement, keyboard and mouse input.
+- Asset search, safe insert and model generation; searchable Roblox documentation.
+- Bulk editing, renaming and duplication; script dependency and audit tools.
 
 ## Install
 
