@@ -15,6 +15,7 @@ import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } fr
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
+import { isWindows } from './platform.mjs';
 
 const dir = appDir;
 
@@ -916,6 +917,7 @@ function render(result, studio, handler = false) {
 }
 
 function takeScreenshot(titleLike, maxWidth) {
+  if (!isWindows) return Promise.resolve(textResult('The window screenshot tool only works on Windows. Use viewport_screenshot, which captures the 3D view from inside Studio on every platform.', true));
   return new Promise((resolve) => {
     const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
     const script = assetFile('screenshot.ps1');
@@ -940,6 +942,11 @@ function takeScreenshot(titleLike, maxWidth) {
 }
 
 function focusStudio(titleLike) {
+  if (!isWindows) {
+    return new Promise((resolve) => {
+      execFile('xdotool', ['search', '--name', titleLike || 'Roblox Studio', 'windowactivate'], { timeout: 15000 }, (err) => resolve(!err));
+    });
+  }
   return new Promise((resolve) => {
     const script = assetFile('screenshot.ps1');
     const args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-TitleLike', titleLike, '-FocusOnly'];

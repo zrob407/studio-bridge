@@ -7,6 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
+import { isWindows, pluginsDir, wineRobloxFolders } from './platform.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
@@ -22,12 +23,6 @@ function userArgs() {
 }
 
 const version = currentVersion;
-
-function pluginsDir() {
-  const base = process.env.LOCALAPPDATA;
-  if (!base) throw new Error('LOCALAPPDATA is not set; the Studio plugin folder can only be found on Windows.');
-  return path.join(base, 'Roblox', 'Plugins');
-}
 
 function ensureToken() {
   fs.mkdirSync(appDir, { recursive: true });
@@ -283,6 +278,15 @@ function install(args) {
   console.log(client === 'codex' ? '  1. Restart Codex so it starts the bridge.' : '  1. Restart Claude Code, or run /mcp, so it starts the bridge.' + (client === 'all' ? ' Restart Codex too.' : ''));
   console.log('  2. Restart Roblox Studio. If it asks, allow HTTP requests and Script Injection for "Studio Bridge".');
   console.log('  3. Ask Claude to list the connected Studio windows to check it works.');
+  if (!isWindows) {
+    const prefixes = wineRobloxFolders();
+    console.log('');
+    console.log('Linux notes:');
+    console.log(`  - The plugin went into ${path.dirname(target)}, inside your Wine prefix. Start Studio from the launcher that owns that prefix (Vinegar or Grapejuice).`);
+    if (prefixes.length > 1) console.log(`  - ${prefixes.length} Studio prefixes were found and the first was used. To use another, run install again with STUDIO_BRIDGE_PLUGINS_DIR set to its Roblox/Plugins folder.`);
+    console.log('  - Install xdotool (X11) if you want input_keyboard, input_mouse and gui_click to focus Studio for you. The screenshot tool is Windows only; use viewport_screenshot.');
+    console.log('  - Run studio-bridge doctor if the Studio window does not show up.');
+  }
 }
 
 function uninstall(args) {
@@ -353,12 +357,17 @@ async function doctor(args) {
       if (fs.existsSync(path.join(folder, legacyName))) note('WARN', `old plugin file ${legacyName} is still there and will load a second copy; delete it`);
     }
   }
-  try {
-    const helper = assetFile('screenshot.ps1');
-    note('ok', `screenshot helper is available (${isPackaged ? 'extracted from the exe' : 'source file'})`);
-    if (!fs.existsSync(helper)) throw new Error('extracted file is missing');
-  } catch (err) {
-    note('FAIL', `screenshot helper is not available: ${err.message}`);
+  if (isWindows) {
+    try {
+      const helper = assetFile('screenshot.ps1');
+      note('ok', `screenshot helper is available (${isPackaged ? 'extracted from the exe' : 'source file'})`);
+      if (!fs.existsSync(helper)) throw new Error('extracted file is missing');
+    } catch (err) {
+      note('FAIL', `screenshot helper is not available: ${err.message}`);
+    }
+  } else {
+    const xdotool = spawnSync('xdotool', ['--version'], { encoding: 'utf8' });
+    note(xdotool.error ? 'WARN' : 'ok', xdotool.error ? 'xdotool is not installed, so input_keyboard, input_mouse and gui_click cannot focus the Studio window (X11 only); viewport_screenshot does not need it' : `xdotool ${(xdotool.stdout || '').trim()} can focus the Studio window`);
   }
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
   if (token) {

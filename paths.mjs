@@ -1,8 +1,8 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { dataDirName, dataRoot } from './platform.mjs';
 
 const require = createRequire(import.meta.url);
 
@@ -23,7 +23,7 @@ export const installedViaNpm = !isPackaged && sourceDir.split(path.sep).includes
 export const appDir = process.env.STUDIO_BRIDGE_HOME
   ? path.resolve(process.env.STUDIO_BRIDGE_HOME)
   : isPackaged || installedViaNpm
-    ? path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'StudioBridge')
+    ? path.join(dataRoot(), dataDirName())
     : sourceDir;
 
 const overrideDir = path.join(appDir, 'overrides');
