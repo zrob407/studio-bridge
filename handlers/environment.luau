@@ -7,6 +7,7 @@ local SECTIONS = {
 	colorCorrection = "ColorCorrectionEffect",
 	sunRays = "SunRaysEffect",
 	depthOfField = "DepthOfFieldEffect",
+	sky = "Sky",
 }
 
 local READ = {
@@ -16,9 +17,11 @@ local READ = {
 	colorCorrection = {"Brightness", "Contrast", "Saturation", "TintColor"},
 	sunRays = {"Intensity", "Spread"},
 	depthOfField = {"FarIntensity", "FocusDistance", "InFocusRadius", "NearIntensity"},
+	sky = {"CelestialBodiesShown", "StarCount", "SunAngularSize", "MoonAngularSize", "SkyboxBk", "SkyboxDn", "SkyboxFt", "SkyboxLf", "SkyboxRt", "SkyboxUp"},
+	terrain = {"WaterColor", "WaterReflectance", "WaterTransparency", "WaterWaveSize", "WaterWaveSpeed", "Decoration"},
 }
 
-local ORDER = {"lighting", "atmosphere", "bloom", "colorCorrection", "sunRays", "depthOfField"}
+local ORDER = {"lighting", "atmosphere", "bloom", "colorCorrection", "sunRays", "depthOfField", "sky", "terrain"}
 
 local function rgb(r, g, b)
 	return Color3.fromRGB(r, g, b)
@@ -86,6 +89,10 @@ local PRESETS = {
 local function sectionInstance(key, create)
 	if key == "lighting" then
 		return Lighting
+	end
+
+	if key == "terrain" then
+		return workspace.Terrain
 	end
 
 	local class = SECTIONS[key]
@@ -164,6 +171,23 @@ elseif action == "get" then
 elseif action == "apply" then
 	local problems = {}
 	local applied = {}
+	local hours = params.time
+
+	if type(hours) == "string" and tonumber(hours) then
+		hours = tonumber(hours)
+	elseif type(hours) == "string" then
+		local h, m = string.match(hours, "^%s*(%d+):(%d+)%s*$")
+
+		if not h then
+			error("time must be a number of hours or HH:MM")
+		end
+
+		hours = tonumber(h) + tonumber(m) / 60
+	end
+
+	if params.preset and not PRESETS[params.preset] then
+		error("unknown preset: " .. params.preset .. " (use action list)")
+	end
 
 	if params.preset then
 		local preset = PRESETS[params.preset]
@@ -188,8 +212,13 @@ elseif action == "apply" then
 		end
 	end
 
+	if hours ~= nil then
+		Lighting.ClockTime = hours
+		table.insert(applied, "time " .. string.format("%.2f", Lighting.ClockTime))
+	end
+
 	if #applied == 0 then
-		error("give a preset or at least one section to change")
+		error("give a preset, a time or at least one section to change")
 	end
 
 	local message = "applied " .. table.concat(applied, ", ")

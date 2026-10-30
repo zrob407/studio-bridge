@@ -59,6 +59,7 @@ jobs:
           node test/sdk-client.test.mjs dist/studio-bridge.exe
           node test/license.test.mjs dist/studio-bridge.exe
           node test/takeover.test.mjs dist/studio-bridge.exe
+          node test/marketplace.test.mjs dist/studio-bridge.exe
 
       - name: Package
         shell: bash

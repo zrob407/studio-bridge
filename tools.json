@@ -1721,7 +1721,7 @@
     },
     {
       "name": "terrain",
-      "description": "Edit terrain. fill: a block, ball or cylinder of a material. clear: a region, or everything with all: true. read: which materials fill a region. generate: procedural noise terrain over an area with a biome (grassland, desert, snow, volcanic, tropical), height, optional water level and a seed; it overwrites the area.",
+      "description": "Edit terrain. fill: a block, ball, cylinder or wedge of a material. clear: a region, or everything with all: true. read: which materials fill a region. generate: procedural noise terrain over an area with a biome (grassland, desert, snow, volcanic, tropical), height, optional water level and a seed; it overwrites the area. smooth: soften a region. replace_material: swap one material for another in a region. colors: read the colors of terrain materials, or set them with colors.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1731,7 +1731,10 @@
               "fill",
               "clear",
               "read",
-              "generate"
+              "generate",
+              "replace_material",
+              "smooth",
+              "colors"
             ]
           },
           "shape": {
@@ -1739,7 +1742,8 @@
             "enum": [
               "block",
               "ball",
-              "cylinder"
+              "cylinder",
+              "wedge"
             ],
             "description": "Shape for fill (default block)."
           },
@@ -1824,6 +1828,33 @@
           "studio": {
             "type": "string",
             "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          },
+          "from": {
+            "type": "string",
+            "description": "replace_material: the material to replace."
+          },
+          "to": {
+            "type": "string",
+            "description": "replace_material: the material to use instead."
+          },
+          "passes": {
+            "type": "number",
+            "description": "smooth: passes, 1 to 5 (default 1)."
+          },
+          "strength": {
+            "type": "number",
+            "description": "smooth: 0 to 1 (default 1)."
+          },
+          "materials": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "colors: which materials to read."
+          },
+          "colors": {
+            "type": "object",
+            "description": "colors: material name to color to set, for example {\"Grass\": {\"Color3\": [90, 160, 60]}}."
           }
         },
         "required": [
@@ -1834,7 +1865,7 @@
     },
     {
       "name": "environment",
-      "description": "Lighting and atmosphere. list: the presets (day, sunset, night, overcast, foggy, horror, space). get: current Lighting, Atmosphere, Bloom, ColorCorrection, SunRays and DepthOfField values. apply: a preset and/or per-section property overrides; missing effects are created.",
+      "description": "Lighting and atmosphere. list: the presets (day, sunset, night, overcast, foggy, horror, space). get: current Lighting, Atmosphere, Bloom, ColorCorrection, SunRays, DepthOfField, Sky and terrain water values. apply: a preset, a time and/or per-section property overrides; missing effects are created.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1877,6 +1908,25 @@
           "studio": {
             "type": "string",
             "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          },
+          "sky": {
+            "type": "object",
+            "description": "Sky properties to set, for example {\"StarCount\": 3000}."
+          },
+          "terrain": {
+            "type": "object",
+            "description": "Terrain water properties to set: WaterColor, WaterTransparency, WaterReflectance, WaterWaveSize, WaterWaveSpeed, Decoration."
+          },
+          "time": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "Time of day: hours as a number or \"HH:MM\"."
           }
         },
         "required": [
@@ -2294,7 +2344,7 @@
     },
     {
       "name": "audio_manage",
-      "description": "Sounds in the place. list: sounds with id, volume, speed, looping, rolloff and group. create: a Sound with an asset id and properties. set: change properties, scale the volume or assign a SoundGroup on many sounds (by paths, or by root and a name filter). group: create a SoundGroup and optionally assign sounds to it. effect: add a reverb, echo, equalizer or other SoundEffect to a Sound or SoundGroup. remap: replace SoundIds using a map of old id to new id (dryRun to preview).",
+      "description": "Sounds in the place. list: sounds with id, volume, speed, looping, rolloff and group. create: a Sound with an asset id and properties. set: change properties, scale the volume or assign a SoundGroup on many sounds (by paths, or by root and a name filter). group: create a SoundGroup and optionally assign sounds to it. effect: add a reverb, echo, equalizer or other SoundEffect to a Sound or SoundGroup. remap: replace SoundIds using a map of old id to new id (dryRun to preview). play, pause, resume and stop: preview the sounds in the editor (seconds stops a play after that long).",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -2306,7 +2356,11 @@
               "set",
               "group",
               "effect",
-              "remap"
+              "remap",
+              "play",
+              "pause",
+              "resume",
+              "stop"
             ]
           },
           "root": {
@@ -2384,6 +2438,10 @@
           "studio": {
             "type": "string",
             "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          },
+          "seconds": {
+            "type": "number",
+            "description": "play: stop after this many seconds."
           }
         },
         "required": [
@@ -2595,6 +2653,965 @@
         },
         "required": [
           "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "spatial_find",
+      "description": "Find places to put things. ground: the ground height, slope and material under points. flat: the flattest spots in an area. space: free spots that fit a box, nearest to a center first. spawn: spots for a character to stand (flat, clear, not in water).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ground",
+              "flat",
+              "space",
+              "spawn"
+            ]
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "description": "[x, z]"
+            },
+            "description": "Points for ground, as [[x, z], ...]."
+          },
+          "x": {
+            "type": "number",
+            "description": "x for ground (with z)."
+          },
+          "z": {
+            "type": "number",
+            "description": "z for ground (with x)."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Search center [x, y, z] (flat, space, spawn)."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "description": "flat: area [width, depth]. space and spawn: box [x, y, z] that must fit (default 4, 6, 4)."
+          },
+          "step": {
+            "type": "number",
+            "description": "Grid or ring spacing in studs."
+          },
+          "radius": {
+            "type": "number",
+            "description": "flat: how far around each spot must also be flat (default step)."
+          },
+          "maxSlope": {
+            "type": "number",
+            "description": "Steepest ground in degrees (flat default 10, space 30, spawn 15)."
+          },
+          "tolerance": {
+            "type": "number",
+            "description": "flat: biggest height difference across a spot in studs."
+          },
+          "searchRadius": {
+            "type": "number",
+            "description": "space and spawn: how far from center to look (default 50)."
+          },
+          "avoidWater": {
+            "type": "boolean",
+            "description": "space and spawn: reject water (default true for spawn)."
+          },
+          "clearance": {
+            "type": "number",
+            "description": "Gap above the ground before the box starts (default 0.2)."
+          },
+          "fromY": {
+            "type": "number",
+            "description": "ground: height the rays start from (default 1000)."
+          },
+          "seeWater": {
+            "type": "boolean",
+            "description": "ground: stop on the water surface."
+          },
+          "rayHeight": {
+            "type": "number",
+            "description": "How far above and below center to look for ground (default 500)."
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to ignore."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most results (default 10)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "spatial_check",
+      "description": "Check things in space. placement: whether a model or part (or a box at center and size, optionally moved to position) overlaps anything, touches terrain, floats or sits on a steep slope. collision: what a model or part touches. walkable: how much of an area a character could walk on, with a map.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "placement",
+              "collision",
+              "walkable"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "The model or part (placement, collision)."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Box or area center (placement without a path, walkable)."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "description": "placement: box [x, y, z]. walkable: area [width, depth]."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "placement: test as if moved here."
+          },
+          "step": {
+            "type": "number",
+            "description": "walkable: grid spacing (default 4)."
+          },
+          "maxSlope": {
+            "type": "number",
+            "description": "Steepest walkable or placeable slope in degrees (walkable 45, placement 30)."
+          },
+          "maxGap": {
+            "type": "number",
+            "description": "placement: how far above the ground still counts as resting on it (default 1)."
+          },
+          "groundRange": {
+            "type": "number",
+            "description": "placement: how far below to look for ground (default 200)."
+          },
+          "agentRadius": {
+            "type": "number",
+            "description": "walkable: character radius (default 1.5)."
+          },
+          "agentHeight": {
+            "type": "number",
+            "description": "walkable: character height (default 5)."
+          },
+          "rayHeight": {
+            "type": "number",
+            "description": "walkable: how far above and below center to look for ground (default 500)."
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to ignore."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most results for collision (default 20)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "spatial_map",
+      "description": "A top-down text map or a summary of an area. map: a grid showing open ground, things standing on it, water and gaps (top row is the lowest Z). scan: counts of parts by class, the objects in the box and their extent.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "map",
+              "scan"
+            ],
+            "description": "Default map."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Area center [x, y, z]."
+          },
+          "size": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 3,
+            "description": "map: [width, depth]. scan: box [x, y, z]."
+          },
+          "step": {
+            "type": "number",
+            "description": "map: cell size in studs (default 4)."
+          },
+          "height": {
+            "type": "number",
+            "description": "map: how tall something must be above the ground to count (default 8)."
+          },
+          "rayHeight": {
+            "type": "number",
+            "description": "map: how far above and below center to look for ground (default 500)."
+          },
+          "ignore": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to ignore."
+          },
+          "limit": {
+            "type": "number",
+            "description": "scan: most objects listed (default 10)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "center",
+          "size"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "snap_grid",
+      "description": "Snap models or parts to a grid (position, and optionally rotation in degrees). dryRun previews.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Several instances."
+          },
+          "grid": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 3,
+                "maxItems": 3,
+                "description": "Per-axis grid [x, y, z]."
+              }
+            ],
+            "description": "Grid size in studs, a number or [x, y, z] (default 1)."
+          },
+          "axes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "x",
+                "y",
+                "z"
+              ]
+            },
+            "description": "Axes to snap (default all)."
+          },
+          "rotation": {
+            "type": "number",
+            "description": "Also snap rotation to multiples of this many degrees."
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "physics_groups",
+      "description": "Collision groups. list: every group and what it does not collide with. register, unregister, rename. set_collidable: make two groups collide or not. assign: put the parts under instances in a group. members: parts in a group.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "register",
+              "unregister",
+              "rename",
+              "set_collidable",
+              "assign",
+              "members"
+            ]
+          },
+          "name": {
+            "type": "string",
+            "description": "Group name (register, unregister, rename)."
+          },
+          "newName": {
+            "type": "string",
+            "description": "New name (rename)."
+          },
+          "a": {
+            "type": "string",
+            "description": "First group (set_collidable)."
+          },
+          "b": {
+            "type": "string",
+            "description": "Second group (set_collidable)."
+          },
+          "collidable": {
+            "type": "boolean",
+            "description": "Whether a and b collide (set_collidable)."
+          },
+          "group": {
+            "type": "string",
+            "description": "Group for assign and members."
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances whose parts go in the group (assign)."
+          },
+          "descendants": {
+            "type": "boolean",
+            "description": "Include descendants (assign, default true)."
+          },
+          "root": {
+            "type": "string",
+            "description": "Where to look (members, default Workspace)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Sample paths for members (default 10)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "effects",
+      "description": "Particle emitters, beams, trails, fire, smoke, sparkles and lights. list: what exists. set_enabled: turn them on or off. emit: fire a burst from ParticleEmitters. clear: remove live particles. Select by paths (and their descendants) or by root with class and nameContains filters.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "list",
+              "set_enabled",
+              "emit",
+              "clear"
+            ]
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to act on, including their descendants."
+          },
+          "root": {
+            "type": "string",
+            "description": "Search root when paths is not given (default Workspace)."
+          },
+          "class": {
+            "type": "string",
+            "description": "Only this class (IsA)."
+          },
+          "nameContains": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "For set_enabled."
+          },
+          "count": {
+            "type": "number",
+            "description": "Particles per emitter for emit (default 20)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most rows for list (default 40)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "animation_play",
+      "description": "Preview a KeyframeSequence on a rig in the edit window by driving its Motor6D joints over time. It runs in the background so you can take screenshots while it plays; stop ends it and restores the rest pose. Nothing is saved with the place.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "play",
+              "stop",
+              "status"
+            ]
+          },
+          "rig": {
+            "type": "string",
+            "description": "The rig model."
+          },
+          "path": {
+            "type": "string",
+            "description": "The KeyframeSequence (play)."
+          },
+          "speed": {
+            "type": "number",
+            "description": "Playback speed (default 1)."
+          },
+          "loop": {
+            "type": "boolean",
+            "description": "Loop (default the sequence setting)."
+          },
+          "maxSeconds": {
+            "type": "number",
+            "description": "Stop by itself after this long (default 20)."
+          },
+          "restoreAtEnd": {
+            "type": "boolean",
+            "description": "Return to the rest pose when it ends (default true)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action",
+          "rig"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "asset_search",
+      "description": "Search Roblox's free Creator Store for models, decals, audio, images, meshes, mesh parts, videos or plugins. Returns asset ids with names and creators, and a cursor for more. Use asset_insert to bring a model into the place.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "What to look for."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "model",
+              "decal",
+              "audio",
+              "image",
+              "mesh",
+              "meshpart",
+              "video",
+              "plugin"
+            ],
+            "description": "Default model."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Results (1 to 50, default 20)."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "The cursor from the previous page."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "asset_insert",
+      "description": "Insert a free model by asset id. The code in it is scanned first. By default every script in the model is removed and the scan report is shown (free models can hide malicious code); pass keepScripts to keep scripts, which is refused if the scan finds high-risk code unless block_high is false.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "description": "The asset id."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Where to put it (default Workspace)."
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "Move it to [x, y, z]."
+          },
+          "keepScripts": {
+            "type": "boolean",
+            "description": "Keep scripts (default false: they are removed)."
+          },
+          "block_high": {
+            "type": "boolean",
+            "description": "With keepScripts, refuse high-risk code (default true)."
+          },
+          "max_findings": {
+            "type": "number",
+            "description": "Most scan findings to list."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "assetId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance_duplicate",
+      "description": "Make many copies of a model or part. array: count copies stepping by an offset (and optional rotation per copy). grid: counts in x, y and z with spacing. radial: count copies around a circle, optionally facing the center. Names follow namePattern with {name} and {n}.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "The model or part to copy."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "array",
+              "grid",
+              "radial"
+            ],
+            "description": "Default array."
+          },
+          "parent": {
+            "type": "string",
+            "description": "Where the copies go (default beside the original)."
+          },
+          "count": {
+            "type": "number",
+            "description": "array and radial."
+          },
+          "offset": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "array: step between copies [x, y, z]."
+          },
+          "rotation": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "array: extra rotation per copy in degrees."
+          },
+          "counts": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "grid: copies along x, y and z, including the original."
+          },
+          "spacing": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "grid: distance between copies [x, y, z]."
+          },
+          "radius": {
+            "type": "number",
+            "description": "radial: circle radius (default 10)."
+          },
+          "center": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "radial: circle center (default the original position)."
+          },
+          "faceCenter": {
+            "type": "boolean",
+            "description": "radial: turn copies to face the center."
+          },
+          "namePattern": {
+            "type": "string",
+            "description": "Default \"{name} {n}\"."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance_rename",
+      "description": "Rename many instances: find and replace (plain text, or a Lua pattern with pattern: true), prefix, suffix, case (upper, lower, title) and numbering. Select by paths, or by root with class and nameContains filters. dryRun previews.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to rename."
+          },
+          "root": {
+            "type": "string",
+            "description": "Rename descendants of this instance (when paths is not given)."
+          },
+          "class": {
+            "type": "string"
+          },
+          "nameContains": {
+            "type": "string"
+          },
+          "find": {
+            "type": "string"
+          },
+          "replace": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "boolean",
+            "description": "Treat find as a Lua pattern."
+          },
+          "prefix": {
+            "type": "string"
+          },
+          "suffix": {
+            "type": "string"
+          },
+          "case": {
+            "type": "string",
+            "enum": [
+              "upper",
+              "lower",
+              "title"
+            ]
+          },
+          "number": {
+            "type": "boolean",
+            "description": "Append a running number."
+          },
+          "startAt": {
+            "type": "number",
+            "description": "First number (default 1)."
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance_pivot",
+      "description": "A model's or part's pivot point. get: where it is. center, bottom, top: move the pivot to the middle, base or top of the bounds without moving the object. set: put the pivot at a world position. move_to: move the object so its pivot lands at a position.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "center",
+              "bottom",
+              "top",
+              "set",
+              "move_to"
+            ]
+          },
+          "position": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "World position for set and move_to."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path",
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance_bulk",
+      "description": "Act on many instances at once, chosen by paths or by root with class, nameContains and tag filters. get: read properties. set: set properties. adjust: change a property relative to its value, with {add: value} or {multiply: number}. delete: remove them (needs confirm). dryRun previews.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "get",
+              "set",
+              "adjust",
+              "delete"
+            ]
+          },
+          "paths": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Instances to act on."
+          },
+          "root": {
+            "type": "string",
+            "description": "Search root when paths is not given."
+          },
+          "class": {
+            "type": "string"
+          },
+          "nameContains": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "properties": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              {
+                "type": "object"
+              }
+            ],
+            "description": "get: an array of property names. set and adjust: an object of property to value (adjust: {\"Position\": {\"add\": {\"Vector3\": [0, 5, 0]}}})."
+          },
+          "confirm": {
+            "type": "boolean",
+            "description": "Required for delete."
+          },
+          "dryRun": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most rows shown (default 15)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "instance_info",
+      "description": "Look around the hierarchy. ancestors: the chain from the game down to an instance. tree: an indented outline of children to a depth. class_info: the properties, methods and events of a Roblox class.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "ancestors",
+              "tree",
+              "class_info"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "The instance (ancestors, tree; tree defaults to the whole game)."
+          },
+          "depth": {
+            "type": "number",
+            "description": "tree: levels to show (default 2)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "tree: most entries (default 120)."
+          },
+          "class": {
+            "type": "string",
+            "description": "class_info: the class name, for example Part."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "script_dependencies",
+      "description": "Follow require() between scripts. deps: what a script requires. dependents: what requires a module. unused: ModuleScripts nothing requires. assets: require(assetId) calls, which load code from Roblox at runtime. It resolves common path forms (script.Parent.X, game.Service.X, :WaitForChild and :FindFirstChild) and reports what it cannot resolve.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "deps",
+              "dependents",
+              "unused",
+              "assets"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "The script or module (deps, dependents)."
+          },
+          "root": {
+            "type": "string",
+            "description": "Where to look (default the whole place)."
+          },
+          "limit": {
+            "type": "number",
+            "description": "Most rows (default 30)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "mode"
         ],
         "additionalProperties": false
       }

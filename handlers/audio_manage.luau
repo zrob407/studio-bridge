@@ -197,6 +197,36 @@ elseif action == "remap" then
 	end
 
 	return (if params.dryRun then "would change " else "changed ") .. changed .. " sound(s)"
+elseif action == "play" or action == "pause" or action == "resume" or action == "stop" then
+	local sounds = targetSounds()
+
+	if #sounds == 0 then
+		error("no sounds matched")
+	end
+
+	for _, sound in ipairs(sounds) do
+		if action == "play" then
+			sound:Play()
+		elseif action == "pause" then
+			sound:Pause()
+		elseif action == "resume" then
+			sound:Resume()
+		else
+			sound:Stop()
+		end
+	end
+
+	if action == "play" and params.seconds then
+		task.delay(params.seconds, function()
+			for _, sound in ipairs(sounds) do
+				if sound.Parent then
+					sound:Stop()
+				end
+			end
+		end)
+	end
+
+	return action .. " on " .. #sounds .. " sound(s)" .. (if action == "play" and params.seconds then ", stopping after " .. params.seconds .. "s" else "")
 end
 
-error("action must be list, create, set, group, effect or remap")
+error("action must be list, create, set, group, effect, remap, play, pause, resume or stop")
