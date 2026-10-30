@@ -13,7 +13,7 @@ npm install -g @zrob407/studio-bridge
 studio-bridge install
 ```
 
-Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested).
+Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested). Linux works through Wine and is untested; see the Linux section.
 
 ## Everyday time-savers
 
@@ -61,7 +61,7 @@ Studio Bridge exposes seventy-nine tools, listed under Tools below. Roblox's own
 
 ## Install
 
-Windows, Roblox Studio and Claude Code are required.
+Windows, Roblox Studio and Claude Code are required. Linux works through Wine (see the Linux section below).
 
 **With npm (recommended).** Needs Node 22 or newer: `npm install -g @zrob407/studio-bridge`, then `studio-bridge install`. It runs on Node, which is signed by the OpenJS Foundation, so Windows protections such as Smart App Control do not block it the way they can block an unsigned exe. Data lives in `%LOCALAPPDATA%\StudioBridge` like the exe's, and `studio-bridge update` upgrades it through npm. The package is published on npm with build provenance, which `npm audit signatures` can verify.
 
@@ -128,6 +128,22 @@ The plugin adds a Studio Bridge button to the Plugins toolbar that opens a theme
 - **Status:** whether the bridge is connected and over which transport, how many commands have run and failed, the last command and how long ago it ran, and how long the plugin has been up.
 - **Tools:** a summary of how many tools are offered and their approximate token cost, one-click presets (Everything, Essentials, World builder, UI designer, Animator, Publisher) and a switch for each tool group. Changes are saved to the bridge straight away; your AI client may need `/mcp` to refresh its tool list. If the profile is fixed by the `STUDIO_BRIDGE_TOOLS` environment variable, the switches are read-only.
 - **Log:** a short log of connection events and commands.
+
+## Linux
+
+Roblox has no native Linux Studio, so this setup is for Studio running under Wine through [Vinegar](https://github.com/vinegarhq/vinegar) or Grapejuice. The bridge itself and Claude Code run natively on Linux; Studio reaches the bridge on `127.0.0.1` because Wine shares the host network.
+
+1. Install Node 22 or newer, then `npm install -g @zrob407/studio-bridge` and `studio-bridge install`.
+2. `install` looks for the Studio Wine prefix in `$WINEPREFIX`, Vinegar (Flatpak and native), Grapejuice and `~/.wine`, and writes the plugin into `drive_c/users/<user>/AppData/Local/Roblox/Plugins`. If your prefix is somewhere else, run it with `STUDIO_BRIDGE_PLUGINS_DIR` set to that `Plugins` folder.
+3. Data (token, uploads, exports, settings) lives in `$XDG_DATA_HOME/studio-bridge`, usually `~/.local/share/studio-bridge`.
+4. Start Studio from your launcher, allow HTTP requests and Script Injection for "Studio Bridge" if it asks, and run `studio-bridge doctor`.
+
+Differences from Windows:
+
+- The `screenshot` tool (a screen capture of the Studio window) is Windows only. `viewport_screenshot` captures the 3D view from inside Studio and works everywhere.
+- `input_keyboard`, `input_mouse` and `gui_click` need Studio to be the focused window. On Linux that uses `xdotool`, which works on X11 only; install it, or click into Studio yourself before using those tools.
+- The packaged exe is Windows only. Use the npm package.
+- This path has not been tested on a real Linux machine yet. Reports are welcome.
 
 ## Windows
 
