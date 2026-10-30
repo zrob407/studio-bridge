@@ -51,7 +51,7 @@ const appdataRoblox = path.join(appdataHome, '.local', 'share', 'vinegar', 'appd
 fs.mkdirSync(path.dirname(appdataRoblox), { recursive: true });
 makeRoblox(appdataHome, ['.local', 'share', 'vinegar', 'prefixes', 'studio'], 'steamuser');
 const appdataFolders = platform.wineRobloxFolders(appdataHome, {});
-check('Vinegar appdata wins over the prefix even before Studio has created Roblox', JSON.stringify(appdataFolders) === JSON.stringify([appdataRoblox]));
+check('Vinegar appdata comes first and the prefix is written too, since either can be the one Studio reads', appdataFolders.length === 2 && appdataFolders[0] === appdataRoblox && appdataFolders[1].includes('prefixes'));
 check('Vinegar flatpak appdata folder is found', (() => {
   const home = path.join(sandbox, 'flatpak-appdata');
   const root = path.join(home, '.var', 'app', 'org.vinegarhq.Vinegar', 'data', 'vinegar', 'appdata');

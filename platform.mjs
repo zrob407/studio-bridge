@@ -65,8 +65,7 @@ export function vinegarAppdataRoots(home = os.homedir(), env = process.env) {
 
 export function wineRobloxFolders(home = os.homedir(), env = process.env) {
   const vinegar = vinegarAppdataRoots(home, env).filter((root) => fs.existsSync(root)).map((root) => path.join(root, 'Roblox'));
-  if (vinegar.length > 0) return vinegar;
-  const found = [];
+  const found = [...vinegar];
   for (const root of winePrefixRoots(home, env)) {
     const users = path.join(root, 'drive_c', 'users');
     for (const user of listDirs(users)) {
