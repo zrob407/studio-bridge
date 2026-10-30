@@ -617,13 +617,25 @@ function watchTools() {
 }
 watchTools();
 
-const SCANNER_HANDLERS = new Set(['script_scan', 'import_rbxm']);
+const HANDLER_INCLUDES = {
+  script_scan: ['_scan'],
+  import_rbxm: ['_scan'],
+  raycast: ['_geometry'],
+  spatial_query: ['_geometry'],
+  scatter: ['_geometry'],
+  terrain: ['_geometry'],
+};
+
+function handlerIncludes(names) {
+  const wanted = new Set(names.flatMap((name) => HANDLER_INCLUDES[name] || []));
+  return [...wanted].map((include) => readAsset(`handlers/${include}.luau`)).join('\n');
+}
 const MAX_BATCH_OPERATIONS = 50;
 
 function buildHandlerCode(name, args) {
   const prelude = readAsset('handlers/_prelude.luau');
   const body = readAsset(`handlers/${name}.luau`);
-  const scanner = SCANNER_HANDLERS.has(name) ? readAsset('handlers/_scan.luau') : '';
+  const scanner = handlerIncludes([name]);
   const { studio, ...params } = args;
   const json = JSON.stringify(params);
   let level = 0;
@@ -641,8 +653,7 @@ function luaLongString(text) {
 
 function buildBatchCode(operations, stopOnError) {
   const prelude = readAsset('handlers/_prelude.luau');
-  const needsScanner = operations.some((operation) => SCANNER_HANDLERS.has(operation.tool));
-  const scanner = needsScanner ? readAsset('handlers/_scan.luau') : '';
+  const scanner = handlerIncludes(operations.map((operation) => operation.tool));
   const steps = operations.map((operation) => {
     const body = readAsset(`handlers/${operation.tool}.luau`);
     const { studio, ...params } = operation.args || {};

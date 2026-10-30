@@ -24,6 +24,26 @@ local MAX_RESULT_BYTES = 32 * 1024 * 1024
 local SOCKET_PROTOCOL = 1
 local WS_URL = string.gsub(URL, "^http", "ws") .. "/ws"
 
+local status = {state = "connecting", detail = "", transport = nil, commands = 0, failures = 0, lastCommand = nil, lastCommandAt = 0, startedAt = os.clock(), log = {}}
+
+local function record(text)
+	table.insert(status.log, os.date("%H:%M:%S") .. " " .. text)
+
+	if #status.log > 40 then
+		table.remove(status.log, 1)
+	end
+end
+
+local function setStatus(state, detail, transport)
+	if status.state ~= state or status.detail ~= detail then
+		record(if detail ~= "" then state .. ": " .. detail else state)
+	end
+
+	status.state = state
+	status.detail = detail
+	status.transport = transport
+end
+
 local format
 
 local function formatTable(value, depth, seen)
@@ -275,6 +295,7 @@ local function reportFailure(ok, response)
 	if message ~= lastFailure then
 		lastFailure = message
 		warn("[Studio Bridge:" .. ROLE .. "] cannot reach the bridge: " .. message)
+		setStatus("offline", "cannot reach the bridge: " .. message)
 	end
 end
 
@@ -411,6 +432,7 @@ local function deliver(result)
 end
 
 local function runCommand(decoded)
+	local startedAt = os.clock()
 	local limit = if type(decoded.timeout) == "number" and decoded.timeout > 0 then decoded.timeout else DEFAULT_COMMAND_TIMEOUT
 	local context = {}
 	local finished = false
@@ -444,6 +466,16 @@ local function runCommand(decoded)
 		finishRecording(context)
 		result = {ok = false, error = "Cancelled by the bridge plugin after " .. limit .. "s; the code was still running.", output = {}}
 	end
+
+	status.commands += 1
+
+	if not result.ok then
+		status.failures += 1
+	end
+
+	status.lastCommand = string.format("%s in %.2fs", if result.ok then "ok" else "failed", os.clock() - startedAt)
+	status.lastCommandAt = os.clock()
+	record("command " .. status.lastCommand)
 
 	pcall(truncate, result)
 
@@ -515,6 +547,10 @@ local function step()
 		task.wait(RETRY_DELAY)
 
 		return
+	end
+
+	if not (socket and socket.ready) then
+		setStatus("connected", "", "http")
 	end
 
 	if lastFailure then
@@ -590,6 +626,7 @@ local function runSocketSession()
 
 	local function endSession(problem)
 		session.ready = false
+		setStatus("reconnecting", tostring(problem or "connection closed"))
 
 		if socket == session then
 			socket = nil
@@ -625,6 +662,7 @@ local function runSocketSession()
 	end
 
 	sendJson(session, {type = "ready"})
+	setStatus("connected", "", "websocket")
 
 	if lastFailure then
 		lastFailure = nil
@@ -694,8 +732,207 @@ if ROLE ~= "client" then
 	end)
 end
 
+local studioPlugin = context.plugin or plugin
+local statusUi
+
+local function elapsed(seconds)
+	if seconds < 60 then
+		return string.format("%ds", seconds)
+	elseif seconds < 3600 then
+		return string.format("%dm", seconds // 60)
+	end
+
+	return string.format("%dh %dm", seconds // 3600, (seconds % 3600) // 60)
+end
+
+local function buildStatusWidget()
+	local holder = shared.__StudioBridgeStatusUi
+
+	if not holder then
+		holder = {}
+		shared.__StudioBridgeStatusUi = holder
+	end
+
+	local alive = holder.widget and pcall(function()
+		return holder.widget.Title
+	end)
+
+	if not alive then
+		holder.widget = studioPlugin:CreateDockWidgetPluginGui(
+			"StudioBridgeStatus",
+			DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 300, 280, 240, 180)
+		)
+		holder.widget.Title = "Studio Bridge"
+		holder.button = studioPlugin:CreateToolbar("Studio Bridge"):CreateButton("StudioBridgeStatus", "Show or hide the Studio Bridge status window", "", "Status")
+		holder.button.ClickableWhenViewportHidden = true
+	end
+
+	local widget = holder.widget
+	local button = holder.button
+	local studioTheme = settings().Studio
+
+	for _, child in widget:GetChildren() do
+		child:Destroy()
+	end
+
+	if holder.click then
+		holder.click:Disconnect()
+	end
+
+	holder.click = button.Click:Connect(function()
+		widget.Enabled = not widget.Enabled
+	end)
+
+	local function color(guide)
+		return studioTheme.Theme:GetColor(guide)
+	end
+
+	local root = Instance.new("Frame")
+	root.Size = UDim2.fromScale(1, 1)
+	root.BorderSizePixel = 0
+	root.Parent = widget
+
+	local padding = Instance.new("UIPadding")
+	padding.PaddingTop = UDim.new(0, 10)
+	padding.PaddingBottom = UDim.new(0, 10)
+	padding.PaddingLeft = UDim.new(0, 12)
+	padding.PaddingRight = UDim.new(0, 12)
+	padding.Parent = root
+
+	local layout = Instance.new("UIListLayout")
+	layout.Padding = UDim.new(0, 4)
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = root
+
+	local function label(order, height, bold)
+		local text = Instance.new("TextLabel")
+		text.LayoutOrder = order
+		text.Size = UDim2.new(1, 0, 0, height)
+		text.BackgroundTransparency = 1
+		text.TextXAlignment = Enum.TextXAlignment.Left
+		text.TextTruncate = Enum.TextTruncate.AtEnd
+		text.RichText = true
+		text.Font = if bold then Enum.Font.BuilderSansBold else Enum.Font.BuilderSans
+		text.TextSize = if bold then 18 else 14
+		text.Text = ""
+		text.Parent = root
+
+		return text
+	end
+
+	local headline = label(1, 24, true)
+	local detail = label(2, 18, false)
+	local versionLine = label(3, 18, false)
+	local commandsLine = label(4, 18, false)
+	local lastLine = label(5, 18, false)
+
+	local logFrame = Instance.new("ScrollingFrame")
+	logFrame.LayoutOrder = 6
+	logFrame.Size = UDim2.new(1, 0, 1, -112)
+	logFrame.BorderSizePixel = 0
+	logFrame.ScrollBarThickness = 6
+	logFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	logFrame.CanvasSize = UDim2.new()
+	logFrame.Parent = root
+
+	local logText = Instance.new("TextLabel")
+	logText.Size = UDim2.new(1, -8, 0, 0)
+	logText.AutomaticSize = Enum.AutomaticSize.Y
+	logText.BackgroundTransparency = 1
+	logText.TextXAlignment = Enum.TextXAlignment.Left
+	logText.TextYAlignment = Enum.TextYAlignment.Top
+	logText.TextWrapped = true
+	logText.Font = Enum.Font.RobotoMono
+	logText.TextSize = 12
+	logText.Text = ""
+	logText.Parent = logFrame
+
+	local STATES = {
+		connected = {"Connected", Color3.fromRGB(80, 200, 120)},
+		connecting = {"Connecting", Color3.fromRGB(230, 180, 60)},
+		reconnecting = {"Reconnecting", Color3.fromRGB(230, 180, 60)},
+		offline = {"Not connected", Color3.fromRGB(230, 90, 90)},
+	}
+
+	local function hex(value)
+		return string.format("#%02x%02x%02x", math.round(value.R * 255), math.round(value.G * 255), math.round(value.B * 255))
+	end
+
+	local function refresh()
+		local background = color(Enum.StudioStyleGuideColor.MainBackground)
+		local main = color(Enum.StudioStyleGuideColor.MainText)
+		local dim = color(Enum.StudioStyleGuideColor.DimmedText)
+
+		root.BackgroundColor3 = background
+		logFrame.BackgroundColor3 = color(Enum.StudioStyleGuideColor.InputFieldBackground)
+		logText.TextColor3 = dim
+
+		for _, line in {detail, versionLine, commandsLine, lastLine} do
+			line.TextColor3 = main
+		end
+
+		headline.TextColor3 = main
+
+		local state = STATES[status.state] or STATES.offline
+
+		headline.Text = string.format('<font color="%s">●</font> %s', hex(state[2]), state[1] .. (if status.state == "connected" and status.transport then " (" .. status.transport .. ")" else ""))
+		detail.Text = if status.detail ~= "" then status.detail else "port " .. tostring(URL):match(":(%d+)$")
+		versionLine.Text = "Plugin " .. tostring(context.version or "standalone") .. " · " .. ROLE .. " window · up " .. elapsed(math.floor(os.clock() - status.startedAt))
+		commandsLine.Text = string.format("%d command(s) run, %d failed", status.commands, status.failures)
+		lastLine.Text = if status.lastCommand then "Last: " .. status.lastCommand .. " (" .. elapsed(math.floor(os.clock() - status.lastCommandAt)) .. " ago)" else "No commands yet"
+		logText.Text = table.concat(status.log, "\n")
+	end
+
+	if holder.theme then
+		holder.theme:Disconnect()
+	end
+
+	holder.theme = studioTheme.ThemeChanged:Connect(refresh)
+
+	refresh()
+
+	task.spawn(function()
+		while not stopped do
+			if widget.Enabled then
+				pcall(refresh)
+			end
+
+			task.wait(1)
+		end
+	end)
+
+	return {
+		destroy = function()
+			if holder.click then
+				holder.click:Disconnect()
+				holder.click = nil
+			end
+
+			if holder.theme then
+				holder.theme:Disconnect()
+				holder.theme = nil
+			end
+		end,
+	}
+end
+
+if ROLE == "edit" and studioPlugin then
+	local built, result = pcall(buildStatusWidget)
+
+	if built then
+		statusUi = result
+	else
+		warn("[Studio Bridge:" .. ROLE .. "] status window unavailable: " .. tostring(result))
+	end
+end
+
 local function stop()
 	stopped = true
+
+	if statusUi then
+		statusUi.destroy()
+		statusUi = nil
+	end
 
 	local session = socket
 

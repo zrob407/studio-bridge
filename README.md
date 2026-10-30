@@ -20,7 +20,7 @@ Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injec
 - "Run a playtest, click Play, and tell me what errors show up in the output."
 - "Rename these 40 parts, fix the tween in ShopController, and publish the animations to my group."
 
-Studio Bridge exposes about forty tools: scripts, instances, UI building, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
+Studio Bridge exposes fifty tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
 
 ## Why Studio Bridge
 
@@ -91,6 +91,10 @@ Tools that need server-side work (uploads, screenshots, the audit) are implement
 - `assets.mjs` is the Open Cloud upload client.
 - `screenshot.ps1` captures or focuses the Studio window.
 
+## Status window
+
+The plugin adds a Studio Bridge button to the Plugins toolbar. It opens a small window showing whether the bridge is connected and over which transport, the plugin version, how many commands have run and failed, how long ago the last one ran, and a short log of connection events. It follows Studio's light or dark theme and does nothing else.
+
 ## Windows
 
 `studio_list` shows every connected window with a role:
@@ -108,6 +112,8 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 - Scripts: `script_get`, `script_set`, `script_edit` (line numbers refer to the original script), `script_search`, `script_validate`
 - Building UI: `ui_build` (a whole GUI from one nested description), `ui_check` (layout checks in a running play session)
 - Instances: `instance_find`, `instance_children`, `instance_get`, `instance_set`, `instance_create`, `instance_delete`, `instance_move`, `instance_clone`, `selection_get`, `selection_set`
+- World building: `terrain` (fill blocks, balls and cylinders; clear; read; generate noise terrain with a biome, height, water level and seed), `environment` (lighting presets day, sunset, night, overcast, foggy, horror and space, plus per-section overrides), `scatter` (drop copies of a model onto the ground with slope alignment, random spin and scale, minimum spacing and a seed), `tween_play` (preview a tween and restore the values)
+- Queries and checks: `raycast` (one ray or many), `spatial_query` (parts in a radius or box, nearest first, or the bounds of an instance), `tag_manage` (list, find, get, add and remove CollectionService tags), `physics_report` (loose, void, oversized and invisible-collidable parts), `audio_report` (missing, silent, loud and duplicated sounds)
 - Playtests: `play_start`, `play_stop`, `run_test`, `logs_get`
 - Camera and pictures: `camera_set`, `camera_frame`, `viewport_screenshot` (3D view only, works with the screen locked, can frame instances and restore your camera), `screenshot` (whole Studio window; needs an unlocked desktop)
 - UI testing: `gui_snapshot`, `gui_click` (needs an unlocked desktop and Studio focus)

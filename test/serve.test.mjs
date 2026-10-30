@@ -88,6 +88,12 @@ check('batch composes the embedded handlers into one chunk', !batch.result.isErr
 const scan = await rpc('tools/call', { name: 'script_scan', arguments: { path: 'game.A' } });
 check('a scanner handler also loads the scan rules', !scan.result.isError && Boolean(received[2]) && received[2].includes('local SCAN_RULES = {') && received[2].includes('scanScripts(root'));
 
+const spatial = await rpc('tools/call', { name: 'spatial_query', arguments: { mode: 'bounds', path: 'game.Workspace.A' } });
+check('a geometry handler also loads the shared geometry helpers', !spatial.result.isError && Boolean(received[3]) && received[3].includes('local function worldBounds') && received[3].includes('local mode = params.mode'));
+const mixed = await rpc('tools/call', { name: 'batch', arguments: { operations: [{ tool: 'tag_manage', args: { action: 'list' } }, { tool: 'scatter', args: { template: 'game.A', center: [0, 0, 0], size: [10, 10] } }] } });
+check('batch includes the geometry helpers once when a geometry tool is in it', !mixed.result.isError && Boolean(received[4]) && received[4].split('local function worldBounds').length === 2);
+check('the plugin source carries the status window', plugin.source.includes('buildStatusWidget') && plugin.source.includes('StudioBridgeStatus'));
+
 const second = spawn(command[0], command.slice(1), {
   env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port) },
   stdio: ['pipe', 'pipe', 'pipe'],
