@@ -64,6 +64,21 @@ if (platform.isWindows) {
   check('Linux data dir follows XDG_DATA_HOME', platform.dataDirName() === 'studio-bridge');
 }
 
+const clients = [
+  { address: '0x1', title: 'Terminal', mapped: true, at: [0, 0], size: [800, 600] },
+  { address: '0x2', title: 'Obby - Roblox Studio', mapped: true, at: [100, 50], size: [2000, 1000] },
+  { address: '0x3', title: 'Lure - Roblox Studio', mapped: true, at: [10, 20], size: [1000, 500] },
+  { address: '0x4', title: 'Hidden - Roblox Studio', mapped: false, at: [0, 0], size: [1, 1] },
+];
+check('Hyprland window is matched by place name', platform.findHyprWindow(clients, 'lure').address === '0x3');
+check('Hyprland falls back to any Studio window', platform.findHyprWindow(clients, 'missing').address === '0x2');
+check('Hyprland skips unmapped and unrelated windows', platform.findHyprWindow(clients.filter((client) => client.address !== '0x2' && client.address !== '0x3'), '') === null);
+check('Hyprland handles bad input', platform.findHyprWindow(null, 'x') === null);
+const grim = platform.hyprGrimArgs(clients[1], 1000, '/tmp/out.jpg');
+check('grim geometry and scale are built from the window', grim.includes('100,50 2000x1000') && grim[grim.indexOf('-s') + 1] === '0.5' && grim.at(-1) === '/tmp/out.jpg');
+check('grim does not upscale', platform.hyprGrimArgs(clients[0], 4000, 'o.jpg')[grim.indexOf('-s') + 1] === '1');
+check('Hyprland is detected from its environment variable', platform.isHyprland({ HYPRLAND_INSTANCE_SIGNATURE: 'abc' }) === platform.isLinux && platform.isHyprland({}) === false);
+
 fs.rmSync(sandbox, { recursive: true, force: true });
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

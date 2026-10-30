@@ -140,8 +140,8 @@ Roblox has no native Linux Studio, so this setup is for Studio running under Win
 
 Differences from Windows:
 
-- The `screenshot` tool (a screen capture of the Studio window) is Windows only. `viewport_screenshot` captures the 3D view from inside Studio and works everywhere.
-- `input_keyboard`, `input_mouse` and `gui_click` need Studio to be the focused window. On Linux that uses `xdotool`, which works on X11 only; install it, or click into Studio yourself before using those tools.
+- The `screenshot` tool (a screen capture of the Studio window) works on Windows and on Hyprland, where it needs `grim`. `viewport_screenshot` captures the 3D view from inside Studio and works everywhere.
+- `input_keyboard`, `input_mouse` and `gui_click` need Studio to be the focused window. On Hyprland (detected from `HYPRLAND_INSTANCE_SIGNATURE`) Studio Bridge finds the window with `hyprctl -j clients` and focuses it with `hyprctl dispatch focuswindow`. On other X11 desktops it uses `xdotool`. Elsewhere, click into Studio yourself before using those tools.
 - The packaged exe is Windows only. Use the npm package.
 - This path has not been tested on a real Linux machine yet. Reports are welcome.
 
