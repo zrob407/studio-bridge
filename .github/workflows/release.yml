@@ -92,11 +92,4 @@ jobs:
 
       - name: Publish to npm
         shell: bash
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "NPM_TOKEN is not set, so the npm package was not published."
-            exit 0
-          fi
-          npm publish --provenance --access public
+        run: npm publish --provenance --access public
