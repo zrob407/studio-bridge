@@ -96,5 +96,5 @@ local function scanScripts(root, maxFindings)
 		table.insert(out, string.format("%s | %s | %s:%d | %s", string.upper(finding.severity), finding.label, finding.path, finding.line, finding.text))
 	end
 
-	return table.concat(out, "\n")
+	return table.concat(out, "\n"), counts
 end

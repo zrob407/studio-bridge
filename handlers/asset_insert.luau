@@ -29,7 +29,7 @@ if #children == 0 then
 	return "asset " .. assetId .. " loaded but is empty"
 end
 
-local report = scanScripts(staging, params.max_findings or 60)
+local report, counts = scanScripts(staging, params.max_findings or 60)
 local names = {}
 
 for _, child in ipairs(children) do
@@ -44,7 +44,7 @@ for _, descendant in ipairs(staging:GetDescendants()) do
 	end
 end
 
-if keepScripts and params.block_high ~= false and string.find(report, "%d+ high") and not string.find(report, " 0 high,") then
+if keepScripts and params.block_high ~= false and counts.high > 0 then
 	staging:Destroy()
 
 	return string.format("NOT inserted (high-risk code found; rerun with block_high false to force). Asset %d: %s\n%s", assetId, table.concat(names, ", "), report)

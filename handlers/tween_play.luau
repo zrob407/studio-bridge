@@ -1,4 +1,5 @@
 local TweenService = game:GetService("TweenService")
+local MAX_WAIT_SECONDS = 50
 local target = resolve(params.path)
 
 if type(params.properties) ~= "table" or next(params.properties) == nil then
@@ -30,6 +31,12 @@ local info = TweenInfo.new(
 	delay
 )
 
+local total = delay + duration * (repeatCount + 1) * (if reverses then 2 else 1)
+
+if params.wait ~= false and total > MAX_WAIT_SECONDS then
+	error(string.format("that tween takes %.0fs, more than the %ds one call can wait; shorten it or pass wait: false", total, MAX_WAIT_SECONDS))
+end
+
 local tween = TweenService:Create(target, info, goal)
 local finished = false
 
@@ -43,7 +50,6 @@ if params.wait == false then
 	return "started tween on " .. pathOf(target)
 end
 
-local total = delay + duration * (repeatCount + 1) * (if reverses then 2 else 1)
 local deadline = os.clock() + total + 2
 
 while not finished and os.clock() < deadline do

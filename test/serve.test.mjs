@@ -104,7 +104,7 @@ check('spatial handlers load the geometry and spatial helpers', spatialFind.ok &
 const poseCode = await include('animation_pose', { action: 'reset', rig: 'game.Workspace.R' });
 check('animation handlers load the animation helpers', poseCode.ok && poseCode.code.includes('local function posesAt'));
 const insertCode = await include('asset_insert', { assetId: '123' });
-check('asset_insert loads the scan rules', insertCode.ok && insertCode.code.includes('local SCAN_RULES = {') && insertCode.code.includes('game:GetObjects'));
+check('asset_insert loads the scan rules', insertCode.ok && insertCode.code.includes('local SCAN_RULES = {') && insertCode.code.includes('game:GetObjects') && insertCode.code.includes('counts.high > 0') && !insertCode.code.includes('0 high,'));
 const snapCode = await include('snap_grid', { path: 'game.Workspace.A' });
 check('snap_grid loads the geometry helpers', snapCode.ok && snapCode.code.includes('local function formatVector'));
 const plainCode = await include('tag_manage', { action: 'list' });

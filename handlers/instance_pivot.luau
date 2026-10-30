@@ -10,7 +10,9 @@ local function currentPivot()
 end
 
 local function setWorldPivot(frame)
-	if target:IsA("Model") then
+	if target:IsA("Model") and target.PrimaryPart then
+		target.PrimaryPart.PivotOffset = target.PrimaryPart.CFrame:ToObjectSpace(frame)
+	elseif target:IsA("Model") then
 		target.WorldPivot = frame
 	else
 		target.PivotOffset = target.CFrame:ToObjectSpace(frame)

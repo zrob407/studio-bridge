@@ -21,8 +21,15 @@ local function orientationOf(name)
 end
 
 local function guiSize()
+	for _, leftover in ipairs(StarterGui:GetChildren()) do
+		if leftover.Name == "__DeviceProbe" then
+			leftover:Destroy()
+		end
+	end
+
 	local probe = Instance.new("ScreenGui")
 	probe.Name = "__DeviceProbe"
+	probe.Archivable = false
 	probe.Parent = StarterGui
 
 	task.wait()
