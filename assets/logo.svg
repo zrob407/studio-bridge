@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Studio Bridge">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#27407a"/>
+      <stop offset="1" stop-color="#0c1430"/>
+    </linearGradient>
+    <linearGradient id="cable" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4fd8ff"/>
+      <stop offset="1" stop-color="#7f9cff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd166" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffd166" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#background)"/>
+  <circle cx="256" cy="98" r="82" fill="url(#glow)"/>
+  <g stroke="url(#cable)" stroke-width="6" stroke-linecap="round" fill="none">
+    <path d="M146 156 L60 326"/>
+    <path d="M366 156 L452 326"/>
+    <path d="M190 230 V326"/>
+    <path d="M223 262 V326"/>
+    <path d="M256 272 V326"/>
+    <path d="M289 262 V326"/>
+    <path d="M322 230 V326"/>
+  </g>
+  <path d="M146 156 Q256 388 366 156" stroke="url(#cable)" stroke-width="11" stroke-linecap="round" fill="none"/>
+  <rect x="130" y="146" width="32" height="200" rx="8" fill="#f4f7ff"/>
+  <rect x="350" y="146" width="32" height="200" rx="8" fill="#f4f7ff"/>
+  <rect x="48" y="326" width="416" height="28" rx="9" fill="#dfe7fb"/>
+  <rect x="48" y="354" width="416" height="8" rx="4" fill="#4fd8ff" opacity="0.55"/>
+  <path d="M256 50 L267 85 L302 98 L267 111 L256 146 L245 111 L210 98 L245 85 Z" fill="#ffd166"/>
+</svg>
