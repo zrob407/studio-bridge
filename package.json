@@ -1,6 +1,6 @@
 {
   "name": "@zrob407/studio-bridge",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "MCP server and Roblox Studio plugin that let Claude Code, Codex and other AI assistants read and edit a place, run Luau, drive playtests and take screenshots",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
