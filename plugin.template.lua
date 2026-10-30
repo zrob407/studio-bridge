@@ -733,6 +733,7 @@ if ROLE ~= "client" then
 end
 
 local studioPlugin = context.plugin or plugin
+local BUTTON_ICON = "rbxassetid://111845153082022"
 local statusUi
 
 local function elapsed(seconds)
@@ -763,9 +764,11 @@ local function buildStatusWidget()
 			DockWidgetPluginGuiInfo.new(Enum.InitialDockState.Float, false, false, 300, 280, 240, 180)
 		)
 		holder.widget.Title = "Studio Bridge"
-		holder.button = studioPlugin:CreateToolbar("Studio Bridge"):CreateButton("StudioBridgeStatus", "Show or hide the Studio Bridge status window", "", "Status")
+		holder.button = studioPlugin:CreateToolbar("Studio Bridge"):CreateButton("StudioBridgeStatus", "Show or hide the Studio Bridge status window", BUTTON_ICON, "Status")
 		holder.button.ClickableWhenViewportHidden = true
 	end
+
+	holder.button.Icon = BUTTON_ICON
 
 	local widget = holder.widget
 	local button = holder.button
