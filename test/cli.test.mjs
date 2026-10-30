@@ -54,7 +54,7 @@ check('standalone install writes the full plugin', standalone.status === 0 && fu
 
 run('install', '--no-register');
 const doctor = run('doctor');
-check('doctor reports the token and the loader', doctor.status === 0 && /ok\s+token\.txt exists/.test(doctor.stdout) && /Studio Bridge\.rbxmx is installed \(loader\)/.test(doctor.stdout), doctor.stdout.split('\n').slice(0, 3).join(' | '));
+check('doctor reports the token and the loader', doctor.status === 0 && /ok\s+token\.txt exists/.test(doctor.stdout) && /Studio Bridge\.rbxmx is installed in .+ \(loader\)/.test(doctor.stdout), doctor.stdout.split('\n').slice(0, 3).join(' | '));
 check('doctor finds the embedded screenshot helper', /ok\s+screenshot helper is available/.test(doctor.stdout), (doctor.stdout.match(/screenshot helper[^\n]*/) || [''])[0]);
 check('doctor sees that the bridge is not running', /not running on port 3991/.test(doctor.stdout));
 
@@ -146,7 +146,7 @@ check('the installer finds the old source install from its Claude Code registrat
 check('it replaces the old registration instead of adding a second one', /remove/.test(calls) && /add/.test(calls) && calls.indexOf('remove') < calls.indexOf('add') && /replacing the previous registration/.test(registeredOut));
 check('the new registration is a user-scope entry named studio-bridge', /add .*--scope user.* studio-bridge -- /.test(calls));
 const oldDoctor = spawnSync(command[0], [...command.slice(1), 'doctor'], { env: { ...registerEnv, STUDIO_BRIDGE_OFFLINE: '1' }, encoding: 'utf8', windowsHide: true, timeout: 60000 });
-check('doctor warns when Claude Code still starts the old source version', /WARN\s+Claude Code still starts the old source version/.test(oldDoctor.stdout || ''));
+check('doctor warns when Claude Code starts a different copy', /WARN\s+Claude Code starts a different copy of Studio Bridge/.test(oldDoctor.stdout || ''));
 
 const codexHome = path.join(sandbox, 'codex');
 const codexFile = path.join(codexHome, 'config.toml');

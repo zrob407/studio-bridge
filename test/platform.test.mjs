@@ -46,6 +46,19 @@ const customPrefix = path.join(sandbox, 'custom-prefix');
 fs.mkdirSync(path.join(customPrefix, 'drive_c', 'users', 'me', 'AppData', 'Local', 'Roblox'), { recursive: true });
 check('WINEPREFIX comes first', platform.wineRobloxFolders(wineHome, { WINEPREFIX: customPrefix })[0] === path.join(customPrefix, 'drive_c', 'users', 'me', 'AppData', 'Local', 'Roblox'));
 
+const appdataHome = path.join(sandbox, 'appdata');
+const appdataRoblox = path.join(appdataHome, '.local', 'share', 'vinegar', 'appdata', 'Roblox');
+fs.mkdirSync(path.dirname(appdataRoblox), { recursive: true });
+makeRoblox(appdataHome, ['.local', 'share', 'vinegar', 'prefixes', 'studio'], 'steamuser');
+const appdataFolders = platform.wineRobloxFolders(appdataHome, {});
+check('Vinegar appdata wins over the prefix even before Studio has created Roblox', JSON.stringify(appdataFolders) === JSON.stringify([appdataRoblox]));
+check('Vinegar flatpak appdata folder is found', (() => {
+  const home = path.join(sandbox, 'flatpak-appdata');
+  const root = path.join(home, '.var', 'app', 'org.vinegarhq.Vinegar', 'data', 'vinegar', 'appdata');
+  fs.mkdirSync(root, { recursive: true });
+  return platform.wineRobloxFolders(home, {})[0] === path.join(root, 'Roblox');
+})());
+
 const override = path.join(sandbox, 'plugins-override');
 check('STUDIO_BRIDGE_PLUGINS_DIR wins', platform.pluginsDir(emptyHome, { STUDIO_BRIDGE_PLUGINS_DIR: override }) === path.resolve(override));
 
@@ -54,6 +67,7 @@ if (platform.isWindows) {
   check('Windows data dir is StudioBridge', platform.dataDirName() === 'StudioBridge');
 } else {
   check('plugins folder is inside the detected prefix', platform.pluginsDir(flatpakHome, {}) === path.join(flatpakRoblox, 'Plugins'));
+  check('Vinegar plugins folder is under appdata', platform.pluginsDirs(appdataHome, {})[0] === path.join(appdataRoblox, 'Plugins'));
   let message = '';
   try {
     platform.pluginsDir(emptyHome, {});

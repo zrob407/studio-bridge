@@ -54,7 +54,18 @@ export function winePrefixRoots(home = os.homedir(), env = process.env) {
   return [...new Set(roots)];
 }
 
+export function vinegarAppdataRoots(home = os.homedir(), env = process.env) {
+  const dataHome = env.XDG_DATA_HOME || path.join(home, '.local', 'share');
+  return [
+    path.join(home, '.var', 'app', 'org.vinegarhq.Vinegar', 'data', 'vinegar', 'appdata'),
+    path.join(home, '.local', 'share', 'vinegar', 'appdata'),
+    path.join(dataHome, 'vinegar', 'appdata'),
+  ].filter((root, index, all) => all.indexOf(root) === index);
+}
+
 export function wineRobloxFolders(home = os.homedir(), env = process.env) {
+  const vinegar = vinegarAppdataRoots(home, env).filter((root) => fs.existsSync(root)).map((root) => path.join(root, 'Roblox'));
+  if (vinegar.length > 0) return vinegar;
   const found = [];
   for (const root of winePrefixRoots(home, env)) {
     const users = path.join(root, 'drive_c', 'users');
@@ -67,12 +78,12 @@ export function wineRobloxFolders(home = os.homedir(), env = process.env) {
   return found;
 }
 
-export function pluginsDir(home = os.homedir(), env = process.env) {
-  if (env.STUDIO_BRIDGE_PLUGINS_DIR) return path.resolve(env.STUDIO_BRIDGE_PLUGINS_DIR);
+export function pluginsDirs(home = os.homedir(), env = process.env) {
+  if (env.STUDIO_BRIDGE_PLUGINS_DIR) return [path.resolve(env.STUDIO_BRIDGE_PLUGINS_DIR)];
   if (isWindows) {
     const base = env.LOCALAPPDATA;
     if (!base) throw new Error('LOCALAPPDATA is not set, so the Studio plugin folder cannot be found. Set STUDIO_BRIDGE_PLUGINS_DIR to the folder that Studio loads plugins from.');
-    return path.join(base, 'Roblox', 'Plugins');
+    return [path.join(base, 'Roblox', 'Plugins')];
   }
   const folders = wineRobloxFolders(home, env);
   if (folders.length === 0) {
@@ -81,5 +92,9 @@ export function pluginsDir(home = os.homedir(), env = process.env) {
         'Start Studio once from your launcher so the prefix exists, or set STUDIO_BRIDGE_PLUGINS_DIR to the Roblox/Plugins folder inside your prefix (drive_c/users/<user>/AppData/Local/Roblox/Plugins).',
     );
   }
-  return path.join(folders[0], 'Plugins');
+  return folders.map((folder) => path.join(folder, 'Plugins'));
+}
+
+export function pluginsDir(home = os.homedir(), env = process.env) {
+  return pluginsDirs(home, env)[0];
 }
