@@ -20,7 +20,7 @@ Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injec
 - "Run a playtest, click Play, and tell me what errors show up in the output."
 - "Rename these 40 parts, fix the tween in ShopController, and publish the animations to my group."
 
-Studio Bridge exposes seventy-four tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, animation authoring and posing, audio, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
+Studio Bridge exposes seventy-nine tools: scripts, instances, tags, UI building, terrain, lighting presets, scattering and spatial queries, animation authoring and posing, audio, camera and screenshots, playtests with a server and client window, asset upload and audit, and `batch` to run many edits as one undoable step.
 
 ## Why Studio Bridge
 
@@ -117,6 +117,8 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 - Audio: `audio_manage` (list, create, bulk set properties or scale volume, SoundGroups, SoundEffects such as reverb and echo, preview play, pause and stop, and remap SoundIds), `audio_report`
 - Placement and space: `spatial_find` (ground height, the flattest spots, free space for a box, and character spawn spots), `spatial_check` (does a model overlap, float or sit on a slope; what it touches; how much of an area is walkable), `spatial_map` (a top-down text map, or a scan of what is in a box), `snap_grid` (snap position and rotation to a grid), `physics_groups` (collision groups: register, set collidable, assign, list), `effects` (list, toggle, emit and clear particles, beams, trails and lights)
 - Instances: `instance_duplicate` (arrays, grids and circles of copies), `instance_rename` (find and replace, prefix, suffix, case, numbering), `instance_pivot` (centre, base or top pivots), `instance_bulk` (get, set, adjust relative to the current value, or delete across many instances, with dry runs), `instance_info` (ancestors, an outline tree, and the members of a Roblox class), `script_dependencies` (follow require() between scripts, find unused modules, and spot require(assetId) calls)
+- Playtest control: `character_move` (walk the player character to a position or an instance, using pathfinding around obstacles, jump, stop, and read its state), `input_keyboard` (key presses, holds and typed text), `input_mouse` (clicks, drags and holds at viewport pixels), all working through Studio's virtual input on a running playtest; these bring Studio to the front for the input
+- Generation and reference: `generate_model` (a model from a text prompt, and optionally an image, using Roblox's own generation service in Studio), `roblox_docs` (search and read the official documentation on create.roblox.com)
 - Asset library: `asset_search` (the free Creator Store: models, decals, audio, images, meshes, plugins), `asset_insert` (insert a free model by id; it scans the code first and removes scripts unless you keep them)
 - Queries and checks: `raycast` (one ray or many), `spatial_query` (parts in a radius or box, nearest first, or the bounds of an instance), `tag_manage` (list, find, get, add and remove CollectionService tags), `physics_report` (loose, void, oversized and invisible-collidable parts), `audio_report` (missing, silent, loud and duplicated sounds)
 - Playtests: `play_start`, `play_stop`, `run_test`, `logs_get`
@@ -140,7 +142,7 @@ Create `%USERPROFILE%\.roblox-key.txt` in your own terminal (no angle brackets):
 
 ## Tests
 
-`npm test` runs the fourteen suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
+`npm test` runs the fifteen suites in `test/`. They start the server with a random token and drive it with a fake plugin or the command line: queueing and timeouts, the WebSocket handshake, acknowledgements, reconnects, requeue limits and batch results, the tool list reload, the signed plugin endpoint, install and uninstall, the MCP handshake, the update command and the update notice, tool and auto-update, the official MCP client library talking to the server, and the npm package (packed, installed and run) with its update path. They need no Studio. `node test/cli.test.mjs dist/studio-bridge.exe` and `node test/serve.test.mjs dist/studio-bridge.exe` run the install and serve suites against a built exe.
 
 ## Security
 
@@ -148,7 +150,7 @@ This tool lets an AI assistant run arbitrary Luau inside your Studio, which is i
 
 - The bridge listens only on `127.0.0.1`, rejects requests with a foreign `Host` header, and requires the random secret in `token.txt` on every request. The secret is created on install and never leaves your machine.
 - The plugin loader only runs plugin source whose HMAC-SHA256 signature, keyed by that secret, matches. A different program that took over the port could not make Studio run its code without the secret.
-- Nothing is sent anywhere except what you ask for: Roblox Open Cloud uploads (using a key you create), the public Roblox economy API for `asset_audit`, and the public Creator Store search and economy details for `asset_search`.
+- Nothing is sent anywhere except what you ask for: Roblox Open Cloud uploads (using a key you create), the public Roblox economy API for `asset_audit`, the public Creator Store search and economy details for `asset_search`, and the public documentation pages on create.roblox.com for `roblox_docs`. `generate_model` sends your prompt to Roblox's generation service through Studio.
 - The Open Cloud key is read from `%USERPROFILE%\.roblox-key.txt` or `ROBLOX_API_KEY` and is never printed. Give it only the permissions you need and revoke it when you are done.
 - `import_rbxm` and `script_scan` flag risky code (require by id, loadstring, LoadAsset, obfuscation, HTTP, teleports, kicks, DataStore) before it enters a place.
 - Playtests run the game for real. A game that touches live services can have real effects.
