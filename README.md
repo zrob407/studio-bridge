@@ -177,12 +177,4 @@ Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. 
 - Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
 - The core stays free. The author may also offer separate add-ons or services, possibly for a fee, under separate terms; those are not covered by this license, and versions already released stay available under the terms they were released with.
 
-Each copy checks that its `LICENSE` file is unmodified (line endings and trailing spaces are ignored). If it was changed or removed, Studio Bridge stays up only to say so: the MCP server tells the AI client "Tampering detected" and returns that message from every tool call, it refuses to serve the plugin or accept plugin connections, and `install` and `update` refuse to run. Restoring the original `LICENSE` lifts the lock at once, and `doctor`, `version` and `licenses` keep working. See License integrity check below.
-
 This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.
-
-### License integrity check
-
-Every version carries a hash of its own `LICENSE` text. If the file in a copy no longer matches (edited, emptied or deleted), the server switches to a locked mode: it still answers, but only to say "Tampering detected: any further use of a tampered license of this tool is not allowed", through the MCP server instructions and as the result of every tool call, so the AI assistant passes that on to the user. The plugin is not served and cannot connect, and `install` and `update` refuse to run. Putting the original `LICENSE` back lifts the lock without a restart. `studio-bridge licenses --hash` prints the hash a maintainer needs to update when the license text changes.
-
-This is a safeguard against casual tampering, not copy protection: the source is public, so anyone determined can remove the check, and the license text is what actually binds you. An earlier build of this check was taken out for a few days while an unrelated Windows block on the unsigned exe was being investigated; the check was not the cause, and it is back now that Studio Bridge can also be installed from npm.

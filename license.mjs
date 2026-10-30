@@ -1,6 +1,3 @@
-// Notice: this file is the license integrity check required by the Studio Bridge License (see LICENSE).
-// Removing, disabling or working around it, or distributing a copy with it removed, is a breach of that license.
-
 import crypto from 'node:crypto';
 import { readAsset } from './paths.mjs';
 
