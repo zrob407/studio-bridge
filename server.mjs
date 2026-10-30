@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { uploadAsset, assetStatus, keyCheck, uploadBatch, batchStatus } from './assets.mjs';
 import { rgbaToPng, downscaleRgba } from './png.mjs';
 import { runAudit } from './audit.mjs';
+import { formatSearch, searchAssets } from './marketplace.mjs';
 import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } from './paths.mjs';
 import { checkLicense, TAMPER_MESSAGE } from './license.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, updateMode } from './updater.mjs';
@@ -624,6 +625,14 @@ const HANDLER_INCLUDES = {
   spatial_query: ['_geometry'],
   scatter: ['_geometry'],
   terrain: ['_geometry'],
+  instance_pivot: ['_geometry'],
+  snap_grid: ['_geometry'],
+  spatial_find: ['_geometry', '_spatial'],
+  spatial_check: ['_geometry', '_spatial'],
+  spatial_map: ['_geometry', '_spatial'],
+  animation_pose: ['_animation'],
+  animation_play: ['_animation'],
+  asset_insert: ['_scan'],
 };
 
 function handlerIncludes(names) {
@@ -902,6 +911,14 @@ async function importRbxm(args) {
   return textResult(render(outcome.result, outcome.studio, true), !outcome.result.ok);
 }
 
+async function assetSearchTool(args) {
+  try {
+    return textResult(formatSearch(await searchAssets(args)), false);
+  } catch (err) {
+    return textResult(`Asset search failed: ${err.message}`, true);
+  }
+}
+
 async function assetAudit(args) {
   let scanPath = args.scan_file ? String(args.scan_file) : '';
   let scanText = '';
@@ -1056,6 +1073,7 @@ async function callTool(name, args) {
   if (name === 'asset_status') return assetStatus(args);
   if (name === 'asset_key_check') return keyCheck();
   if (name === 'asset_audit') return assetAudit(args);
+  if (name === 'asset_search') return assetSearchTool(args);
   if (name === 'import_rbxm') return importRbxm(args);
   if (name === 'asset_upload_batch') return uploadBatch(args);
   if (name === 'asset_batch_status') return batchStatus(args);

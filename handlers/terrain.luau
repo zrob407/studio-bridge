@@ -49,6 +49,8 @@ if action == "fill" then
 		end
 
 		terrain:FillBall(center, params.radius, material)
+	elseif shape == "wedge" then
+		terrain:FillWedge(frame, toVector3(params.size, "size"), material)
 	elseif shape == "cylinder" then
 		if type(params.radius) ~= "number" or type(params.height) ~= "number" then
 			error("radius and height are required")
@@ -56,7 +58,7 @@ if action == "fill" then
 
 		terrain:FillCylinder(frame, params.height, params.radius, material)
 	else
-		error("shape must be block, ball or cylinder")
+		error("shape must be block, ball, cylinder or wedge")
 	end
 
 	return "filled " .. shape .. " of " .. material.Name .. " at " .. formatVector(center)
@@ -294,6 +296,128 @@ elseif action == "generate" then
 		seed,
 		written
 	)
+elseif action == "replace_material" then
+	local center = toVector3(params.center, "center")
+	local size = toVector3(params.size, "size")
+	local from = materialOf(params.from, nil)
+	local to = materialOf(params.to, nil)
+	local region = Region3.new(center - size / 2, center + size / 2):ExpandToGrid(RESOLUTION)
+
+	terrain:ReplaceMaterial(region, RESOLUTION, from, to)
+
+	return "replaced " .. from.Name .. " with " .. to.Name .. " in the region"
+elseif action == "smooth" then
+	local center = toVector3(params.center, "center")
+	local size = toVector3(params.size, "size")
+	local passes = math.clamp(params.passes or 1, 1, 5)
+	local strength = math.clamp(params.strength or 1, 0, 1)
+	local region = Region3.new(center - size / 2, center + size / 2):ExpandToGrid(RESOLUTION)
+	local cells = region.Size / RESOLUTION
+
+	if cells.X * cells.Y * cells.Z > MAX_READ_CELLS then
+		error("region is too large to smooth; use a smaller size")
+	end
+
+	local materials, occupancy = terrain:ReadVoxels(region, RESOLUTION)
+	local dimensions = materials.Size
+
+	for _ = 1, passes do
+		local nextOccupancy = {}
+		local nextMaterials = {}
+
+		for x = 1, dimensions.X do
+			nextOccupancy[x] = {}
+			nextMaterials[x] = {}
+
+			for y = 1, dimensions.Y do
+				nextOccupancy[x][y] = {}
+				nextMaterials[x][y] = {}
+
+				for z = 1, dimensions.Z do
+					local sum = 0
+					local samples = 0
+					local votes = {}
+					local winner = materials[x][y][z]
+					local best = 0
+
+					for dx = -1, 1 do
+						for dy = -1, 1 do
+							for dz = -1, 1 do
+								local nx = x + dx
+								local ny = y + dy
+								local nz = z + dz
+
+								if nx >= 1 and nx <= dimensions.X and ny >= 1 and ny <= dimensions.Y and nz >= 1 and nz <= dimensions.Z then
+									local amount = occupancy[nx][ny][nz]
+
+									sum += amount
+									samples += 1
+
+									if amount > 0 then
+										local material = materials[nx][ny][nz]
+
+										if material ~= Enum.Material.Air and material ~= Enum.Material.Water then
+											votes[material] = (votes[material] or 0) + amount
+
+											if votes[material] > best then
+												best = votes[material]
+												winner = material
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+
+					local current = occupancy[x][y][z]
+					local averaged = sum / samples
+					local blended = current + (averaged - current) * strength
+
+					nextOccupancy[x][y][z] = blended
+
+					if blended > 0 and materials[x][y][z] == Enum.Material.Air then
+						nextMaterials[x][y][z] = winner
+					elseif blended <= 0 then
+						nextMaterials[x][y][z] = Enum.Material.Air
+					else
+						nextMaterials[x][y][z] = materials[x][y][z]
+					end
+				end
+			end
+		end
+
+		materials = nextMaterials
+		occupancy = nextOccupancy
+	end
+
+	terrain:WriteVoxels(region, RESOLUTION, materials, occupancy)
+
+	return "smoothed the region with " .. passes .. " pass(es)"
+elseif action == "colors" then
+	local colors = params.colors
+
+	if type(colors) == "table" and next(colors) ~= nil then
+		local changed = 0
+
+		for name, value in pairs(colors) do
+			terrain:SetMaterialColor(materialOf(name, nil), decode(value))
+			changed += 1
+		end
+
+		return "set " .. changed .. " terrain color(s)"
+	end
+
+	local names = params.materials or {"Grass", "Sand", "Rock", "Ground", "Mud", "Snow", "Water", "Slate", "Sandstone", "Basalt", "Limestone", "Pavement", "Asphalt", "Cobblestone", "Brick", "Concrete", "CrackedLava", "Glacier", "Ice", "LeafyGrass", "Salt", "WoodPlanks"}
+	local lines = {}
+
+	for _, name in ipairs(names) do
+		local color = terrain:GetMaterialColor(materialOf(name, nil))
+
+		table.insert(lines, string.format("%s %d, %d, %d", name, math.round(color.R * 255), math.round(color.G * 255), math.round(color.B * 255)))
+	end
+
+	return table.concat(lines, "\n")
 end
 
-error("action must be fill, clear, read or generate")
+error("action must be fill, clear, read, generate, replace_material, smooth or colors")

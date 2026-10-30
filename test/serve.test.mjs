@@ -94,6 +94,22 @@ const mixed = await rpc('tools/call', { name: 'batch', arguments: { operations: 
 check('batch includes the geometry helpers once when a geometry tool is in it', !mixed.result.isError && Boolean(received[4]) && received[4].split('local function worldBounds').length === 2);
 check('the plugin source carries the status window', plugin.source.includes('buildStatusWidget') && plugin.source.includes('StudioBridgeStatus'));
 
+const include = async (name, args) => {
+  const before = received.length;
+  const answered = await rpc('tools/call', { name, arguments: args });
+  return { ok: !answered.result.isError, code: received[before] || '' };
+};
+const spatialFind = await include('spatial_find', { mode: 'ground', x: 1, z: 2 });
+check('spatial handlers load the geometry and spatial helpers', spatialFind.ok && spatialFind.code.includes('local function worldBounds') && spatialFind.code.includes('local function groundAt') && spatialFind.code.includes('local mode = params.mode'));
+const poseCode = await include('animation_pose', { action: 'reset', rig: 'game.Workspace.R' });
+check('animation handlers load the animation helpers', poseCode.ok && poseCode.code.includes('local function posesAt'));
+const insertCode = await include('asset_insert', { assetId: '123' });
+check('asset_insert loads the scan rules', insertCode.ok && insertCode.code.includes('local SCAN_RULES = {') && insertCode.code.includes('game:GetObjects'));
+const snapCode = await include('snap_grid', { path: 'game.Workspace.A' });
+check('snap_grid loads the geometry helpers', snapCode.ok && snapCode.code.includes('local function formatVector'));
+const plainCode = await include('tag_manage', { action: 'list' });
+check('a handler with no includes carries none', plainCode.ok && !plainCode.code.includes('local function worldBounds') && !plainCode.code.includes('local function posesAt'));
+
 const second = spawn(command[0], command.slice(1), {
   env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port) },
   stdio: ['pipe', 'pipe', 'pipe'],
