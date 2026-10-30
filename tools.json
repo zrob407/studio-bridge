@@ -2391,6 +2391,143 @@
         ],
         "additionalProperties": false
       }
+    },
+    {
+      "name": "ui_autoscale",
+      "description": "Convert a GUI from pixel Offsets to responsive Scale. Measures the real layout (respecting UIPadding, AnchorPoint, SizeConstraint and AutomaticSize), converts sizes and positions to Scale, leaves layout-managed and scrolling content alone, converts corner radii and list and grid spacing, makes text scale with a readable minimum and maximum, and adds aspect ratio constraints to top-level panels. The ScreenGui must be enabled and visible in the viewport so it can be measured. Use dryRun first; it is one undo step.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "A ScreenGui or any GUI object to convert, including its descendants."
+          },
+          "dryRun": {
+            "type": "boolean",
+            "description": "Report what would change without changing anything."
+          },
+          "size": {
+            "type": "boolean",
+            "description": "Convert sizes (default true)."
+          },
+          "position": {
+            "type": "boolean",
+            "description": "Convert positions (default true)."
+          },
+          "layouts": {
+            "type": "boolean",
+            "description": "Convert UIListLayout padding and UIGridLayout cell size and padding (default true)."
+          },
+          "corners": {
+            "type": "boolean",
+            "description": "Convert UICorner radii (default true)."
+          },
+          "text": {
+            "type": "string",
+            "enum": [
+              "constrain",
+              "none"
+            ],
+            "description": "constrain: TextScaled with a UITextSizeConstraint (default)."
+          },
+          "minTextSize": {
+            "type": "number",
+            "description": "Smallest text size for constrained text (default 8)."
+          },
+          "aspect": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "all",
+              "none"
+            ],
+            "description": "Aspect ratio constraints on top-level panels: auto skips panels that fill most of the screen (default), all adds to every one."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          },
+          "designSize": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "The screen size [width, height] the pixel values were designed for. Top-level panels are scaled against this instead of the current Studio viewport."
+          },
+          "limitSize": {
+            "type": "boolean",
+            "description": "Add a UISizeConstraint capping top-level panels at their current pixel size so they do not grow past the design on large screens (default true)."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "ui_responsive_check",
+      "description": "Check how a GUI lays out at different screen sizes without playtesting. Copies it into a probe at each device size (phone-small, phone, phone-landscape, tablet, tablet-landscape, laptop, desktop, or your own width and height) and reports elements that extend past the screen, touch targets under the minimum size, tiny text, text wider than its box and collapsed elements. The probe is removed afterwards.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "A ScreenGui or any GUI object."
+          },
+          "devices": {
+            "type": "array",
+            "description": "Preset names, or objects with name, width, height and touch. Default phone, tablet, desktop.",
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "width": {
+                      "type": "number"
+                    },
+                    "height": {
+                      "type": "number"
+                    },
+                    "touch": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "width",
+                    "height"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "minTouch": {
+            "type": "number",
+            "description": "Smallest tappable size in pixels on touch devices (default 44)."
+          },
+          "minText": {
+            "type": "number",
+            "description": "Smallest readable text size in pixels (default 10)."
+          },
+          "studio": {
+            "type": "string",
+            "description": "Which Studio window when several are connected: id prefix, placeId, or place name fragment."
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
     }
   ],
   "meta": {
