@@ -15,6 +15,25 @@ export function dataDirName() {
   return isWindows ? 'StudioBridge' : 'studio-bridge';
 }
 
+export function isHyprland(env = process.env) {
+  return isLinux && Boolean(env.HYPRLAND_INSTANCE_SIGNATURE);
+}
+
+export function findHyprWindow(clients, titleLike) {
+  const wanted = String(titleLike || '').toLowerCase();
+  const mapped = (Array.isArray(clients) ? clients : []).filter((client) => client && client.mapped !== false && typeof client.title === 'string');
+  const studio = mapped.filter((client) => client.title.toLowerCase().includes('roblox studio'));
+  const exact = wanted ? mapped.filter((client) => client.title.toLowerCase().includes(wanted)) : [];
+  return exact[0] || studio[0] || null;
+}
+
+export function hyprGrimArgs(client, maxWidth, outPath) {
+  const [x, y] = client.at;
+  const [width, height] = client.size;
+  const scale = Math.min(1, Number(maxWidth) / width) || 1;
+  return ['-t', 'jpeg', '-q', '80', '-s', String(scale), '-g', `${x},${y} ${width}x${height}`, outPath];
+}
+
 function listDirs(folder) {
   try {
     return fs.readdirSync(folder, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name);

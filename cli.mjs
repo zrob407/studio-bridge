@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { isWindows, pluginsDir, wineRobloxFolders } from './platform.mjs';
+import { isHyprland, isWindows, pluginsDir, wineRobloxFolders } from './platform.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
@@ -284,7 +284,8 @@ function install(args) {
     console.log('Linux notes:');
     console.log(`  - The plugin went into ${path.dirname(target)}, inside your Wine prefix. Start Studio from the launcher that owns that prefix (Vinegar or Grapejuice).`);
     if (prefixes.length > 1) console.log(`  - ${prefixes.length} Studio prefixes were found and the first was used. To use another, run install again with STUDIO_BRIDGE_PLUGINS_DIR set to its Roblox/Plugins folder.`);
-    console.log('  - Install xdotool (X11) if you want input_keyboard, input_mouse and gui_click to focus Studio for you. The screenshot tool is Windows only; use viewport_screenshot.');
+    if (isHyprland()) console.log('  - Hyprland detected: hyprctl focuses Studio for input_keyboard, input_mouse and gui_click, and install grim to enable the screenshot tool.');
+    else console.log('  - Install xdotool (X11) if you want input_keyboard, input_mouse and gui_click to focus Studio for you. The screenshot tool is Windows and Hyprland only; use viewport_screenshot.');
     console.log('  - Run studio-bridge doctor if the Studio window does not show up.');
   }
 }
@@ -365,6 +366,11 @@ async function doctor(args) {
     } catch (err) {
       note('FAIL', `screenshot helper is not available: ${err.message}`);
     }
+  } else if (isHyprland()) {
+    const hyprctl = spawnSync('hyprctl', ['version', '-j'], { encoding: 'utf8' });
+    note(hyprctl.error || hyprctl.status !== 0 ? 'WARN' : 'ok', hyprctl.error || hyprctl.status !== 0 ? 'Hyprland was detected but hyprctl does not work from here, so input_keyboard, input_mouse and gui_click cannot focus the Studio window' : 'hyprctl can focus the Studio window');
+    const grim = spawnSync('grim', ['-h'], { encoding: 'utf8' });
+    note(grim.error ? 'WARN' : 'ok', grim.error ? 'grim is not installed, so the screenshot tool is unavailable (viewport_screenshot still works)' : 'grim is available for the screenshot tool');
   } else {
     const xdotool = spawnSync('xdotool', ['--version'], { encoding: 'utf8' });
     note(xdotool.error ? 'WARN' : 'ok', xdotool.error ? 'xdotool is not installed, so input_keyboard, input_mouse and gui_click cannot focus the Studio window (X11 only); viewport_screenshot does not need it' : `xdotool ${(xdotool.stdout || '').trim()} can focus the Studio window`);

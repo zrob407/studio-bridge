@@ -15,7 +15,7 @@ import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } fr
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
-import { isWindows } from './platform.mjs';
+import { findHyprWindow, hyprGrimArgs, isHyprland, isWindows } from './platform.mjs';
 
 const dir = appDir;
 
@@ -916,8 +916,54 @@ function render(result, studio, handler = false) {
   return parts.join('\n');
 }
 
+function runTool(command, args, timeout) {
+  return new Promise((resolve) => {
+    execFile(command, args, { timeout, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => resolve({ err, stdout: String(stdout || ''), stderr: String(stderr || '') }));
+  });
+}
+
+async function hyprStudioWindow(titleLike) {
+  const listed = await runTool('hyprctl', ['-j', 'clients'], 5000);
+  if (listed.err) return { error: `hyprctl failed: ${listed.stderr.trim() || listed.err.message}` };
+  let clients;
+  try {
+    clients = JSON.parse(listed.stdout);
+  } catch {
+    return { error: 'hyprctl returned output that is not JSON' };
+  }
+  const client = findHyprWindow(clients, titleLike);
+  return client ? { client } : { error: 'No Roblox Studio window was found on this Hyprland session' };
+}
+
+async function hyprScreenshot(titleLike, maxWidth) {
+  const found = await hyprStudioWindow(titleLike);
+  if (found.error) return textResult(`Screenshot failed: ${found.error}`, true);
+  const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
+  const shot = await runTool('grim', hyprGrimArgs(found.client, maxWidth, file), 20000);
+  if (shot.err || !fs.existsSync(file)) {
+    fs.rmSync(file, { force: true });
+    return textResult(`Screenshot failed: ${shot.stderr.trim() || shot.err.message}. Install grim for window screenshots on Hyprland.`, true);
+  }
+  const data = fs.readFileSync(file).toString('base64');
+  fs.rmSync(file, { force: true });
+  return {
+    content: [
+      { type: 'image', data, mimeType: 'image/jpeg' },
+      { type: 'text', text: `${found.client.title} (${found.client.size[0]}x${found.client.size[1]})` },
+    ],
+  };
+}
+
+async function hyprFocus(titleLike) {
+  const found = await hyprStudioWindow(titleLike);
+  if (found.error) return false;
+  const dispatched = await runTool('hyprctl', ['dispatch', 'focuswindow', `address:${found.client.address}`], 5000);
+  return !dispatched.err && dispatched.stdout.trim().startsWith('ok');
+}
+
 function takeScreenshot(titleLike, maxWidth) {
-  if (!isWindows) return Promise.resolve(textResult('The window screenshot tool only works on Windows. Use viewport_screenshot, which captures the 3D view from inside Studio on every platform.', true));
+  if (isHyprland()) return hyprScreenshot(titleLike, maxWidth);
+  if (!isWindows) return Promise.resolve(textResult('The window screenshot tool only works on Windows and Hyprland (it needs grim there). Use viewport_screenshot, which captures the 3D view from inside Studio on every platform.', true));
   return new Promise((resolve) => {
     const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
     const script = assetFile('screenshot.ps1');
@@ -942,6 +988,7 @@ function takeScreenshot(titleLike, maxWidth) {
 }
 
 function focusStudio(titleLike) {
+  if (isHyprland()) return hyprFocus(titleLike);
   if (!isWindows) {
     return new Promise((resolve) => {
       execFile('xdotool', ['search', '--name', titleLike || 'Roblox Studio', 'windowactivate'], { timeout: 15000 }, (err) => resolve(!err));
