@@ -4025,6 +4025,62 @@
       "physics_report"
     ]
   },
+  "groupInfo": {
+    "core": {
+      "title": "Core",
+      "summary": "Scripts, instances, selection, screenshots, camera, playtest start and stop, logs, batch and the docs. Always on."
+    },
+    "building": {
+      "title": "Building",
+      "summary": "Terrain, lighting, scatter, spatial tools, effects, tweens, bulk editing, asset search and insert, generation."
+    },
+    "ui": {
+      "title": "UI",
+      "summary": "Build, scale and check GUIs, and the device emulator."
+    },
+    "playtest": {
+      "title": "Playtest control",
+      "summary": "Walk the character, send keyboard and mouse input."
+    },
+    "media": {
+      "title": "Animation and audio",
+      "summary": "Create, edit and preview animations; manage sounds."
+    },
+    "publishing": {
+      "title": "Publishing",
+      "summary": "Upload assets in bulk, audit ownership, export models."
+    },
+    "analysis": {
+      "title": "Analysis",
+      "summary": "Scan scripts, dependencies, physics and audio for problems."
+    }
+  },
+  "presets": [
+    {
+      "name": "Everything",
+      "profile": "all"
+    },
+    {
+      "name": "Essentials",
+      "profile": "core"
+    },
+    {
+      "name": "World builder",
+      "profile": "building"
+    },
+    {
+      "name": "UI designer",
+      "profile": "ui,playtest"
+    },
+    {
+      "name": "Animator",
+      "profile": "media"
+    },
+    {
+      "name": "Publisher",
+      "profile": "publishing,analysis"
+    }
+  ],
   "meta": {
     "import_rbxm": {
       "batchable": false

@@ -24,7 +24,8 @@ function start(label, { profile, settings } = {}) {
   const home = path.join(sandbox, label);
   fs.mkdirSync(home, { recursive: true });
   if (settings) fs.writeFileSync(path.join(home, 'settings.json'), JSON.stringify(settings));
-  const env = { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: crypto.randomBytes(16).toString('hex'), STUDIO_BRIDGE_PORT: '3970', STUDIO_BRIDGE_OFFLINE: '1' };
+  const token = crypto.randomBytes(16).toString('hex');
+  const env = { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: '3970', STUDIO_BRIDGE_OFFLINE: '1' };
   delete env.STUDIO_BRIDGE_TOOLS;
   if (profile !== undefined) env.STUDIO_BRIDGE_TOOLS = profile;
   const child = spawn(base[0], [...base.slice(1), 'serve'], { env, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
@@ -53,6 +54,10 @@ function start(label, { profile, settings } = {}) {
     home,
     notifications,
     rpc,
+    post: async (body, sendToken = true) => {
+      const response = await fetch('http://127.0.0.1:3970/profile', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(sendToken ? { 'X-Bridge-Token': token } : {}) }, body: JSON.stringify(body) });
+      return { status: response.status, body: await response.json().catch(() => ({})) };
+    },
     tools: async () => (await rpc('tools/list', {})).result.tools,
     call: async (name, args) => (await rpc('tools/call', { name, arguments: args })).result,
     stop: async () => {
@@ -115,6 +120,35 @@ await unknown.rpc('initialize', {});
 const unknownNames = (await unknown.tools()).map((tool) => tool.name);
 check('an unknown group is ignored and the rest still apply', unknownNames.includes('ui_build') && unknownNames.includes('run_luau') && !unknownNames.includes('terrain'));
 await unknown.stop();
+
+const panel = start('panel');
+await panel.ready;
+await panel.rpc('initialize', {});
+const info = await panel.post({ action: 'get' });
+check('the plugin can read the tool groups, presets and totals', info.status === 200 && typeof info.body.version === 'string' && info.body.profile === 'all' && info.body.groups.length === groupNames.length && info.body.groups[0].name === 'core' && info.body.groups[0].tools === catalog.groups.core.length && info.body.groups.every((group) => group.title && group.tokens > 0) && info.body.presets.length > 0 && info.body.total.tools === allNames.length && info.body.total.tokens > 1000);
+check('every preset names real groups', catalog.presets.every((preset) => preset.profile === 'all' || preset.profile.split(',').every((group) => groupNames.includes(group))));
+const unauthorized = await panel.post({ action: 'get' }, false);
+check('the endpoint refuses a request without the token', unauthorized.status === 401);
+const chosen = await panel.post({ action: 'set', profile: ' UI , building ' });
+check('a chosen profile is normalized and saved', chosen.status === 200 && chosen.body.profile === 'building,ui' && JSON.parse(fs.readFileSync(path.join(panel.home, 'settings.json'), 'utf8')).toolProfile === 'building,ui', chosen.body.profile);
+check('and the total shrinks to match', chosen.body.total.tools < allNames.length && chosen.body.total.tools >= catalog.groups.core.length);
+await sleep(300);
+const panelNames = (await panel.tools()).map((tool) => tool.name);
+check('the client list follows the chosen profile and is told it changed', panelNames.includes('terrain') && panelNames.includes('ui_build') && !panelNames.includes('animation_create') && panel.notifications.includes('notifications/tools/list_changed'));
+const coreOnly = await panel.post({ action: 'set', profile: 'core' });
+check('core alone is accepted', coreOnly.status === 200 && coreOnly.body.profile === 'core' && coreOnly.body.total.tools === catalog.groups.core.length);
+const everything2 = await panel.post({ action: 'set', profile: 'core,all' });
+check('all wins over named groups', everything2.status === 200 && everything2.body.profile === 'all');
+const bogusSet = await panel.post({ action: 'set', profile: 'bogus' });
+check('an unknown group is rejected and the setting is unchanged', bogusSet.status === 400 && /unknown tool group/.test(bogusSet.body.error) && JSON.parse(fs.readFileSync(path.join(panel.home, 'settings.json'), 'utf8')).toolProfile === 'all');
+await panel.stop();
+
+const fixed = start('fixed', { profile: 'ui' });
+await fixed.ready;
+const lockedInfo = await fixed.post({ action: 'get' });
+const lockedSet = await fixed.post({ action: 'set', profile: 'all' });
+check('an environment override is reported as locked and cannot be changed', lockedInfo.body.locked === true && lockedSet.status === 409 && /environment variable/.test(lockedSet.body.error));
+await fixed.stop();
 
 const cliEnv = { ...process.env, STUDIO_BRIDGE_HOME: path.join(sandbox, 'cli'), STUDIO_BRIDGE_OFFLINE: '1' };
 delete cliEnv.STUDIO_BRIDGE_TOOLS;
