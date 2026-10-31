@@ -2,7 +2,7 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
-## 0.6.9 - 2026-10-31
+## 0.6.10 - 2026-10-31
 
 - New **Config** tab in the Studio Bridge window: switch update checks, automatic updates and signed-packs-only on or off without asking your AI or using the command line. It also shows the current tool groups with a shortcut to the Tools tab. Needs the matching Studio Bridge program, so restart your AI tool after updating.
 - When the port is already taken, `serve` now says what holds it (which Studio Bridge version, or another program) and how to find and stop it, instead of just failing. `doctor` says the same instead of a generic 401 warning, and `install` warns when an older server is still running. A running server now includes its version in the reply to an unauthorized request.
