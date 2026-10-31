@@ -909,10 +909,12 @@ local function buildStatusWidget()
 	local HOVER_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 	-- Text that grows a little and lights up while the pointer is over its button, so it is clear it can be pressed.
-	-- Buttons get a soft white halo behind the text; plain labels (recolor) turn white instead.
+	-- Buttons get a soft white halo behind the text; plain labels (recolor) turn white instead. recolor can also be a
+	-- function that returns the color to settle back to, for text that is repainted while the pointer is over it.
 	local function hoverable(hit, text, recolor)
 		local base = text.TextSize
 		local halo
+		local resting
 
 		if text:IsA("TextButton") then
 			halo = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderSizePixel = 0, Active = false}, text)
@@ -920,10 +922,26 @@ local function buildStatusWidget()
 			rounded(halo, 8)
 		end
 
-		local resting
+		local function settle()
+			TweenService:Create(text, HOVER_TWEEN, {TextSize = base}):Play()
+
+			if recolor then
+				local color = if type(recolor) == "function" then recolor() else resting
+
+				if color then
+					TweenService:Create(text, HOVER_TWEEN, {TextColor3 = color}):Play()
+				end
+			end
+
+			resting = nil
+
+			if halo then
+				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 1}):Play()
+			end
+		end
 
 		hit.MouseEnter:Connect(function()
-			resting = text.TextColor3
+			resting = resting or text.TextColor3
 			TweenService:Create(text, HOVER_TWEEN, {TextSize = base + 2}):Play()
 
 			if recolor then
@@ -934,15 +952,11 @@ local function buildStatusWidget()
 				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 0.85}):Play()
 			end
 		end)
-		hit.MouseLeave:Connect(function()
-			TweenService:Create(text, HOVER_TWEEN, {TextSize = base}):Play()
-
-			if recolor and resting then
-				TweenService:Create(text, HOVER_TWEEN, {TextColor3 = resting}):Play()
-			end
-
-			if halo then
-				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 1}):Play()
+		hit.MouseLeave:Connect(settle)
+		-- No leave event arrives when the window is hidden under the pointer, so settle then as well.
+		widget:GetPropertyChangedSignal("Enabled"):Connect(function()
+			if not widget.Enabled then
+				settle()
 			end
 		end)
 	end
@@ -1022,7 +1036,9 @@ local function buildStatusWidget()
 
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
-		hoverable(tabButton, tabButton, true)
+		hoverable(tabButton, tabButton, function()
+			return if selected == name then mainText() else dimText()
+		end)
 		tabButton.MouseButton1Click:Connect(function()
 			selected = name
 			paintTabs()
