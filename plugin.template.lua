@@ -975,6 +975,20 @@ local function buildStatusWidget()
 		veil.BackgroundColor3 = background()
 	end)
 
+	local function openPage(name)
+		selected = name
+		paintTabs()
+
+		if name == "Tools" then
+			toolsPage.CanvasPosition = Vector2.zero
+			loadProfile()
+		elseif name == "Pro" then
+			loadPro()
+		elseif name == "Config" then
+			loadConfig()
+		end
+	end
+
 	local function selectPage(name)
 		switchId += 1
 
@@ -990,16 +1004,11 @@ local function buildStatusWidget()
 				return
 			end
 
-			selected = name
-			paintTabs()
+			-- The page is swapped inside pcall so an error while loading it cannot leave the veil covering the content.
+			local ok, err = pcall(openPage, name)
 
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
+			if not ok then
+				warn("Studio Bridge could not open the " .. name .. " page: " .. tostring(err))
 			end
 
 			TweenService:Create(veil, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
