@@ -8,7 +8,7 @@ import { pipeline } from 'node:stream/promises';
 import { appDir, installedViaNpm, isPackaged, readAsset } from './paths.mjs';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const DEFAULT_SETTINGS = { checkUpdates: true, autoUpdate: false, toolProfile: 'all' };
+const DEFAULT_SETTINGS = { checkUpdates: true, autoUpdate: false, toolProfile: 'all', packTrust: 'all' };
 
 export function currentVersion() {
   if (process.env.STUDIO_BRIDGE_TEST_VERSION) return process.env.STUDIO_BRIDGE_TEST_VERSION;
@@ -202,19 +202,39 @@ export async function applyRelease(release, installArgs = [], log = () => {}) {
 
 const settingsPath = () => path.join(appDir, 'settings.json');
 
+const PACK_TRUST_VALUES = ['all', 'verified'];
+
 export function loadSettings() {
+  let text;
   try {
-    const saved = JSON.parse(fs.readFileSync(settingsPath(), 'utf8'));
-    return { ...DEFAULT_SETTINGS, ...saved };
+    text = fs.readFileSync(settingsPath(), 'utf8');
+  } catch (err) {
+    return err && err.code === 'ENOENT' ? { ...DEFAULT_SETTINGS } : { ...DEFAULT_SETTINGS, packTrust: 'verified', unreadable: true };
+  }
+  try {
+    const saved = JSON.parse(text);
+    if (!saved || typeof saved !== 'object' || Array.isArray(saved)) throw new Error('settings must be an object');
+    const merged = { ...DEFAULT_SETTINGS, ...saved };
+    if (!PACK_TRUST_VALUES.includes(merged.packTrust)) merged.packTrust = 'verified';
+    return merged;
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return { ...DEFAULT_SETTINGS, packTrust: 'verified', unreadable: true };
   }
 }
 
 export function saveSettings(changes) {
-  const next = { ...loadSettings(), ...changes };
+  const { unreadable, ...current } = loadSettings();
+  const file = settingsPath();
+  const next = { ...current, ...changes };
+  if (unreadable) {
+    try {
+      fs.copyFileSync(file, `${file}.broken-${Date.now()}`);
+    } catch {
+      return next;
+    }
+  }
   fs.mkdirSync(appDir, { recursive: true });
-  fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2) + '\n');
+  fs.writeFileSync(file, JSON.stringify(next, null, 2) + '\n');
   return next;
 }
 

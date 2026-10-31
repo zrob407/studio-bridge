@@ -8,6 +8,7 @@ const testDir = path.join(bridgeDir, 'test');
 
 export const rules = [
   { match: /\.md$/i, tests: [] },
+  { match: /^\.gitignore$/, tests: [] },
   { match: /^\.github\//, tests: [] },
   { match: /^assets\//, tests: [] },
   { match: /^build\//, tests: [] },
@@ -15,9 +16,10 @@ export const rules = [
   { match: /^docs\.mjs$/, tests: ['docs'] },
   { match: /^marketplace\.mjs$/, tests: ['marketplace'] },
   { match: /^checks\.mjs$|^LICENSE$/, tests: ['checks', 'package'] },
-  { match: /^updater\.mjs$/, tests: ['update', 'autoupdate', 'npm-update', 'cli'] },
+  { match: /^updater\.mjs$/, tests: ['update', 'autoupdate', 'npm-update', 'settings', 'cli'] },
   { match: /^ws\.mjs$/, tests: ['ws-transport', 'reliability'] },
-  { match: /^platform\.mjs$/, tests: ['platform', 'cli', 'package'] },
+  { match: /^platform\.mjs$/, tests: ['platform', 'platform-tools', 'cli', 'package'] },
+  { match: /^packs\.mjs$|^trust\.mjs$|^pro\.mjs$/, tests: ['packs', 'trust', 'pro', 'cli', 'package'] },
   { match: /^handlers\/|^plugin\.(stub|template)\./, tests: ['tools', 'plugin', 'package'] },
 ];
 

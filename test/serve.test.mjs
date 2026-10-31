@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { offeredCatalog } from './helpers/catalog.mjs';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2];
@@ -14,7 +15,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-serve-'));
 const token = crypto.randomBytes(32).toString('hex');
 const port = 3990;
 const server = spawn(command[0], command.slice(1), {
-  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port) },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_NO_BROWSER: '1' },
   stdio: ['pipe', 'pipe', 'ignore'],
   windowsHide: true,
 });
@@ -51,7 +52,7 @@ check('serve answers the MCP handshake', initialized.result && initialized.resul
 
 const listed = await rpc('tools/list', {});
 const tools = listed.result.tools;
-check('serve lists the tools from tools.json', tools.length === JSON.parse(fs.readFileSync(path.join(bridgeDir, 'tools.json'), 'utf8')).tools.length, `${tools.length} tools`);
+check('serve lists the tools from tools.json', tools.length === offeredCatalog(bridgeDir).tools.length, `${tools.length} tools`);
 const batchEnum = tools.find((tool) => tool.name === 'batch').inputSchema.properties.operations.items.properties.tool.enum;
 check('batch list is built from the handler files', batchEnum.includes('script_get') && batchEnum.includes('instance_find') && !batchEnum.includes('play_start'), `${batchEnum.length} batchable`);
 
@@ -93,6 +94,11 @@ check('a geometry handler also loads the shared geometry helpers', !spatial.resu
 const mixed = await rpc('tools/call', { name: 'batch', arguments: { operations: [{ tool: 'tag_manage', args: { action: 'list' } }, { tool: 'scatter', args: { template: 'game.A', center: [0, 0, 0], size: [10, 10] } }] } });
 check('batch includes the geometry helpers once when a geometry tool is in it', !mixed.result.isError && Boolean(received[4]) && received[4].split('local function worldBounds').length === 2);
 check('the plugin source carries the status window', plugin.source.includes('buildStatusWidget') && plugin.source.includes('StudioBridgeStatus'));
+check('the plugin source has a Pro tab that only talks to the local bridge', plugin.source.includes('PAGES = {"Status", "Tools", "Pro", "Log"}') && plugin.source.includes('post("/pro", {action = "activate"') && plugin.source.includes('ClearTextOnFocus = false') && !/api\.polar\.sh|workers\.dev|studio-bridge-license/.test(plugin.source));
+const buy = await post('/pro', { action: 'buy' });
+check('the bridge answers the buy button with the checkout link', buy.ok === true && /^https:\/\/buy\.polar\.sh\//.test(buy.url) && buy.message.includes(buy.url));
+check('the Pro tab has a Buy a license button below Activate that only asks the local bridge', plugin.source.includes('Text = "Buy a license"') && plugin.source.includes('post("/pro", {action = "buy"})') && plugin.source.indexOf('Text = "Buy a license"') > plugin.source.indexOf('Text = "Activate"') && !/buy\.polar\.sh/.test(plugin.source));
+check('the Pro tab clears the key box after a successful activation and never logs the key', plugin.source.includes('keyBox.Text = ""') && !/(print|warn)\([^)]*keyBox/.test(plugin.source));
 
 const include = async (name, args) => {
   const before = received.length;

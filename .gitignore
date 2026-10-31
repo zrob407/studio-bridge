@@ -11,3 +11,5 @@ settings.json
 update-check.json
 update-log.txt
 runtime/
+packs/
+pack-data/

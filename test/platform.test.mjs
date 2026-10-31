@@ -93,6 +93,13 @@ check('grim geometry and scale are built from the window', grim.includes('100,50
 check('grim does not upscale', platform.hyprGrimArgs(clients[0], 4000, 'o.jpg')[grim.indexOf('-s') + 1] === '1');
 check('Hyprland is detected from its environment variable', platform.isHyprland({ HYPRLAND_INSTANCE_SIGNATURE: 'abc' }) === platform.isLinux && platform.isHyprland({}) === false);
 
+check('every tool is offered on Windows', platform.unsupportedTools({ platform: 'win32', hyprland: false, has: () => false }).size === 0);
+check('the window screenshot is not offered on a Linux desktop without Hyprland', platform.unsupportedTools({ platform: 'linux', hyprland: false, has: () => true }).has('screenshot'));
+check('nor on Hyprland when grim or hyprctl is missing', platform.unsupportedTools({ platform: 'linux', hyprland: true, has: (name) => name === 'hyprctl' }).has('screenshot') && platform.unsupportedTools({ platform: 'linux', hyprland: true, has: (name) => name === 'grim' }).has('screenshot'));
+check('but it is offered on Hyprland with both tools installed', !platform.unsupportedTools({ platform: 'linux', hyprland: true, has: () => true }).has('screenshot'));
+check('and not on other systems', platform.unsupportedTools({ platform: 'darwin', hyprland: false, has: () => true }).has('screenshot'));
+check('a missing command is reported as missing, not as an error', platform.commandExists('definitely-not-a-real-command-xyz') === false);
+
 fs.rmSync(sandbox, { recursive: true, force: true });
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
 process.exit(failures === 0 ? 0 : 1);

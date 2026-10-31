@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { offeredCatalog } from './helpers/catalog.mjs';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-tools-'));
@@ -12,7 +13,7 @@ const toolsFile = path.join(workDir, 'tools.json');
 fs.copyFileSync(path.join(bridgeDir, 'tools.json'), toolsFile);
 
 const server = spawn('node', [path.join(bridgeDir, 'server.mjs')], {
-  env: { ...process.env, STUDIO_BRIDGE_TOKEN: crypto.randomBytes(16).toString('hex'), STUDIO_BRIDGE_PORT: '3994', STUDIO_BRIDGE_TOOLS_FILE: toolsFile },
+  env: { ...process.env, STUDIO_BRIDGE_TOKEN: crypto.randomBytes(16).toString('hex'), STUDIO_BRIDGE_PORT: '3994', STUDIO_BRIDGE_TOOLS_FILE: toolsFile, STUDIO_BRIDGE_PACKS_DIR: path.join(workDir, 'no-packs') },
   stdio: ['pipe', 'pipe', 'ignore'],
 });
 
@@ -50,7 +51,7 @@ const check = (name, condition, detail = '') => {
 const initialized = await rpc('initialize', {});
 check('server announces that its tool list can change', initialized.result.capabilities.tools.listChanged === true);
 
-const original = JSON.parse(fs.readFileSync(toolsFile, 'utf8'));
+const original = offeredCatalog(toolsFile);
 const first = await listTools();
 check('tools come from tools.json', first.length === original.tools.length, `${first.length} tools`);
 check('batch lists the batchable handler tools', batchEnum(first).includes('script_get') && !batchEnum(first).includes('play_start'));

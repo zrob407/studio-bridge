@@ -1,6 +1,6 @@
 {
   "name": "@zrob407/studio-bridge",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "MCP server and Roblox Studio plugin that let Claude Code, Codex and other AI assistants read and edit a place, run Luau, drive playtests and take screenshots",
   "license": "SEE LICENSE IN LICENSE",
   "type": "module",
@@ -10,6 +10,9 @@
   "files": [
     "cli.mjs",
     "platform.mjs",
+    "packs.mjs",
+    "trust.mjs",
+    "pro.mjs",
     "install.mjs",
     "server.mjs",
     "assets.mjs",
@@ -27,6 +30,7 @@
     "plugin.stub.lua",
     "handlers",
     "LICENSE",
+    "PRO-LICENSE.txt",
     "THIRD_PARTY_NOTICES.txt"
   ],
   "keywords": [
@@ -57,7 +61,7 @@
     "access": "public"
   },
   "scripts": {
-    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs && node test/package.test.mjs && node test/npm-update.test.mjs && node test/checks.test.mjs && node test/takeover.test.mjs && node test/marketplace.test.mjs && node test/docs.test.mjs && node test/profiles.test.mjs && node test/platform.test.mjs",
+    "test": "node test/reliability.test.mjs && node test/ws-transport.test.mjs && node test/tools.test.mjs && node test/plugin.test.mjs && node test/cli.test.mjs && node test/serve.test.mjs && node test/update.test.mjs && node test/autoupdate.test.mjs && node test/sdk-client.test.mjs && node test/package.test.mjs && node test/npm-update.test.mjs && node test/checks.test.mjs && node test/takeover.test.mjs && node test/marketplace.test.mjs && node test/docs.test.mjs && node test/profiles.test.mjs && node test/platform.test.mjs && node test/packs.test.mjs && node test/trust.test.mjs && node test/pro.test.mjs && node test/platform-tools.test.mjs && node test/settings.test.mjs",
     "test:changed": "node test/changed.mjs",
     "build": "node build/build.mjs"
   },

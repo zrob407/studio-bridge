@@ -4,6 +4,8 @@
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. Free to use, including for commercial games, under the Studio Bridge License (source-available, see License below); no dependencies beyond Node 22.
 
+**New: Studio Bridge Pro.** Paid add-on packs are now available, starting with Snapshots and diffs, with more planned (audit, QA playtests, localization, a dead-code finder). The free program is unchanged. Pro has its own separate license; see [Studio Bridge Pro](#studio-bridge-pro).
+
 Studio Bridge speaks standard MCP, so it is not tied to one assistant. It is used and tested with Claude Code. Setup for OpenAI's Codex CLI is included (see Install), but it has not yet been tried with Codex itself.
 
 ## Quick start
@@ -179,6 +181,53 @@ When several windows are connected, pass `studio` as an id prefix, a placeId, pa
 - Auditing: `asset_audit` (every asset id a place references, plus who owns each; open the .rbxl in Studio first, then it reports yours, Roblox, Studio template, other owners and unavailable; keyless lookups, cached, resumable)
 - Bulk publishing: `asset_publish_instances` (export many instances from Studio and upload them, named "{name} {rig}"), `asset_upload_batch` (many local files), `asset_batch_status` (finish checking a results file). Results go to a JSON file in `exports\`; identical files are reused for 24 hours so a rerun resumes instead of duplicating.
 
+## Packs
+
+A pack adds tools without changing Studio Bridge itself. Put a folder in the `packs` folder of the data folder (`studio-bridge doctor` prints the path) and its tools appear in Claude Code without a restart; deleting the folder removes them.
+
+```
+packs/my-pack/
+  pack.json          name, version, title, summary and a tools array (name, description, inputSchema)
+  handlers/tool.luau one Luau file per tool; it gets the same prelude and `params` as the built-in handlers
+  main.mjs           optional; export async function authorize({ tool, args }) to allow or refuse a call
+```
+
+- `authorize` returns `true`, `{ ok: true }` or `{ ok: false, message }`. The message is shown to the user, and a refused call never reaches Studio. If it throws, the call is refused with the error. This is where a pack can do its own checks, for example a license key.
+- Each pack gets a tool group called `pack-<name>`, so `studio-bridge settings tools core,pack-my-pack` works.
+- A pack tool cannot reuse a built-in name, cannot be used inside `batch`, and a broken pack is skipped with a log line while the rest keep working.
+- A tool marked `"server": true` in `pack.json` has no handler file. Its code is in `main.mjs` as `export const tools = { toolName: async (args, api) => ... }`, and it can combine Luau in Studio with work on your computer. `api.runHandler(name, params, { studio, timeoutSeconds })` runs `handlers/<name>.luau` from the pack in Studio and returns `{ ok, error, output, returned, files }`, where `files` are the files the Luau attached with `bridge.attachFile`. `api.runLuau(source, params, options)` does the same with Luau your code holds in memory, for packs that keep no handler files on disk. `api.dataDir` is a folder for the pack's own data, `api.text(message, isError)` builds a result and `api.log(message)` writes a log line. The `authorize` hook runs before server tools too.
+- **Trust.** Studio Bridge's own packs are digitally signed, and the core checks the signature against public keys built into it. There are two tiers, each with its own key: free official packs, and paid Studio Bridge Pro packs. The tier comes only from which key signed the pack, never from anything the pack says about itself. `studio-bridge doctor` lists each pack as official, official Pro or unverified third-party, and the Studio Bridge window shows a PRO or unverified badge on the pack's group. Anyone can still use unsigned packs: they load, but their tool descriptions are labeled `[Unverified third-party pack ...]`. `studio-bridge settings pack-trust verified` loads only packs signed by Studio Bridge; the default `all` also loads unsigned ones. A pack that carries a signature that does not match its files, or that is signed by someone else's key, is never loaded, because it was changed after signing.
+- A pack's `main.mjs` runs with your user's permissions, like any program you install. Only install packs from people you trust.
+
+## Studio Bridge Pro
+
+Studio Bridge Pro is a set of paid add-on packs for any MCP-ready AI tool. Everything in this repository stays free and works without a license: all seventy-nine tools, the Studio plugin and the pack system are not going behind a paywall. Pro adds extra packs on top.
+
+**Buy a license:** https://buy.polar.sh/polar_cl_5c8YQvxi93De84kvcyfDl0CkAtxiYMb6dnDR61HbTDI (or press **Buy a license** in the Pro tab of the Studio Bridge window). Plans are 1, 3, 6 or 12 months, or a one-time lifetime license that covers every current and future version of Studio Bridge Pro, including packs added later.
+
+**Pro has its own license.** Studio Bridge itself is under the source-available terms in `LICENSE`. The Pro packs and your license key are under the separate [Pro license](PRO-LICENSE.txt), which covers devices (up to three per key), what you may and may not share, plan length, privacy and refunds. Buying Pro does not change the license of the free program, and the free program's license does not cover the paid packs.
+
+**Available now**
+- **Snapshots and diffs.** Save part of a place, see exactly what changed since, and roll it back with an automatic safety snapshot first.
+
+**Planned, in no particular order and with no dates**
+- **Audit pack.** A broader sweep of a place for problems, with a written report.
+- **QA playtests.** Scripted playtests that exercise a game and report what broke.
+- **Localization.** Find hard-coded text and move it into translation tables.
+- **Dead-code finder.** Find scripts, modules and remotes that nothing uses.
+
+Planned packs may change or be dropped, and none of them are promised until they ship. Lifetime licenses include whichever of them are released. Existing licenses pick up new packs automatically.
+
+To unlock Pro, open the **Pro** tab in the Studio Bridge window, paste your license key and press **Activate**. Or run `studio-bridge pro activate` (it asks for the key with the typing hidden; `--key-file` and the `STUDIO_BRIDGE_PRO_KEY` variable also work). `studio-bridge pro status` shows what is installed and `studio-bridge pro remove` takes the license off this computer and frees its device slot.
+
+What happens when you activate:
+- The key is sent to the Studio Bridge license server, together with a random device id and this computer's name. Your places, scripts and files are never sent.
+- The server checks the key and returns the pack launchers. The program verifies each launcher's digital signature against a public key built into it before installing anything, so a launcher that was changed or signed by someone else is refused.
+- The key is saved in the `packs` folder of the Studio Bridge data folder, in `license.key`. The paid code itself is downloaded the first time you use a Pro tool, and is kept encrypted on disk.
+- A key works on up to three devices at a time. Repeated wrong keys pause that device and network for a while.
+
+Pro needs Studio Bridge 0.6.7 or newer and an internet connection when you activate and every so often afterward; packs keep working offline for up to three days.
+
 ## Tool groups
 
 All seventy-nine tools are offered by default. Their definitions cost roughly 23,000 tokens of context in a client that loads every tool at once, so you can offer fewer: `studio-bridge settings tools core` keeps just the 28 everyday tools (about 5,700 tokens), and a list adds groups to it, for example `studio-bridge settings tools building,ui`. The groups are `core` (always on: scripts, instances, selection, screenshots, camera, playtest start and stop, logs, batch and the docs), `building` (terrain, lighting, scatter, spatial tools, effects, tweens, collision groups, bulk editing, asset search and insert, generation), `ui` (building, scaling and checking GUIs, the device emulator), `playtest` (keyboard, mouse and character control), `media` (animation and audio), `publishing` (uploads, audits, exports) and `analysis` (script, physics and audio checks). `studio-bridge settings tools all` turns everything back on, and the `STUDIO_BRIDGE_TOOLS` environment variable overrides the setting. A running bridge picks the change up within a second or two; your AI client may need `/mcp` to refresh its list. A tool outside the chosen groups is not listed, cannot be batched, and says which group to enable if it is called anyway.
@@ -231,6 +280,6 @@ Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. 
 - You must keep the copyright notice and license, and you must not present it, or a modified version, as your own original work.
 - You may not sell it, or charge for copies of it or for a product or service whose value comes mainly from it (a paid fork, a paid hosted version, selling the exe).
 - Forks should not use the name "Studio Bridge" in a way that suggests they are the original or endorsed by the author.
-- The core stays free. The author may also offer separate add-ons or services, possibly for a fee, under separate terms; those are not covered by this license, and versions already released stay available under the terms they were released with.
+- The core stays free. The author may also offer separate add-ons or services, possibly for a fee, under separate terms; those are not covered by this license, and versions already released stay available under the terms they were released with. The Studio Bridge Pro packs are such an add-on: they are covered only by the separate Pro license in `PRO-LICENSE.txt`.
 
 This is not an OSI-approved open-source license, because it forbids selling the software. Versions 0.2.3 and earlier were released under the MIT License, and those copies stay available under it. The Node.js runtime inside the exe has its own license in `THIRD_PARTY_NOTICES.txt`; `studio-bridge licenses` prints both. This summary is not legal advice and the text in `LICENSE` is what applies.
