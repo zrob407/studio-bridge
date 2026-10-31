@@ -98,7 +98,10 @@ check('the port hint names a command for this system', platform.portHolderHint(3
   check('a newer Studio Bridge reports its version', currentHolder.studioBridge === true && currentHolder.version === '0.6.9');
   check('another program on the port is not mistaken for Studio Bridge', otherHolder.studioBridge === false);
   check('a free port has no holder', nobody === null);
-  for (const server of [old, current, other]) server.close();
+  for (const server of [old, current, other]) {
+    server.closeAllConnections();
+    server.close();
+  }
 }
 
 const clients = [
@@ -125,4 +128,4 @@ check('a missing command is reported as missing, not as an error', platform.comm
 
 fs.rmSync(sandbox, { recursive: true, force: true });
 console.log(failures === 0 ? 'ALL PASSED' : `${failures} FAILED`);
-process.exit(failures === 0 ? 0 : 1);
+process.exitCode = failures === 0 ? 0 : 1;
