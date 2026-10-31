@@ -2,6 +2,12 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
+## Unreleased
+
+- The Config tab is now opened with a cogwheel button in the top right of the window instead of a tab. The cogwheel spins once when you point at it.
+- Config has a **Run doctor** button that shows the `doctor` report in the window.
+- Tabs, preset chips, switches and buttons grow and light up when you point at them, and pages fade when you switch tabs.
+
 ## 0.6.10 - 2026-10-31
 
 - New **Config** tab in the Studio Bridge window: switch update checks, automatic updates and signed-packs-only on or off without asking your AI or using the command line. It also shows the current tool groups with a shortcut to the Tools tab. Needs the matching Studio Bridge program, so restart your AI tool after updating.

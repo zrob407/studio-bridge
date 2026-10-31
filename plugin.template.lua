@@ -1,5 +1,6 @@
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
 local context = ({...})[1] or {}
@@ -742,7 +743,7 @@ local GOOD = Color3.fromRGB(80, 200, 120)
 local GOLD = Color3.fromRGB(255, 209, 102)
 local WARN = Color3.fromRGB(230, 180, 60)
 local BAD = Color3.fromRGB(230, 90, 90)
-local PAGES = {"Status", "Tools", "Pro", "Config", "Log"}
+local PAGES = {"Status", "Tools", "Pro", "Log"}
 local STATES = {
 	connected = {"Connected", GOOD},
 	connecting = {"Connecting", WARN},
@@ -905,6 +906,47 @@ local function buildStatusWidget()
 		return made
 	end
 
+	local HOVER_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	-- Text that grows a little and lights up while the pointer is over its button, so it is clear it can be pressed.
+	-- Buttons get a soft white halo behind the text; plain labels (recolor) turn white instead.
+	local function hoverable(hit, text, recolor)
+		local base = text.TextSize
+		local halo
+
+		if text:IsA("TextButton") then
+			halo = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderSizePixel = 0, Active = false}, text)
+
+			rounded(halo, 8)
+		end
+
+		local resting
+
+		hit.MouseEnter:Connect(function()
+			resting = text.TextColor3
+			TweenService:Create(text, HOVER_TWEEN, {TextSize = base + 2}):Play()
+
+			if recolor then
+				TweenService:Create(text, HOVER_TWEEN, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+			end
+
+			if halo then
+				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 0.85}):Play()
+			end
+		end)
+		hit.MouseLeave:Connect(function()
+			TweenService:Create(text, HOVER_TWEEN, {TextSize = base}):Play()
+
+			if recolor and resting then
+				TweenService:Create(text, HOVER_TWEEN, {TextColor3 = resting}):Play()
+			end
+
+			if halo then
+				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 1}):Play()
+			end
+		end)
+	end
+
 	local root = create("Frame", {Size = UDim2.fromScale(1, 1), BorderSizePixel = 0}, widget)
 
 	onTheme(function()
@@ -916,15 +958,38 @@ local function buildStatusWidget()
 
 	rounded(logo, 10)
 
-	local title = label(header, {Position = UDim2.fromOffset(64, 10), Size = UDim2.new(1, -262, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Studio Bridge"})
-	local subtitle = label(header, {Position = UDim2.fromOffset(64, 34), Size = UDim2.new(1, -262, 0, 18), TextSize = 13})
-	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 32), Size = UDim2.fromOffset(176, 28), BorderSizePixel = 0}, header)
+	local title = label(header, {Position = UDim2.fromOffset(64, 10), Size = UDim2.new(1, -306, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Studio Bridge"})
+	local subtitle = label(header, {Position = UDim2.fromOffset(64, 34), Size = UDim2.new(1, -306, 0, 18), TextSize = 13})
+	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -58, 0, 32), Size = UDim2.fromOffset(176, 28), BorderSizePixel = 0}, header)
 
 	rounded(pill, 14)
 
 	local dot = create("Frame", {Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(10, 10), BorderSizePixel = 0}, pill)
 
 	rounded(dot, 5)
+
+	local cogButton = create("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 32), Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, AutoButtonColor = false, Text = ""}, header)
+	local cogScale = create("UIScale", {}, cogButton)
+	local cog = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(24, 24), BackgroundTransparency = 1}, cogButton)
+	local cogBody = {}
+	local center = UDim2.fromScale(0.5, 0.5)
+
+	-- Four bars crossing at the middle make the eight teeth, a disc covers their middles and a hole is cut out of it.
+	for index = 0, 3 do
+		local bar = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = center, Size = UDim2.fromOffset(5, 24), BorderSizePixel = 0, Rotation = index * 45}, cog)
+
+		rounded(bar, 1)
+		table.insert(cogBody, bar)
+	end
+
+	local cogDisc = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = center, Size = UDim2.fromOffset(18, 18), BorderSizePixel = 0}, cog)
+
+	rounded(cogDisc, 9)
+	table.insert(cogBody, cogDisc)
+
+	local cogHole = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = center, Size = UDim2.fromOffset(8, 8), BorderSizePixel = 0}, cog)
+
+	rounded(cogHole, 4)
 
 	local pillText = label(pill, {Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -34, 1, 0), Font = Enum.Font.BuilderSansBold, TextSize = 13})
 
@@ -955,6 +1020,19 @@ local function buildStatusWidget()
 	local toolsPage
 	local proPage
 
+	local cogHovered = false
+	local cogSpinning = false
+
+	local function paintCog()
+		local tint = if cogHovered or selected == "Config" then ACCENT else dimText()
+
+		for _, part in cogBody do
+			part.BackgroundColor3 = tint
+		end
+
+		cogHole.BackgroundColor3 = background()
+	end
+
 	local function paintTabs()
 		for name, entry in tabs do
 			local active = name == selected
@@ -962,9 +1040,80 @@ local function buildStatusWidget()
 			entry.button.TextColor3 = if active then mainText() else dimText()
 			entry.underline.BackgroundColor3 = ACCENT
 			entry.underline.Visible = active
-			pages[name].Visible = active
 		end
+
+		for name, page in pages do
+			page.Visible = name == selected
+		end
+
+		paintCog()
 	end
+
+	-- A veil in the page color sits over the content and fades in, the page is swapped underneath, then it fades out.
+	local veil = create("Frame", {Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 1, -100), BorderSizePixel = 0, BackgroundTransparency = 1, Active = false, ZIndex = 10}, root)
+	local switchId = 0
+
+	onTheme(function()
+		veil.BackgroundColor3 = background()
+	end)
+
+	local function selectPage(name)
+		switchId += 1
+
+		local id = switchId
+
+		task.spawn(function()
+			local fadeOut = TweenService:Create(veil, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0})
+
+			fadeOut:Play()
+			fadeOut.Completed:Wait()
+
+			if id ~= switchId then
+				return
+			end
+
+			selected = name
+			paintTabs()
+
+			if name == "Tools" then
+				toolsPage.CanvasPosition = Vector2.zero
+				loadProfile()
+			elseif name == "Pro" then
+				loadPro()
+			elseif name == "Config" then
+				loadConfig()
+			end
+
+			TweenService:Create(veil, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+		end)
+	end
+
+	cogButton.MouseButton1Click:Connect(function()
+		selectPage(if selected == "Config" then "Status" else "Config")
+	end)
+	cogButton.MouseEnter:Connect(function()
+		cogHovered = true
+		paintCog()
+		TweenService:Create(cogScale, HOVER_TWEEN, {Scale = 1.15}):Play()
+
+		if not cogSpinning then
+			cogSpinning = true
+			cog.Rotation = 0
+
+			local spin = TweenService:Create(cog, TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = 360})
+
+			spin.Completed:Connect(function()
+				cog.Rotation = 0
+				cogSpinning = false
+			end)
+			spin:Play()
+		end
+	end)
+	cogButton.MouseLeave:Connect(function()
+		cogHovered = false
+		paintCog()
+		TweenService:Create(cogScale, HOVER_TWEEN, {Scale = 1}):Play()
+	end)
 
 	for index, name in PAGES do
 		local tabButton = create("TextButton", {
@@ -980,34 +1129,15 @@ local function buildStatusWidget()
 
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
+		hoverable(tabButton, tabButton, true)
 		tabButton.MouseButton1Click:Connect(function()
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+			selectPage(name)
 		end)
 	end
 
 	holder.show = function(name)
-		if tabs[name] then
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+		if pages[name] then
+			selectPage(name)
 		end
 	end
 
@@ -1206,6 +1336,7 @@ local function buildStatusWidget()
 			create("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, chip)
 
 			if not locked then
+				hoverable(chip, chip)
 				chip.MouseButton1Click:Connect(function()
 					applyProfile(preset.profile)
 				end)
@@ -1242,7 +1373,7 @@ local function buildStatusWidget()
 
 			rounded(knob, 8)
 
-			label(row, {
+			local groupTitle = label(row, {
 				Position = UDim2.fromOffset(68, 8),
 				Size = UDim2.new(1, -80, 0, 20),
 				Font = Enum.Font.BuilderSansBold,
@@ -1262,6 +1393,7 @@ local function buildStatusWidget()
 			})
 
 			if not isCore and not locked then
+				hoverable(row, groupTitle, true)
 				track.MouseButton1Click:Connect(function()
 					toggleGroup(group.name)
 				end)
@@ -1322,10 +1454,12 @@ local function buildStatusWidget()
 		Text = "",
 	}, keyCard)
 	local activateButton = create("TextButton", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 38), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Activate"}, proPage)
+	hoverable(activateButton, activateButton)
 
 	rounded(activateButton, 8)
 
 	local buyButton = create("TextButton", {LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 34), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 14, Text = "Buy a license"}, proPage)
+	hoverable(buyButton, buyButton)
 
 	rounded(buyButton, 8)
 
@@ -1337,6 +1471,7 @@ local function buildStatusWidget()
 
 	local proStatusText = label(proStatusCard, {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
 	local removeButton = create("TextButton", {LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 32), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSans, TextSize = 13, Text = "Remove the license from this computer", Visible = false}, proPage)
+	hoverable(removeButton, removeButton)
 
 	rounded(removeButton, 8)
 
@@ -1518,6 +1653,20 @@ local function buildStatusWidget()
 	local configBusy = false
 	local renderConfig
 
+	local doctorButton = create("TextButton", {LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 38), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Run doctor"}, configPage)
+
+	rounded(doctorButton, 8)
+	hoverable(doctorButton, doctorButton)
+
+	local doctorOutput = label(configPage, {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Code, TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, RichText = false, TextYAlignment = Enum.TextYAlignment.Top, Visible = false})
+	local doctorRunning = false
+
+	onTheme(function()
+		doctorButton.BackgroundColor3 = ACCENT
+		doctorButton.TextColor3 = ON_ACCENT
+		doctorOutput.TextColor3 = mainText()
+	end)
+
 	local function configSwitches(data)
 		local source = if data.updateMode == "source" then " This copy runs from source, so it cannot update itself." else ""
 
@@ -1612,7 +1761,7 @@ local function buildStatusWidget()
 				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 			}, track)
 			rounded(track:FindFirstChildOfClass("Frame"), 8)
-			label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
+			local rowTitle = label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
 			label(row, {
 				Position = UDim2.fromOffset(68, 30),
 				Size = UDim2.new(1, -80, 0, 48),
@@ -1623,6 +1772,7 @@ local function buildStatusWidget()
 				TextYAlignment = Enum.TextYAlignment.Top,
 				Text = switch.text,
 			})
+			hoverable(row, rowTitle, true)
 			track.MouseButton1Click:Connect(function()
 				if switch.key == "packTrust" then
 					setConfig(switch.key, if switch.on then "all" else "verified")
@@ -1656,6 +1806,7 @@ local function buildStatusWidget()
 		}, toolsRow)
 
 		rounded(openTools, 12)
+		hoverable(openTools, openTools)
 		openTools.MouseButton1Click:Connect(function()
 			holder.show("Tools")
 		end)
@@ -1667,6 +1818,25 @@ local function buildStatusWidget()
 
 	table.insert(themed, function()
 		renderConfig()
+	end)
+
+	doctorButton.MouseButton1Click:Connect(function()
+		if doctorRunning then
+			return
+		end
+
+		doctorRunning = true
+		doctorButton.Text = "Running doctor..."
+
+		task.spawn(function()
+			local ok, response = post("/doctor", {})
+			local decoded = decodeBody(ok, response)
+
+			doctorOutput.Text = if decoded and decoded.output then decoded.output else "Doctor could not run: " .. ((decoded and decoded.error) or "the bridge did not answer")
+			doctorOutput.Visible = true
+			doctorButton.Text = "Run doctor"
+			doctorRunning = false
+		end)
 	end)
 
 	loadConfig = function()
