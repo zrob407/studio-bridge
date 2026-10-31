@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Bridge compared with other Roblox Studio MCP tools</title>
+<meta name="description" content="How Studio Bridge compares with Roblox's built-in MCP server, WEPPY and the community robloxstudio-mcp projects, checked against each project's own documentation.">
+<meta name="theme-color" content="#12151c">
+<meta property="og:title" content="Studio Bridge compared with other Roblox Studio MCP tools">
+<meta property="og:description" content="How Studio Bridge compares with Roblox's built-in MCP server, WEPPY and the community robloxstudio-mcp projects, checked against each project's own documentation.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zrob407.github.io/studio-bridge/compare.html">
+<meta property="og:image" content="https://zrob407.github.io/studio-bridge/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo-128.png">
+<link rel="stylesheet" href="style.css">
+<script src="script.js"></script>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="wash"></div></div>
+<div class="progress" aria-hidden="true"><i></i></div>
+<button class="totop" type="button" aria-label="Back to top">&uarr;</button>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.7</span></a>
+<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="compare.html" aria-current="page">Compare</a><a href="pro.html" class="pro-link">Pro</a><a href="changelog.html">Changelog</a><a href="license.html">License</a><a class="gh" href="https://github.com/zrob407/studio-bridge"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<div class="page-hero" data-reveal>
+<p class="eyebrow">Compare</p>
+<h1>How it compares</h1>
+<p class="lead">Several tools connect an AI assistant to Roblox Studio. Here is how Studio Bridge sits next to the main ones, using only what each project says about itself.</p>
+</div>
+
+<div class="cmp-wrap" data-reveal><table class="cmp">
+<thead><tr><th scope="col"></th><th scope="col" class="us">Studio Bridge</th><th scope="col">Roblox built-in server</th><th scope="col">WEPPY</th><th scope="col">robloxstudio-mcp (boshyxd)</th><th scope="col">robloxstudio-mcp (6xvl)</th></tr></thead>
+<tbody>
+<tr><th scope="row">Tools</th><td class="us">79 (28 everyday tools, the rest in groups)</td><td>26, listed in Roblox's docs</td><td>Number not stated; it dispatches by action instead of one tool per function</td><td>43 in v2.7.0-next.6, 31 in its read-only edition</td><td>"96+" across scripts, instances, terrain, lighting and more</td></tr>
+<tr><th scope="row">Setup</th><td class="us">One npm command, then <code>studio-bridge install</code> writes the plugin and registers your AI tool</td><td>Turn on "Enable Studio as MCP server" in the Assistant. Nothing else to install</td><td>A one-line install script for Windows or macOS/Linux, or <code>npx</code>. Then restart your AI app and Studio</td><td><code>npx</code> plus a Studio plugin from its Releases page</td><td><code>npx</code> plus a Studio plugin from its Releases page</td></tr>
+<tr><th scope="row">Status</th><td class="us">Under active development, version 0.6.7</td><td>Part of Roblox Studio</td><td>Active: 342 commits and 70 GitHub stars. The author calls it a work in progress</td><td>Archived by its owner on June 6, 2026; it points to a fork</td><td>Not stated</td></tr>
+<tr><th scope="row">Plugin</th><td class="us">Source is in the repository; the signature is verified</td><td>No separate plugin; built into Studio</td><td>Repository is public and the author says the source is on GitHub. The license is not called open source</td><td>Not stated</td><td>Compiled and obfuscated; its README says the plugin source is private</td></tr>
+<tr><th scope="row">Platforms</th><td class="us">Windows, and Linux through Wine with Vinegar or Grapejuice</td><td>Windows and macOS setup shown in the docs</td><td>Windows 10+ and macOS 12+ in its requirements; Linux is not listed</td><td>Not stated for macOS or Linux</td><td>Only Windows paths shown</td></tr>
+<tr><th scope="row">Local security</th><td class="us">127.0.0.1 only, a secret on every request, signed plugin, no telemetry</td><td>Docs advise connecting only clients you trust</td><td>Localhost only and rate limited. Authentication not stated. Anonymous Google Analytics telemetry, which can be turned off</td><td>README says it works "locally and safely"; authentication not described</td><td>Authentication not described</td></tr>
+<tr><th scope="row">License</th><td class="us">Source-available. All 79 tools are free, including for commercial games. Optional paid Pro packs add snapshots and diffs and more</td><td>Not stated on the docs page</td><td>Its own license: Basic is free; Pro needs a paid license and includes bidirectional sync, UI Studio, bulk operations, terrain, spatial analysis, and audio and animation control</td><td>MIT</td><td>MIT (repository page)</td></tr>
+</tbody>
+</table></div>
+<p class="cmp-note" data-reveal>Checked on October 31, 2026 against each project's own page: <a href="https://create.roblox.com/docs/studio/mcp">Roblox's docs</a>, <a href="https://github.com/hope1026/weppy-roblox-mcp">WEPPY's README</a> and <a href="https://devforum.roblox.com/t/weppy-roblox-ai-toolkit-roblox-studio-mcp-with-sync-playtest-and-ui-studio/4588907">DevForum post</a>, <a href="https://github.com/boshyxd/robloxstudio-mcp">boshyxd</a> and <a href="https://github.com/6xvl/robloxstudio-mcp">6xvl</a>. "Not stated" means the page does not say, not that the answer is no. Projects change, so check theirs before you decide, and <a href="https://github.com/zrob407/studio-bridge/issues">tell us</a> if something here is out of date.</p>
+
+<section class="tight" data-reveal>
+<div class="grid">
+<div class="card"><h3>Where Studio Bridge helps most</h3>
+<ul class="plain"><li><code>batch</code> runs up to 50 edits as one undo step.</li><li>Tool groups keep your AI's tool list small: the 28 everyday tools cost about 5,700 tokens.</li><li><code>ui_responsive_check</code> and the device emulator check a GUI on phones, tablets and consoles, and none of the 26 tools in Roblox's list does that.</li><li>Terrain, lighting, scatter, animation, audio and publishing tools.</li><li>Linux through Wine, and an optional Pro pack for snapshots and diffs.</li></ul></div>
+<div class="card"><h3>Where WEPPY helps most</h3>
+<ul class="plain"><li>Two-way sync between Studio and local files, with a history (a Pro feature).</li><li>UI Studio for building in-game UI, a web dashboard, and a VS Code explorer extension.</li><li>Works with up to five open Studio windows.</li></ul>
+<p class="small">If you want that sync workflow, it is built for it. Its terrain, bulk and animation tools sit behind its Pro license.</p></div>
+<div class="card"><h3>Where Roblox's built-in server helps most</h3>
+<ul class="plain"><li>Nothing to install: it is part of Studio.</li><li>Tools for generating meshes and materials, and explore and playtest subagents.</li><li>Maintained by Roblox and kept in step with the Assistant.</li><li>Connects to several open Studio windows at once, which Roblox calls experimental.</li></ul>
+<p class="small">If its tools cover what you do, it is a fine place to start. You can run both side by side.</p></div>
+</div>
+</section>
+
+<section class="tight" data-reveal>
+<h2>Other things worth knowing</h2>
+<ul class="plain">
+<li>Roblox's open-source <a href="https://github.com/Roblox/studio-rust-mcp-server">studio-rust-mcp-server</a> was archived on April 3, 2026, and its README recommends the built-in server.</li>
+<li><a href="https://github.com/kolvian/roblox-mcp-server">kolvian/roblox-mcp-server</a>, a fork of Roblox's Rust server, lists 9 tools and Windows and macOS downloads. It states no authentication.</li>
+<li>boshyxd's README recommends the actively maintained fork <a href="https://github.com/Chrrxs/robloxstudio-mcp">Chrrxs/robloxstudio-mcp</a>. Its README lists 24 tools by name, an MIT license and Linux through Wine. It is left out of the table to keep it readable.</li>
+<li>Roblox's <a href="https://devforum.roblox.com/t/assistant-updates-studio-built-in-mcp-server-and-playtest-automation/4474643">announcement</a> and <a href="https://create.roblox.com/docs/studio/mcp">docs</a> list the built-in server's tools.</li>
+</ul>
+</section>
+
+<section class="tight" data-reveal>
+<h2>Questions</h2>
+<div class="faq">
+<details><summary>Is Studio Bridge free?</summary><p>Yes. All 79 tools are free, including for commercial games. <a href="pro.html">Pro</a> is an optional paid add-on with extra packs.</p></details>
+<details><summary>Does it work with my AI tool?</summary><p>It speaks standard MCP, so any MCP-ready AI tool can use it. Claude Code is the one it is tested with, and <code>studio-bridge install</code> registers it for you.</p></details>
+<details><summary>Does it send my places anywhere?</summary><p>No. The bridge listens only on 127.0.0.1 and collects no telemetry. Tools that reach Roblox, such as asset upload and publishing, run only when you ask your AI to use them.</p></details>
+<details><summary>Can I use it with the built-in Roblox server?</summary><p>Yes, they are separate MCP servers, so you can connect both and let your AI use whichever tool suits the job.</p></details>
+<details><summary>How do I get it?</summary><p>Follow the <a href="install.html">install guide</a>. It takes two commands.</p></details>
+</div>
+<p style="margin-top:22px"><a class="btn" href="install.html">Install Studio Bridge</a> <a class="btn secondary" href="tools.html">Browse the tools</a></p>
+</section>
+</div>
+</main>
+<footer class="site">
+<div class="wrap">
+<div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
+<div>Studio Bridge 0.6.7 &middot; by zrob407. Not affiliated with Roblox.</div>
+</div>
+</footer>
+</body>
+</html>
