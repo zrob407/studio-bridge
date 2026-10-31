@@ -1719,19 +1719,26 @@ local function buildStatusWidget()
 
 	local shownLog = -1
 
+	-- Studio redoes text layout for every property write, even when the value is the same, and this runs once a second.
+	local function setIfChanged(object, property, value)
+		if object[property] ~= value then
+			object[property] = value
+		end
+	end
+
 	local function refresh()
 		local state = STATES[status.state] or STATES.offline
 
-		dot.BackgroundColor3 = state[2]
-		pillText.Text = state[1] .. (if status.state == "connected" and status.transport then "  ·  " .. status.transport else "")
-		subtitle.Text = (if profileData and profileData.version then "bridge v" .. profileData.version .. "  ·  " else "") .. ROLE .. " window"
-		commandsValue.Text = tostring(status.commands)
-		failedValue.Text = tostring(status.failures)
-		failedValue.TextColor3 = if status.failures > 0 then BAD else mainText()
-		lastValue.Text = status.lastCommand or "none yet"
-		lastCaption.Text = if status.lastCommand then "last command  ·  " .. elapsed(math.floor(os.clock() - status.lastCommandAt)) .. " ago" else "last command"
-		uptimeValue.Text = elapsed(math.floor(os.clock() - status.startedAt))
-		infoLabel.Text = if status.detail ~= "" then status.detail else "Commands from your AI assistant run here. Open the Tools tab to choose which tool groups it can use."
+		setIfChanged(dot, "BackgroundColor3", state[2])
+		setIfChanged(pillText, "Text", state[1] .. (if status.state == "connected" and status.transport then "  ·  " .. status.transport else ""))
+		setIfChanged(subtitle, "Text", (if profileData and profileData.version then "bridge v" .. profileData.version .. "  ·  " else "") .. ROLE .. " window")
+		setIfChanged(commandsValue, "Text", tostring(status.commands))
+		setIfChanged(failedValue, "Text", tostring(status.failures))
+		setIfChanged(failedValue, "TextColor3", if status.failures > 0 then BAD else mainText())
+		setIfChanged(lastValue, "Text", status.lastCommand or "none yet")
+		setIfChanged(lastCaption, "Text", if status.lastCommand then "last command  ·  " .. elapsed(math.floor(os.clock() - status.lastCommandAt)) .. " ago" else "last command")
+		setIfChanged(uptimeValue, "Text", elapsed(math.floor(os.clock() - status.startedAt)))
+		setIfChanged(infoLabel, "Text", if status.detail ~= "" then status.detail else "Commands from your AI assistant run here. Open the Tools tab to choose which tool groups it can use.")
 
 		if #status.log ~= shownLog then
 			shownLog = #status.log
