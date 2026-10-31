@@ -1,5 +1,6 @@
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
 local context = ({...})[1] or {}
@@ -905,6 +906,61 @@ local function buildStatusWidget()
 		return made
 	end
 
+	local HOVER_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+	-- Text that grows a little and lights up while the pointer is over its button, so it is clear it can be pressed.
+	-- Buttons get a soft white halo behind the text; plain labels (recolor) turn white instead. recolor can also be a
+	-- function that returns the color to settle back to, for text that is repainted while the pointer is over it.
+	local function hoverable(hit, text, recolor)
+		local base = text.TextSize
+		local halo
+		local resting
+
+		if text:IsA("TextButton") then
+			halo = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = 1, BorderSizePixel = 0, Active = false}, text)
+
+			rounded(halo, 8)
+		end
+
+		local function settle()
+			TweenService:Create(text, HOVER_TWEEN, {TextSize = base}):Play()
+
+			if recolor then
+				local color = if type(recolor) == "function" then recolor() else resting
+
+				if color then
+					TweenService:Create(text, HOVER_TWEEN, {TextColor3 = color}):Play()
+				end
+			end
+
+			resting = nil
+
+			if halo then
+				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 1}):Play()
+			end
+		end
+
+		hit.MouseEnter:Connect(function()
+			resting = resting or text.TextColor3
+			TweenService:Create(text, HOVER_TWEEN, {TextSize = base + 2}):Play()
+
+			if recolor then
+				TweenService:Create(text, HOVER_TWEEN, {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+			end
+
+			if halo then
+				TweenService:Create(halo, HOVER_TWEEN, {BackgroundTransparency = 0.85}):Play()
+			end
+		end)
+		hit.MouseLeave:Connect(settle)
+		-- No leave event arrives when the window is hidden under the pointer, so settle then as well.
+		widget:GetPropertyChangedSignal("Enabled"):Connect(function()
+			if not widget.Enabled then
+				settle()
+			end
+		end)
+	end
+
 	local root = create("Frame", {Size = UDim2.fromScale(1, 1), BorderSizePixel = 0}, widget)
 
 	onTheme(function()
@@ -980,6 +1036,9 @@ local function buildStatusWidget()
 
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
+		hoverable(tabButton, tabButton, function()
+			return if selected == name then mainText() else dimText()
+		end)
 		tabButton.MouseButton1Click:Connect(function()
 			selected = name
 			paintTabs()
@@ -1206,6 +1265,7 @@ local function buildStatusWidget()
 			create("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, chip)
 
 			if not locked then
+				hoverable(chip, chip)
 				chip.MouseButton1Click:Connect(function()
 					applyProfile(preset.profile)
 				end)
@@ -1242,7 +1302,7 @@ local function buildStatusWidget()
 
 			rounded(knob, 8)
 
-			label(row, {
+			local groupTitle = label(row, {
 				Position = UDim2.fromOffset(68, 8),
 				Size = UDim2.new(1, -80, 0, 20),
 				Font = Enum.Font.BuilderSansBold,
@@ -1262,6 +1322,7 @@ local function buildStatusWidget()
 			})
 
 			if not isCore and not locked then
+				hoverable(row, groupTitle, true)
 				track.MouseButton1Click:Connect(function()
 					toggleGroup(group.name)
 				end)
@@ -1322,10 +1383,12 @@ local function buildStatusWidget()
 		Text = "",
 	}, keyCard)
 	local activateButton = create("TextButton", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 38), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Activate"}, proPage)
+	hoverable(activateButton, activateButton)
 
 	rounded(activateButton, 8)
 
 	local buyButton = create("TextButton", {LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 34), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 14, Text = "Buy a license"}, proPage)
+	hoverable(buyButton, buyButton)
 
 	rounded(buyButton, 8)
 
@@ -1337,6 +1400,7 @@ local function buildStatusWidget()
 
 	local proStatusText = label(proStatusCard, {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
 	local removeButton = create("TextButton", {LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 32), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSans, TextSize = 13, Text = "Remove the license from this computer", Visible = false}, proPage)
+	hoverable(removeButton, removeButton)
 
 	rounded(removeButton, 8)
 
@@ -1612,7 +1676,7 @@ local function buildStatusWidget()
 				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
 			}, track)
 			rounded(track:FindFirstChildOfClass("Frame"), 8)
-			label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
+			local rowTitle = label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
 			label(row, {
 				Position = UDim2.fromOffset(68, 30),
 				Size = UDim2.new(1, -80, 0, 48),
@@ -1623,6 +1687,7 @@ local function buildStatusWidget()
 				TextYAlignment = Enum.TextYAlignment.Top,
 				Text = switch.text,
 			})
+			hoverable(row, rowTitle, true)
 			track.MouseButton1Click:Connect(function()
 				if switch.key == "packTrust" then
 					setConfig(switch.key, if switch.on then "all" else "verified")
@@ -1656,6 +1721,7 @@ local function buildStatusWidget()
 		}, toolsRow)
 
 		rounded(openTools, 12)
+		hoverable(openTools, openTools)
 		openTools.MouseButton1Click:Connect(function()
 			holder.show("Tools")
 		end)
