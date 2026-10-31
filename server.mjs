@@ -15,7 +15,7 @@ import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } fr
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
-import { findHyprWindow, hyprGrimArgs, isHyprland, isWindows, unsupportedTools } from './platform.mjs';
+import { describeHolder, findHyprWindow, hyprGrimArgs, isHyprland, isWindows, portHolder, portHolderHint, unsupportedTools } from './platform.mjs';
 import { authorize as authorizePack, loadPacks, packsDir, serverTool } from './packs.mjs';
 import { activate as proActivate, openPurchasePage, remove as proRemove, status as proStatus } from './pro.mjs';
 
@@ -261,7 +261,7 @@ const server = http.createServer(async (req, res) => {
   const host = String(req.headers.host || '');
   if (!host.startsWith('127.0.0.1') && !host.startsWith('localhost')) return respond(res, 403, { error: 'forbidden' });
   if (req.method !== 'POST') return respond(res, 405, { error: 'method not allowed' });
-  if (!tokenMatches(req.headers['x-bridge-token'])) return respond(res, 401, { error: 'unauthorized' });
+  if (!tokenMatches(req.headers['x-bridge-token'])) return respond(res, 401, { error: 'unauthorized', version: currentVersion() });
   if (!checkLicense().ok) return respond(res, 403, { error: 'license tampered', message: TAMPER_MESSAGE });
 
   let body;
@@ -308,6 +308,18 @@ const server = http.createServer(async (req, res) => {
       log(`[studio-bridge] tool profile is now ${lastProfile}`);
     }
     return respond(res, 200, profileInfo());
+  }
+
+  if (req.url === '/settings') {
+    if (body.action === 'set') {
+      const choices = { checkUpdates: [true, false], autoUpdate: [true, false], packTrust: ['all', 'verified'] };
+      if (!Object.hasOwn(choices, body.name) || !choices[body.name].includes(body.value)) return respond(res, 400, { error: 'unknown setting or value' });
+      const changes = { [body.name]: body.value };
+      if (body.name === 'autoUpdate' && body.value === true) changes.checkUpdates = true;
+      saveSettings(changes);
+      log(`[studio-bridge] setting ${body.name} is now ${body.value}`);
+    }
+    return respond(res, 200, settingsInfo());
   }
 
   if (req.url === '/plugin') {
@@ -495,7 +507,8 @@ server.on('error', async (err) => {
     setTimeout(() => server.listen(PORT, '127.0.0.1'), 500);
     return;
   }
-  log(`[studio-bridge] port ${PORT} is already in use, by another studio-bridge that is not older or does not share this token. Stop it and reconnect.`);
+  const holder = await portHolder(PORT);
+  log(`[studio-bridge] port ${PORT} is already in use by ${describeHolder(holder)}${holder && holder.studioBridge ? ', which could not be replaced automatically (it is not older than this one, or it uses a different token)' : ''}. Stop it (${portHolderHint(PORT)}), then reconnect.`);
   process.exit(1);
 });
 
@@ -731,6 +744,22 @@ function profileInfo() {
     })),
     presets: toolPresets,
     total: { tools: names.length, tokens: tokensOf(names) },
+  };
+}
+
+function settingsInfo() {
+  const settings = loadSettings();
+  return {
+    version: currentVersion(),
+    checkUpdates: settings.checkUpdates === true,
+    autoUpdate: settings.autoUpdate === true,
+    packTrust: settings.packTrust,
+    unreadable: settings.unreadable === true,
+    updateMode: updateMode(),
+    offline: Boolean(process.env.STUDIO_BRIDGE_OFFLINE),
+    profile: profileText(),
+    profileLocked: Boolean(process.env.STUDIO_BRIDGE_TOOLS),
+    update: updateState,
   };
 }
 

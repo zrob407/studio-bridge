@@ -6,6 +6,27 @@ import { spawnSync } from 'node:child_process';
 export const isWindows = process.platform === 'win32';
 export const isLinux = process.platform === 'linux';
 
+export async function portHolder(port) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/plugin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', signal: AbortSignal.timeout(2000) });
+    const body = await response.json().catch(() => ({}));
+    if (response.status === 401 && body.error === 'unauthorized') return { studioBridge: true, version: typeof body.version === 'string' ? body.version : null };
+    return { studioBridge: false };
+  } catch (err) {
+    return err && err.cause && err.cause.code === 'ECONNREFUSED' ? null : { studioBridge: false };
+  }
+}
+
+export function portHolderHint(port) {
+  return isWindows ? `find it with: Get-NetTCPConnection -LocalPort ${port} | Select OwningProcess` : `find it with: ss -ltnp | grep ${port}`;
+}
+
+export function describeHolder(holder) {
+  if (!holder) return 'nothing';
+  if (!holder.studioBridge) return 'another program';
+  return holder.version ? `Studio Bridge ${holder.version}` : 'an older Studio Bridge (before 0.6.9, which does not report its version)';
+}
+
 export function dataRoot() {
   if (isWindows) return process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
   if (process.env.XDG_DATA_HOME) return process.env.XDG_DATA_HOME;

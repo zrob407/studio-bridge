@@ -742,7 +742,7 @@ local GOOD = Color3.fromRGB(80, 200, 120)
 local GOLD = Color3.fromRGB(255, 209, 102)
 local WARN = Color3.fromRGB(230, 180, 60)
 local BAD = Color3.fromRGB(230, 90, 90)
-local PAGES = {"Status", "Tools", "Pro", "Log"}
+local PAGES = {"Status", "Tools", "Pro", "Config", "Log"}
 local STATES = {
 	connected = {"Connected", GOOD},
 	connecting = {"Connecting", WARN},
@@ -951,6 +951,7 @@ local function buildStatusWidget()
 	local selected = "Status"
 	local loadProfile
 	local loadPro
+	local loadConfig
 	local toolsPage
 	local proPage
 
@@ -988,6 +989,8 @@ local function buildStatusWidget()
 				loadProfile()
 			elseif name == "Pro" then
 				loadPro()
+			elseif name == "Config" then
+				loadConfig()
 			end
 		end)
 	end
@@ -1002,6 +1005,8 @@ local function buildStatusWidget()
 				loadProfile()
 			elseif name == "Pro" then
 				loadPro()
+			elseif name == "Config" then
+				loadConfig()
 			end
 		end
 	end
@@ -1487,6 +1492,196 @@ local function buildStatusWidget()
 			renderPro()
 		end)
 	end)
+
+	local configPage = create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+	}, content)
+
+	pages.Config = configPage
+	create("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 20)}, configPage)
+	create("UIListLayout", {Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder}, configPage)
+
+	local configTitle = label(configPage, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 26), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Config"})
+	local configIntro = label(configPage, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, Text = "Switch these here instead of asking your AI. They are saved on this computer."})
+	local configMessage = label(configPage, {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None})
+	local configRows = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1}, configPage)
+
+	create("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, configRows)
+
+	local configData = nil
+	local configNote = ""
+	local configBusy = false
+	local renderConfig
+
+	local function configSwitches(data)
+		local source = if data.updateMode == "source" then " This copy runs from source, so it cannot update itself." else ""
+
+		return {
+			{key = "checkUpdates", title = "Check for updates", text = "Look for a newer release once a day when the bridge starts. Nothing is downloaded.", on = data.checkUpdates},
+			{key = "autoUpdate", title = "Install updates automatically", text = "Download, verify and install new releases yourself. They take effect at the next restart." .. source, on = data.autoUpdate},
+			{key = "packTrust", title = "Only load signed packs", text = "On: only packs signed by Studio Bridge load. Off: unsigned third-party packs load too, labeled unverified.", on = data.packTrust == "verified"},
+		}
+	end
+
+	local function setConfig(key, value)
+		if configBusy then
+			return
+		end
+
+		configBusy = true
+		configNote = "Saving..."
+		renderConfig()
+
+		task.spawn(function()
+			local ok, response = post("/settings", {action = "set", name = key, value = value})
+			local decoded = decodeBody(ok, response)
+
+			configBusy = false
+
+			if decoded and decoded.packTrust then
+				configData = decoded
+				configNote = if key == "packTrust" then "Saved. Your AI client may need /mcp to refresh its tool list." else "Saved."
+			elseif decoded and decoded.error then
+				configNote = "Not saved: " .. decoded.error
+			else
+				configNote = "Not saved: the bridge did not answer. If your AI tool was just updated, restart it."
+			end
+
+			renderConfig()
+		end)
+	end
+
+	renderConfig = function()
+		local keepScroll = configPage.CanvasPosition
+
+		clearChildren(configRows)
+
+		configTitle.TextColor3 = mainText()
+		configIntro.TextColor3 = dimText()
+		configMessage.TextColor3 = dimText()
+
+		if not configData then
+			configMessage.Text = if configNote ~= "" then configNote else "Waiting for the bridge..."
+
+			return
+		end
+
+		local notes = {}
+
+		if configNote ~= "" then
+			table.insert(notes, configNote)
+		end
+
+		if configData.unreadable then
+			table.insert(notes, "The settings file could not be read, so only signed packs are loaded. Saving a switch keeps a copy of the broken file and replaces it.")
+		end
+
+		if configData.update and configData.update.applied then
+			table.insert(notes, string.format("Studio Bridge %s was installed. Restart your AI tool to use it.", plain(configData.update.applied)))
+		elseif configData.update and configData.update.newer then
+			table.insert(notes, string.format("Update available: %s (you have %s). Ask your AI to run bridge_update, or run studio-bridge update.", plain(configData.update.tag), plain(configData.version)))
+		end
+
+		configMessage.Text = table.concat(notes, "\n")
+
+		for index, switch in configSwitches(configData) do
+			local row = create("Frame", {LayoutOrder = index, Size = UDim2.new(1, 0, 0, 84), BorderSizePixel = 0, BackgroundColor3 = card()}, configRows)
+
+			rounded(row, 10)
+
+			local track = create("TextButton", {
+				Position = UDim2.fromOffset(14, 31),
+				Size = UDim2.fromOffset(40, 22),
+				BorderSizePixel = 0,
+				AutoButtonColor = false,
+				Text = "",
+				BackgroundColor3 = if switch.on then ACCENT else line(),
+			}, row)
+
+			rounded(track, 11)
+
+			create("Frame", {
+				Position = if switch.on then UDim2.fromOffset(21, 3) else UDim2.fromOffset(3, 3),
+				Size = UDim2.fromOffset(16, 16),
+				BorderSizePixel = 0,
+				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+			}, track)
+			rounded(track:FindFirstChildOfClass("Frame"), 8)
+			label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
+			label(row, {
+				Position = UDim2.fromOffset(68, 30),
+				Size = UDim2.new(1, -80, 0, 48),
+				TextSize = 12,
+				TextColor3 = dimText(),
+				TextWrapped = true,
+				TextTruncate = Enum.TextTruncate.None,
+				TextYAlignment = Enum.TextYAlignment.Top,
+				Text = switch.text,
+			})
+			track.MouseButton1Click:Connect(function()
+				if switch.key == "packTrust" then
+					setConfig(switch.key, if switch.on then "all" else "verified")
+				else
+					setConfig(switch.key, not switch.on)
+				end
+			end)
+		end
+
+		local toolsRow = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 84), BorderSizePixel = 0, BackgroundColor3 = card()}, configRows)
+
+		rounded(toolsRow, 10)
+		label(toolsRow, {Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = "Tool groups"})
+		label(toolsRow, {
+			Position = UDim2.fromOffset(14, 30),
+			Size = UDim2.new(1, -28, 0, 20),
+			TextSize = 12,
+			TextColor3 = dimText(),
+			Text = string.format("Offered now: %s%s", plain(configData.profile), if configData.profileLocked then "  ·  fixed by STUDIO_BRIDGE_TOOLS" else ""),
+		})
+
+		local openTools = create("TextButton", {
+			Position = UDim2.fromOffset(14, 52),
+			Size = UDim2.fromOffset(150, 24),
+			BorderSizePixel = 0,
+			BackgroundColor3 = line(),
+			TextColor3 = mainText(),
+			Font = Enum.Font.BuilderSansBold,
+			TextSize = 13,
+			Text = "Open the Tools tab",
+		}, toolsRow)
+
+		rounded(openTools, 12)
+		openTools.MouseButton1Click:Connect(function()
+			holder.show("Tools")
+		end)
+
+		task.defer(function()
+			configPage.CanvasPosition = keepScroll
+		end)
+	end
+
+	table.insert(themed, function()
+		renderConfig()
+	end)
+
+	loadConfig = function()
+		task.spawn(function()
+			local ok, response = post("/settings", {action = "get"})
+			local decoded = decodeBody(ok, response)
+
+			if decoded and decoded.packTrust then
+				configData = decoded
+				configNote = ""
+			end
+
+			renderConfig()
+		end)
+	end
 
 	local logPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
