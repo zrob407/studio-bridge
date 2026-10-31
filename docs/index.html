@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Bridge: AI tools for Roblox Studio</title>
+<meta name="description" content="An MCP server and Roblox Studio plugin that lets an AI assistant read and edit your place, run Luau, drive playtests and publish assets. 79 tools, free for commercial games.">
+<meta name="theme-color" content="#12151c">
+<meta property="og:title" content="Studio Bridge: AI tools for Roblox Studio">
+<meta property="og:description" content="An MCP server and Roblox Studio plugin that lets an AI assistant read and edit your place, run Luau, drive playtests and publish assets. 79 tools, free for commercial games.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zrob407.github.io/studio-bridge/">
+<meta property="og:image" content="https://zrob407.github.io/studio-bridge/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo-128.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="30" height="30">Studio Bridge</a>
+<nav class="main" aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="pro.html" class="pro-link">Pro</a><a href="license.html">License</a><a href="https://github.com/zrob407/studio-bridge">GitHub</a></nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<div class="hero">
+<img class="logo" src="logo.png" alt="Studio Bridge logo" width="96" height="96">
+<h1>Let your AI work inside Roblox Studio</h1>
+<p class="lead">Studio Bridge is an MCP server and Studio plugin. It lets an AI coding assistant read and edit your place, run Luau, drive playtests, take screenshots and publish assets. 79 tools, free to use for commercial games.</p>
+<div class="cta">
+<a class="btn" href="install.html">Get started</a>
+<a class="btn secondary" href="https://github.com/zrob407/studio-bridge">View on GitHub</a>
+</div>
+<pre><code>npm install -g @zrob407/studio-bridge
+studio-bridge install</code></pre>
+</div>
+</div>
+
+<section>
+<div class="wrap">
+<h2>Why Studio Bridge</h2>
+<div class="grid">
+<div class="card"><h3>No forced restarts</h3><p>Every command has a deadline and can be cancelled. Results survive a reconnect, and the plugin reloads itself when it changes.</p></div>
+<div class="card"><h3>Fewer calls and tokens</h3><p>One <code>batch</code> call runs up to 50 edits as a single undo step. Tool groups keep the tool list small: the 28 everyday tools cost about 5,700 tokens.</p></div>
+<div class="card"><h3>Easy to trust</h3><p>It listens only on 127.0.0.1, needs a secret on every request, verifies the plugin's signature, collects no telemetry and ships with build provenance.</p></div>
+<div class="card"><h3>Free for commercial games</h3><p>Use it to make anything you like, including paid games. The core program stays free.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<h2>What you can ask for</h2>
+<div class="grid">
+<div class="card"><p>"Generate a rocky island with a beach, scatter palm trees on it, and switch the lighting to sunset."</p></div>
+<div class="card"><p>"Build a main menu, make it responsive, and check it on an iPhone, an iPad and an Xbox."</p></div>
+<div class="card"><p>"Run a playtest, walk the character to the shop door, click Buy and tell me what errors show up."</p></div>
+<div class="card"><p>"Find every script that uses DataStore and list the risky ones."</p></div>
+<div class="card"><p>"List every asset this place uses that I do not own."</p></div>
+<div class="card"><p>"Export every animation in this rig's AnimSaves folder and publish them to my group."</p></div>
+</div>
+<p style="margin-top:18px"><a href="tools.html">Browse all 79 tools</a></p>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="card pro">
+<h2>Studio Bridge <span class="badge pro">Pro</span></h2>
+<p style="margin-bottom:16px">Optional paid add-on packs on top of the free program. The first, Snapshots and diffs, saves part of a place, shows exactly what changed and rolls it back. More are planned. Nothing in the free program moves behind a paywall.</p>
+<a class="btn gold" href="pro.html">See Pro</a>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<h2>Works with</h2>
+<div class="grid">
+<div class="card"><h3>Claude Code</h3><p>Used and tested here. <code>studio-bridge install</code> registers it for you.</p></div>
+<div class="card"><h3>Other MCP clients</h3><p>Studio Bridge speaks standard MCP. Setup for OpenAI's Codex CLI is included but has not been tried with Codex itself.</p></div>
+<div class="card"><h3>Windows and Linux</h3><p>Windows is the main platform. Linux works through Wine with Vinegar or Grapejuice, including Hyprland. Linux support is new, so reports are welcome.</p></div>
+</div>
+</div>
+</section>
+</main>
+<footer class="site">
+<div class="wrap">
+<div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
+<div>Studio Bridge 0.6.7 &middot; by zrob407. Not affiliated with Roblox.</div>
+</div>
+</footer>
+</body>
+</html>

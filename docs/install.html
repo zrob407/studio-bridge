@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install Studio Bridge</title>
+<meta name="description" content="Install Studio Bridge on Windows or Linux in a few minutes: one npm command, one install command, and you are ready.">
+<meta name="theme-color" content="#12151c">
+<meta property="og:title" content="Install Studio Bridge">
+<meta property="og:description" content="Install Studio Bridge on Windows or Linux in a few minutes: one npm command, one install command, and you are ready.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zrob407.github.io/studio-bridge/install.html">
+<meta property="og:image" content="https://zrob407.github.io/studio-bridge/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo-128.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="30" height="30">Studio Bridge</a>
+<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html" aria-current="page">Install</a><a href="tools.html">Tools</a><a href="pro.html" class="pro-link">Pro</a><a href="license.html">License</a><a href="https://github.com/zrob407/studio-bridge">GitHub</a></nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<div class="hero" style="text-align:left;padding-bottom:12px">
+<h1>Install</h1>
+<p class="lead" style="margin-left:0">You need Roblox Studio, Node 22 or newer and an MCP-ready AI tool such as Claude Code.</p>
+</div>
+
+<section class="tight">
+<h2>Windows</h2>
+<ol class="steps">
+<li><h3>Install the program</h3><pre><code>npm install -g @zrob407/studio-bridge</code></pre><p>It runs on Node, which is signed by the OpenJS Foundation, so Windows protections such as Smart App Control do not block it the way they can block an unsigned exe.</p></li>
+<li><h3>Set it up</h3><pre><code>studio-bridge install</code></pre><p>This creates a secret token, writes the Studio plugin and registers Studio Bridge with Claude Code.</p></li>
+<li><h3>Restart</h3><p>Restart your AI tool and Roblox Studio. If Studio asks, allow HTTP requests and Script Injection for "Studio Bridge".</p></li>
+<li><h3>Check it</h3><pre><code>studio-bridge doctor</code></pre><p>Doctor lists what is installed and tells you if something looks wrong. The Studio Bridge window in Studio should show Connected.</p></li>
+</ol>
+<div class="note">Prefer no Node? Download <code>studio-bridge-&lt;version&gt;.exe</code> from the <a href="https://github.com/zrob407/studio-bridge/releases">releases page</a> and double-click it. The exe is not code-signed, so Windows may warn about it. If it is blocked, use npm.</div>
+</section>
+
+<section class="tight">
+<h2>Linux</h2>
+<p>Roblox has no native Linux Studio, so this is for Studio running under Wine through <a href="https://github.com/vinegarhq/vinegar">Vinegar</a> or Grapejuice. The bridge and your AI tool run natively on Linux, and Studio reaches the bridge on 127.0.0.1.</p>
+<ol class="steps">
+<li><h3>Install and set up</h3><pre><code>npm install -g @zrob407/studio-bridge
+studio-bridge install</code></pre><p>The installer finds where Studio reads plugins, including Vinegar's app data folder and the Wine prefix.</p></li>
+<li><h3>Start Studio from your launcher</h3><p>Allow HTTP requests and Script Injection for "Studio Bridge" if it asks, then run <code>studio-bridge doctor</code>.</p></li>
+</ol>
+<div class="note">The <code>screenshot</code> tool needs Windows, or Hyprland with <code>grim</code>. <code>viewport_screenshot</code> works everywhere. Input tools need Studio to be the focused window, which Studio Bridge arranges with <code>hyprctl</code> on Hyprland and <code>xdotool</code> on other X11 desktops. The packaged exe is Windows only, so use npm on Linux.</div>
+</section>
+
+<section class="tight">
+<h2>Keeping it up to date</h2>
+<pre><code>studio-bridge update</code></pre>
+<p>Checking for updates is on by default and can be turned off in settings. New versions are announced on the <a href="https://github.com/zrob407/studio-bridge/releases">releases page</a>.</p>
+</section>
+
+<section class="tight">
+<h2>Help</h2>
+<p>Run <code>studio-bridge doctor</code> first. The <a href="https://github.com/zrob407/studio-bridge#readme">README</a> covers every setting, and you can open an issue on <a href="https://github.com/zrob407/studio-bridge/issues">GitHub</a>.</p>
+</section>
+</div>
+</main>
+<footer class="site">
+<div class="wrap">
+<div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
+<div>Studio Bridge 0.6.7 &middot; by zrob407. Not affiliated with Roblox.</div>
+</div>
+</footer>
+</body>
+</html>

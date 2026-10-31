@@ -1455,6 +1455,8 @@ local function buildStatusWidget()
 
 			if decoded and decoded.message then
 				showProMessage(decoded.message, decoded.ok == true)
+			elseif decoded then
+				showProMessage("This Studio Bridge program is older than the plugin and cannot open the license page. Restart your AI tool to update it.", false)
 			else
 				showProMessage("Could not reach the Studio Bridge program. Check that your AI tool has started it.", false)
 			end

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>All 79 Studio Bridge tools</title>
+<meta name="description" content="Every tool Studio Bridge gives your AI assistant, grouped by what it does, with a one-line description of each.">
+<meta name="theme-color" content="#12151c">
+<meta property="og:title" content="All 79 Studio Bridge tools">
+<meta property="og:description" content="Every tool Studio Bridge gives your AI assistant, grouped by what it does, with a one-line description of each.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zrob407.github.io/studio-bridge/tools.html">
+<meta property="og:image" content="https://zrob407.github.io/studio-bridge/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo-128.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="30" height="30">Studio Bridge</a>
+<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html" aria-current="page">Tools</a><a href="pro.html" class="pro-link">Pro</a><a href="license.html">License</a><a href="https://github.com/zrob407/studio-bridge">GitHub</a></nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<div class="hero" style="text-align:left;padding-bottom:12px">
+<h1>79 tools</h1>
+<p class="lead" style="margin-left:0">All tools are offered by default. To save context, <code>studio-bridge settings tools core</code> offers only the 28 everyday tools, and you can add groups such as <code>building</code> or <code>ui</code> on top.</p>
+</div>
+<p><a href="#core" class="badge soon" style="margin-right:6px">Core</a><a href="#building" class="badge soon" style="margin-right:6px">Building</a><a href="#ui" class="badge soon" style="margin-right:6px">UI</a><a href="#playtest" class="badge soon" style="margin-right:6px">Playtest</a><a href="#media" class="badge soon" style="margin-right:6px">Media</a><a href="#publishing" class="badge soon" style="margin-right:6px">Publishing</a><a href="#analysis" class="badge soon" style="margin-right:6px">Analysis</a></p>
+<section class="tight" id="core">
+<h2>Core <span style="color:var(--dim);font-size:0.6em;font-weight:600">28 tools</span></h2>
+<p style="color:var(--dim)">Always on. Scripts, instances, selection, screenshots, camera, starting and stopping playtests, logs, batch and the Roblox docs.</p>
+<ul class="tool-list">
+<li><code>studio_list</code><span>List the Roblox Studio windows currently connected to the bridge plugin.</span></li>
+<li><code>bridge_update</code><span>Check for a newer Studio Bridge release.</span></li>
+<li><code>run_luau</code><span>Run Luau code inside a connected Roblox Studio window (plugin context).</span></li>
+<li><code>batch</code><span>Run several edit-window tools in one call and one undo step.</span></li>
+<li><code>instance_find</code><span>Find instances under a root by name (substring, or * and ?</span></li>
+<li><code>instance_children</code><span>List children of an instance, optionally as a tree.</span></li>
+<li><code>instance_get</code><span>Get properties, attributes, tags and child count of an instance.</span></li>
+<li><code>instance_set</code><span>Set properties, attributes and tags on one or many instances.</span></li>
+<li><code>instance_create</code><span>Create instances of a class under a parent.</span></li>
+<li><code>instance_delete</code><span>Delete instances (services and top-level children of game are refused).</span></li>
+<li><code>instance_move</code><span>Reparent instances.</span></li>
+<li><code>instance_clone</code><span>Clone an instance.</span></li>
+<li><code>script_get</code><span>Read a script's source with line numbers, optionally a line range.</span></li>
+<li><code>script_set</code><span>Replace the whole source of an existing script.</span></li>
+<li><code>script_edit</code><span>Apply line edits to a script.</span></li>
+<li><code>script_search</code><span>Search script sources (default whole game) for text.</span></li>
+<li><code>script_validate</code><span>Check Luau syntax of a script (by path) or of a source string, without running it.</span></li>
+<li><code>selection_get</code><span>List what is currently selected in Studio (use it when the user says &quot;this&quot; or &quot;the selected one&quot;).</span></li>
+<li><code>selection_set</code><span>Select instances in Studio so the user can see them (an empty list clears the selection).</span></li>
+<li><code>logs_get</code><span>Read the Output log of a Studio window.</span></li>
+<li><code>screenshot</code><span>Capture the Roblox Studio window as an image (brings the window to the front first).</span></li>
+<li><code>viewport_screenshot</code><span>Capture only the 3D viewport of Studio (no panels) as an image.</span></li>
+<li><code>camera_set</code><span>Move the Studio editor camera (not the player camera).</span></li>
+<li><code>camera_frame</code><span>Point the Studio editor camera at instances so they fill the view, from a chosen angle.</span></li>
+<li><code>play_start</code><span>Start a play session from the edit window.</span></li>
+<li><code>play_stop</code><span>Stop the running play session (targets the server window automatically).</span></li>
+<li><code>run_test</code><span>Run a test in a fresh play session and return the result.</span></li>
+<li><code>roblox_docs</code><span>Roblox's official documentation from create.roblox.com.</span></li>
+</ul>
+</section>
+<section class="tight" id="building">
+<h2>Building <span style="color:var(--dim);font-size:0.6em;font-weight:600">22 tools</span></h2>
+<p style="color:var(--dim)">Terrain, lighting, scatter, spatial tools, effects, tweens, collision groups, bulk editing, asset search and insert, and model generation.</p>
+<ul class="tool-list">
+<li><code>terrain</code><span>Edit terrain.</span></li>
+<li><code>environment</code><span>Lighting and atmosphere.</span></li>
+<li><code>scatter</code><span>Scatter copies of a model or part across an area, dropped onto whatever ground is below, into a new folder.</span></li>
+<li><code>spatial_find</code><span>Find places to put things.</span></li>
+<li><code>spatial_check</code><span>Check things in space.</span></li>
+<li><code>spatial_map</code><span>A top-down text map or a summary of an area.</span></li>
+<li><code>snap_grid</code><span>Snap models or parts to a grid (position, and optionally rotation in degrees).</span></li>
+<li><code>raycast</code><span>Cast one ray, or several with rays, through the place.</span></li>
+<li><code>spatial_query</code><span>Find what is near a point or inside a box, nearest first, or measure the world bounds of an instance.</span></li>
+<li><code>effects</code><span>Particle emitters, beams, trails, fire, smoke, sparkles and lights.</span></li>
+<li><code>physics_groups</code><span>Collision groups.</span></li>
+<li><code>tween_play</code><span>Preview a tween on an instance in the edit window.</span></li>
+<li><code>instance_duplicate</code><span>Make many copies of a model or part.</span></li>
+<li><code>instance_rename</code><span>Rename many instances: find and replace (plain text, or a Lua pattern with pattern: true), prefix, suffix, case (upper, lower, title) and numbering.</span></li>
+<li><code>instance_pivot</code><span>A model's or part's pivot point.</span></li>
+<li><code>instance_bulk</code><span>Act on many instances at once, chosen by paths or by root with class, nameContains and tag filters.</span></li>
+<li><code>instance_info</code><span>Look around the hierarchy.</span></li>
+<li><code>tag_manage</code><span>CollectionService tags.</span></li>
+<li><code>asset_search</code><span>Search Roblox's free Creator Store for models, decals, audio, images, meshes, mesh parts, videos or plugins.</span></li>
+<li><code>asset_insert</code><span>Insert a free model by asset id.</span></li>
+<li><code>generate_model</code><span>Generate a 3D model from a text prompt (and optionally a reference image) with Roblox's own generation service in Studio, and place it in the place.</span></li>
+<li><code>import_rbxm</code><span>Load a .rbxm or .rbxmx file from this computer (for example one saved by export_rbxm in another place) into the open Studio place.</span></li>
+</ul>
+</section>
+<section class="tight" id="ui">
+<h2>UI <span style="color:var(--dim);font-size:0.6em;font-weight:600">7 tools</span></h2>
+<p style="color:var(--dim)">Building, scaling and checking GUIs, plus the device emulator.</p>
+<ul class="tool-list">
+<li><code>ui_build</code><span>Build a whole GUI (or any instance tree) from one nested description.</span></li>
+<li><code>ui_check</code><span>Check the on-screen GUI of a running play session for layout problems: off-screen or clipped elements, overlapping buttons and text, text that does not fit, small text...</span></li>
+<li><code>ui_autoscale</code><span>Convert a GUI from pixel Offsets to responsive Scale.</span></li>
+<li><code>ui_responsive_check</code><span>Check how a GUI lays out at different screen sizes without playtesting.</span></li>
+<li><code>device_emulator</code><span>Studio's device emulator.</span></li>
+<li><code>gui_snapshot</code><span>List the on-screen GUI of the player in a running play session (runs in the client window automatically): path, class, text, whether it is a button or input, and its c...</span></li>
+<li><code>gui_click</code><span>Click a GUI object (by path) or a screen position in the player client of a running play session, using virtual input.</span></li>
+</ul>
+</section>
+<section class="tight" id="playtest">
+<h2>Playtest <span style="color:var(--dim);font-size:0.6em;font-weight:600">3 tools</span></h2>
+<p style="color:var(--dim)">Keyboard, mouse and character control during a playtest.</p>
+<ul class="tool-list">
+<li><code>input_keyboard</code><span>Send keyboard input to a running playtest through the edit window, which Studio Bridge brings to the front first.</span></li>
+<li><code>input_mouse</code><span>Send mouse input to a running playtest through the edit window, which Studio Bridge brings to the front first.</span></li>
+<li><code>character_move</code><span>Control the player's character in a running playtest (it runs in the client window).</span></li>
+</ul>
+</section>
+<section class="tight" id="media">
+<h2>Media <span style="color:var(--dim);font-size:0.6em;font-weight:600">8 tools</span></h2>
+<p style="color:var(--dim)">Animation and audio.</p>
+<ul class="tool-list">
+<li><code>animation_inspect</code><span>Describe a KeyframeSequence (length, loop, priority, joints, markers, keyframe times, and with detail every pose as position, rotation in degrees, weight and easing),...</span></li>
+<li><code>animation_create</code><span>Build a KeyframeSequence from a description.</span></li>
+<li><code>animation_edit</code><span>Edit a KeyframeSequence with a list of operations: scale_time {factor}, shift_time {seconds}, reverse, delete_keyframes {times or from and to}, add_marker {time, name,...</span></li>
+<li><code>animation_pose</code><span>Pose a rig from a KeyframeSequence at a time (interpolating between keyframes) by setting its Motor6D transforms, so you can take a screenshot of the result; or reset...</span></li>
+<li><code>animation_play</code><span>Preview a KeyframeSequence on a rig in the edit window by driving its Motor6D joints over time.</span></li>
+<li><code>animation_ids</code><span>Animation instances and their AnimationIds.</span></li>
+<li><code>audio_manage</code><span>Sounds in the place.</span></li>
+<li><code>audio_report</code><span>Scan Sound instances: missing SoundId, volume 0 or above 5, sounds set to Playing, and SoundIds used more than once.</span></li>
+</ul>
+</section>
+<section class="tight" id="publishing">
+<h2>Publishing <span style="color:var(--dim);font-size:0.6em;font-weight:600">8 tools</span></h2>
+<p style="color:var(--dim)">Uploads, audits and exports.</p>
+<ul class="tool-list">
+<li><code>asset_upload</code><span>Upload a local file to Roblox through Open Cloud (animations as .rbxm exported with export_rbxm, models, images, audio, meshes).</span></li>
+<li><code>asset_upload_batch</code><span>Upload many local files to Roblox through Open Cloud, one at a time, without waiting on each, then check them all in one polling pass.</span></li>
+<li><code>asset_batch_status</code><span>Finish checking a batch: re-polls every unfinished item of a results file written by asset_upload_batch or asset_publish_instances, updates the file, and summarizes it.</span></li>
+<li><code>asset_status</code><span>Check an Open Cloud upload by operation id (returns the asset id when done, plus the moderation state).</span></li>
+<li><code>asset_key_check</code><span>Check that an Open Cloud API key is set up (in ~/.roblox-key.txt or ROBLOX_API_KEY) and accepted by Roblox, without printing it or uploading anything.</span></li>
+<li><code>asset_audit</code><span>Find every asset id a game references (mesh, texture, sound, animation and other asset properties, string attributes, and ids written in script source) in the open Stu...</span></li>
+<li><code>asset_publish_instances</code><span>Export instances from Studio (for example KeyframeSequences from a rig's AnimSaves folder) as separate .rbxm files and upload them all to Roblox.</span></li>
+<li><code>export_rbxm</code><span>Serialize instances (for example a KeyframeSequence or a model) to a binary .rbxm file saved on this computer.</span></li>
+</ul>
+</section>
+<section class="tight" id="analysis">
+<h2>Analysis <span style="color:var(--dim);font-size:0.6em;font-weight:600">3 tools</span></h2>
+<p style="color:var(--dim)">Script, physics and audio checks.</p>
+<ul class="tool-list">
+<li><code>script_scan</code><span>Scan scripts for risky code: require by asset id, loadstring, LoadAsset, getfenv/setfenv, obfuscated strings, HTTP calls, teleports, kicks, DataStore access.</span></li>
+<li><code>script_dependencies</code><span>Follow require() between scripts.</span></li>
+<li><code>physics_report</code><span>Scan parts for physics problems: loose unanchored parts, parts below the void, oversized or tiny parts, invisible collidable parts and MeshParts without a mesh.</span></li>
+</ul>
+</section>
+<div class="note gold">Paid packs add their own tools. They appear only after a license is activated. See <a href="pro.html">Studio Bridge Pro</a>.</div>
+</div>
+</main>
+<footer class="site">
+<div class="wrap">
+<div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
+<div>Studio Bridge 0.6.7 &middot; by zrob407. Not affiliated with Roblox.</div>
+</div>
+</footer>
+</body>
+</html>

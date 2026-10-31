@@ -16,6 +16,7 @@ export const rules = [
   { match: /^docs\.mjs$/, tests: ['docs'] },
   { match: /^marketplace\.mjs$/, tests: ['marketplace'] },
   { match: /^checks\.mjs$|^LICENSE$/, tests: ['checks', 'package'] },
+  { match: /^(docs\/|build\/site\.mjs$|tools\.json$|pro\.mjs$|README\.md$)/, tests: ['site'] },
   { match: /^updater\.mjs$/, tests: ['update', 'autoupdate', 'npm-update', 'settings', 'cli'] },
   { match: /^ws\.mjs$/, tests: ['ws-transport', 'reliability'] },
   { match: /^platform\.mjs$/, tests: ['platform', 'platform-tools', 'cli', 'package'] },
