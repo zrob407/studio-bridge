@@ -95,6 +95,9 @@ const mixed = await rpc('tools/call', { name: 'batch', arguments: { operations: 
 check('batch includes the geometry helpers once when a geometry tool is in it', !mixed.result.isError && Boolean(received[4]) && received[4].split('local function worldBounds').length === 2);
 check('the plugin source carries the status window', plugin.source.includes('buildStatusWidget') && plugin.source.includes('StudioBridgeStatus'));
 check('the plugin source has a Pro tab that only talks to the local bridge', plugin.source.includes('PAGES = {"Status", "Tools", "Pro", "Config", "Log"}') && plugin.source.includes('post("/settings", {action = "set"') && plugin.source.includes('post("/pro", {action = "activate"') && plugin.source.includes('ClearTextOnFocus = false') && !/api\.polar\.sh|workers\.dev|studio-bridge-license/.test(plugin.source));
+const doctorRun = await post('/doctor', {});
+check('the Config tab can run doctor through the bridge', typeof doctorRun.output === 'string' && /studio-bridge \d+\.\d+\.\d+/.test(doctorRun.output), (doctorRun.output || doctorRun.error || '').split('\n')[0]);
+check('the Config tab has a Run doctor button that asks the local bridge', plugin.source.includes('Text = "Run doctor"') && plugin.source.includes('post("/doctor", {})'));
 const buy = await post('/pro', { action: 'buy' });
 check('the bridge answers the buy button with the checkout link', buy.ok === true && /^https:\/\/buy\.polar\.sh\//.test(buy.url) && buy.message.includes(buy.url));
 check('the Pro tab has a Buy a license button below Activate that only asks the local bridge', plugin.source.includes('Text = "Buy a license"') && plugin.source.includes('post("/pro", {action = "buy"})') && plugin.source.indexOf('Text = "Buy a license"') > plugin.source.indexOf('Text = "Activate"') && !/buy\.polar\.sh/.test(plugin.source) && plugin.source.includes('Restart your AI tool to update it'));
