@@ -15,7 +15,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-serve-'));
 const token = crypto.randomBytes(32).toString('hex');
 const port = 3990;
 const server = spawn(command[0], command.slice(1), {
-  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_NO_BROWSER: '1' },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PLUGINS_DIR: path.join(home, 'Roblox', 'Plugins'), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_NO_BROWSER: '1' },
   stdio: ['pipe', 'pipe', 'ignore'],
   windowsHide: true,
 });
