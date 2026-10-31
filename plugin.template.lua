@@ -742,7 +742,7 @@ local GOOD = Color3.fromRGB(80, 200, 120)
 local GOLD = Color3.fromRGB(255, 209, 102)
 local WARN = Color3.fromRGB(230, 180, 60)
 local BAD = Color3.fromRGB(230, 90, 90)
-local PAGES = {"Status", "Tools", "Pro", "Config", "Log"}
+local PAGES = {"Status", "Tools", "Pro", "Log"}
 local STATES = {
 	connected = {"Connected", GOOD},
 	connecting = {"Connecting", WARN},
@@ -916,15 +916,46 @@ local function buildStatusWidget()
 
 	rounded(logo, 10)
 
-	local title = label(header, {Position = UDim2.fromOffset(64, 10), Size = UDim2.new(1, -262, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Studio Bridge"})
-	local subtitle = label(header, {Position = UDim2.fromOffset(64, 34), Size = UDim2.new(1, -262, 0, 18), TextSize = 13})
-	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 32), Size = UDim2.fromOffset(176, 28), BorderSizePixel = 0}, header)
+	local title = label(header, {Position = UDim2.fromOffset(64, 10), Size = UDim2.new(1, -306, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Studio Bridge"})
+	local subtitle = label(header, {Position = UDim2.fromOffset(64, 34), Size = UDim2.new(1, -306, 0, 18), TextSize = 13})
+	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -58, 0, 32), Size = UDim2.fromOffset(176, 28), BorderSizePixel = 0}, header)
 
 	rounded(pill, 14)
 
 	local dot = create("Frame", {Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(10, 10), BorderSizePixel = 0}, pill)
 
 	rounded(dot, 5)
+
+	-- The settings gear from OPNduck (Tabler "settings"): a wavy ring around a smaller ring. Roblox cannot draw the
+	-- SVG path without an uploaded image, so it is built from circles, fitted to the original shape on a 24 unit grid.
+	local COG_UNIT = 1.25
+	local cogButton = create("TextButton", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 32), Size = UDim2.fromOffset(32, 32), BackgroundTransparency = 1, AutoButtonColor = false, Text = ""}, header)
+	local cog = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(24 * COG_UNIT, 24 * COG_UNIT), BackgroundTransparency = 1}, cogButton)
+	local cogInk = {}
+	local cogCutout = {}
+
+	local function cogDisc(radius, offsetX, offsetY, group)
+		local disc = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, offsetX * COG_UNIT, 0.5, offsetY * COG_UNIT), Size = UDim2.fromOffset(radius * 2 * COG_UNIT, radius * 2 * COG_UNIT), BorderSizePixel = 0}, cog)
+
+		rounded(disc, radius * COG_UNIT)
+		table.insert(group, disc)
+	end
+
+	-- Eight lobes around a body: the outer shape in ink, then the inner one cut out in the page color.
+	local function cogShape(body, lobe, lobeDistance, group)
+		cogDisc(body, 0, 0, group)
+
+		for step = 0, 7 do
+			local angle = math.rad(step * 45)
+
+			cogDisc(lobe, math.sin(angle) * lobeDistance, -math.cos(angle) * lobeDistance, group)
+		end
+	end
+
+	cogShape(8.2, 2.6, 7.5, cogInk)
+	cogShape(6.4, 0.8, 7.2, cogCutout)
+	cogDisc(4, 0, 0, cogInk)
+	cogDisc(2, 0, 0, cogCutout)
 
 	local pillText = label(pill, {Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -34, 1, 0), Font = Enum.Font.BuilderSansBold, TextSize = 13})
 
@@ -955,6 +986,20 @@ local function buildStatusWidget()
 	local toolsPage
 	local proPage
 
+	local cogHovered = false
+
+	local function paintCog()
+		local tint = if cogHovered then Color3.fromRGB(255, 255, 255) elseif selected == "Config" then ACCENT else dimText()
+
+		for _, part in cogInk do
+			part.BackgroundColor3 = tint
+		end
+
+		for _, part in cogCutout do
+			part.BackgroundColor3 = background()
+		end
+	end
+
 	local function paintTabs()
 		for name, entry in tabs do
 			local active = name == selected
@@ -962,9 +1007,90 @@ local function buildStatusWidget()
 			entry.button.TextColor3 = if active then mainText() else dimText()
 			entry.underline.BackgroundColor3 = ACCENT
 			entry.underline.Visible = active
-			pages[name].Visible = active
+		end
+
+		for name, page in pages do
+			page.Visible = name == selected
+		end
+
+		paintCog()
+	end
+
+	local function openPage(name)
+		selected = name
+		paintTabs()
+
+		if name == "Tools" then
+			toolsPage.CanvasPosition = Vector2.zero
+			loadProfile()
+		elseif name == "Pro" then
+			loadPro()
+		elseif name == "Config" then
+			loadConfig()
 		end
 	end
+
+	-- The same easing OPNduck gives its settings gear: cubic-bezier(0.5, 0, 0.2, 1) over 0.9 seconds, one full turn.
+	local function cubicBezier(x1, y1, x2, y2)
+		local function sample(a, b, t)
+			local inverse = 1 - t
+
+			return 3 * a * inverse * inverse * t + 3 * b * inverse * t * t + t * t * t
+		end
+
+		return function(progress)
+			local low, high = 0, 1
+
+			for _ = 1, 24 do
+				local middle = (low + high) / 2
+
+				if sample(x1, x2, middle) < progress then
+					low = middle
+				else
+					high = middle
+				end
+			end
+
+			return sample(y1, y2, (low + high) / 2)
+		end
+	end
+
+	local COG_SPIN_SECONDS = 0.9
+	local cogEase = cubicBezier(0.5, 0, 0.2, 1)
+	local cogSpin
+
+	local function spinCog()
+		if cogSpin then
+			return
+		end
+
+		local elapsed = 0
+
+		cogSpin = RunService.Heartbeat:Connect(function(step)
+			elapsed += step
+
+			if elapsed >= COG_SPIN_SECONDS then
+				cog.Rotation = 0
+				cogSpin:Disconnect()
+				cogSpin = nil
+			else
+				cog.Rotation = 360 * cogEase(elapsed / COG_SPIN_SECONDS)
+			end
+		end)
+	end
+
+	cogButton.MouseButton1Click:Connect(function()
+		openPage(if selected == "Config" then "Status" else "Config")
+	end)
+	cogButton.MouseEnter:Connect(function()
+		cogHovered = true
+		paintCog()
+		spinCog()
+	end)
+	cogButton.MouseLeave:Connect(function()
+		cogHovered = false
+		paintCog()
+	end)
 
 	for index, name in PAGES do
 		local tabButton = create("TextButton", {
@@ -981,33 +1107,13 @@ local function buildStatusWidget()
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
 		tabButton.MouseButton1Click:Connect(function()
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+			openPage(name)
 		end)
 	end
 
 	holder.show = function(name)
-		if tabs[name] then
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+		if pages[name] then
+			openPage(name)
 		end
 	end
 
