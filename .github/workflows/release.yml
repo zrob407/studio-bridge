@@ -37,7 +37,7 @@ jobs:
       - name: Check syntax
         shell: bash
         run: |
-          for file in server.mjs assets.mjs audit.mjs marketplace.mjs docs.mjs png.mjs ws.mjs paths.mjs cli.mjs updater.mjs checks.mjs install.mjs platform.mjs packs.mjs trust.mjs pro.mjs build/build.mjs; do
+          for file in server.mjs assets.mjs audit.mjs marketplace.mjs docs.mjs png.mjs ws.mjs paths.mjs cli.mjs updater.mjs checks.mjs install.mjs platform.mjs packs.mjs trust.mjs pro.mjs build/build.mjs build/site.mjs; do
             node --check "$file"
           done
 

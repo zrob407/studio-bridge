@@ -97,7 +97,7 @@ check('the plugin source carries the status window', plugin.source.includes('bui
 check('the plugin source has a Pro tab that only talks to the local bridge', plugin.source.includes('PAGES = {"Status", "Tools", "Pro", "Log"}') && plugin.source.includes('post("/pro", {action = "activate"') && plugin.source.includes('ClearTextOnFocus = false') && !/api\.polar\.sh|workers\.dev|studio-bridge-license/.test(plugin.source));
 const buy = await post('/pro', { action: 'buy' });
 check('the bridge answers the buy button with the checkout link', buy.ok === true && /^https:\/\/buy\.polar\.sh\//.test(buy.url) && buy.message.includes(buy.url));
-check('the Pro tab has a Buy a license button below Activate that only asks the local bridge', plugin.source.includes('Text = "Buy a license"') && plugin.source.includes('post("/pro", {action = "buy"})') && plugin.source.indexOf('Text = "Buy a license"') > plugin.source.indexOf('Text = "Activate"') && !/buy\.polar\.sh/.test(plugin.source));
+check('the Pro tab has a Buy a license button below Activate that only asks the local bridge', plugin.source.includes('Text = "Buy a license"') && plugin.source.includes('post("/pro", {action = "buy"})') && plugin.source.indexOf('Text = "Buy a license"') > plugin.source.indexOf('Text = "Activate"') && !/buy\.polar\.sh/.test(plugin.source) && plugin.source.includes('Restart your AI tool to update it'));
 check('the Pro tab clears the key box after a successful activation and never logs the key', plugin.source.includes('keyBox.Text = ""') && !/(print|warn)\([^)]*keyBox/.test(plugin.source));
 
 const include = async (name, args) => {
