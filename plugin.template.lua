@@ -1022,7 +1022,7 @@ local function buildStatusWidget()
 
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
-	hoverable(tabButton, tabButton, true)
+		hoverable(tabButton, tabButton, true)
 		tabButton.MouseButton1Click:Connect(function()
 			selected = name
 			paintTabs()
