@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 export const isWindows = process.platform === 'win32';
 export const isLinux = process.platform === 'linux';
@@ -96,4 +97,18 @@ export function pluginsDirs(home = os.homedir(), env = process.env) {
 
 export function pluginsDir(home = os.homedir(), env = process.env) {
   return pluginsDirs(home, env)[0];
+}
+
+const probed = new Map();
+
+export function commandExists(name) {
+  if (!probed.has(name)) probed.set(name, !spawnSync(name, ['-h'], { stdio: 'ignore', timeout: 5000 }).error);
+  return probed.get(name);
+}
+
+export function unsupportedTools({ platform = process.platform, hyprland = isHyprland(), has = commandExists } = {}) {
+  const unsupported = new Set();
+  const canCapture = platform === 'win32' || (platform === 'linux' && hyprland && has('hyprctl') && has('grim'));
+  if (!canCapture) unsupported.add('screenshot');
+  return unsupported;
 }

@@ -739,9 +739,10 @@ local statusUi
 local ACCENT = Color3.fromRGB(79, 216, 255)
 local ON_ACCENT = Color3.fromRGB(10, 22, 44)
 local GOOD = Color3.fromRGB(80, 200, 120)
+local GOLD = Color3.fromRGB(255, 209, 102)
 local WARN = Color3.fromRGB(230, 180, 60)
 local BAD = Color3.fromRGB(230, 90, 90)
-local PAGES = {"Status", "Tools", "Log"}
+local PAGES = {"Status", "Tools", "Pro", "Log"}
 local STATES = {
 	connected = {"Connected", GOOD},
 	connecting = {"Connecting", WARN},
@@ -949,7 +950,9 @@ local function buildStatusWidget()
 	local pages = {}
 	local selected = "Status"
 	local loadProfile
+	local loadPro
 	local toolsPage
+	local proPage
 
 	local function paintTabs()
 		for name, entry in tabs do
@@ -983,6 +986,8 @@ local function buildStatusWidget()
 			if name == "Tools" then
 				toolsPage.CanvasPosition = Vector2.zero
 				loadProfile()
+			elseif name == "Pro" then
+				loadPro()
 			end
 		end)
 	end
@@ -995,6 +1000,8 @@ local function buildStatusWidget()
 			if name == "Tools" then
 				toolsPage.CanvasPosition = Vector2.zero
 				loadProfile()
+			elseif name == "Pro" then
+				loadPro()
 			end
 		end
 	end
@@ -1236,7 +1243,7 @@ local function buildStatusWidget()
 				Font = Enum.Font.BuilderSansBold,
 				TextSize = 15,
 				TextColor3 = mainText(),
-				Text = string.format('%s  <font color="%s">%d tools  ·  about %s tokens%s</font>', group.title, hexOf(dimText()), group.tools, tokenText(group.tokens), if isCore then "  ·  always on" else ""),
+				Text = string.format('%s%s  <font color="%s">%d tools  ·  about %s tokens%s</font>', group.title, (({pro = '  <font color="#ffd166"><b>PRO</b></font>', official = '  <font color="#4fd8ff">official</font>', unverified = '  <font color="#ff9f43">unverified</font>'})[group.tier or ""] or ""), hexOf(dimText()), group.tools, tokenText(group.tokens), if isCore then "  ·  always on" else ""),
 			})
 			label(row, {
 				Position = UDim2.fromOffset(68, 30),
@@ -1277,6 +1284,207 @@ local function buildStatusWidget()
 			renderTools()
 		end)
 	end
+
+	proPage = create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+	}, content)
+
+	pages.Pro = proPage
+	create("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 20)}, proPage)
+	create("UIListLayout", {Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder}, proPage)
+
+	local proTitle = label(proPage, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 26), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = 'Studio Bridge  <font color="#ffd166"><b>PRO</b></font>'})
+	local proIntro = label(proPage, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, Text = "Paste your license key to download and unlock the paid packs. The key is saved on this computer only."})
+	local keyCard = create("Frame", {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 40), BorderSizePixel = 0}, proPage)
+
+	rounded(keyCard, 8)
+
+	local keyBox = create("TextBox", {
+		Position = UDim2.fromOffset(12, 0),
+		Size = UDim2.new(1, -24, 1, 0),
+		BackgroundTransparency = 1,
+		ClearTextOnFocus = false,
+		Font = Enum.Font.RobotoMono,
+		TextSize = 13,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		PlaceholderText = "Paste your license key here",
+		Text = "",
+	}, keyCard)
+	local activateButton = create("TextButton", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 38), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Activate"}, proPage)
+
+	rounded(activateButton, 8)
+
+	local buyButton = create("TextButton", {LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 34), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 14, Text = "Buy a license"}, proPage)
+
+	rounded(buyButton, 8)
+
+	local proMessage = label(proPage, {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None})
+	local proStatusCard = create("Frame", {LayoutOrder = 7, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0}, proPage)
+
+	rounded(proStatusCard, 10)
+	create("UIPadding", {PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, proStatusCard)
+
+	local proStatusText = label(proStatusCard, {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
+	local removeButton = create("TextButton", {LayoutOrder = 8, Size = UDim2.new(1, 0, 0, 32), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSans, TextSize = 13, Text = "Remove the license from this computer", Visible = false}, proPage)
+
+	rounded(removeButton, 8)
+
+	local proData
+	local proBusy = false
+
+	local function plain(text)
+		return (string.gsub(string.gsub(string.gsub(tostring(text), "&", "&amp;"), "<", "&lt;"), ">", "&gt;"))
+	end
+
+	local trustNames = {official = "official", pro = "official Pro"}
+
+	local function renderPro()
+		if not proData then
+			proStatusText.Text = "Checking this computer..."
+			removeButton.Visible = false
+
+			return
+		end
+
+		if proData.hasKey then
+			local packs = {}
+
+			for _, pack in proData.packs or {} do
+				table.insert(packs, string.format("%s %s  (%s)", plain(pack.title), plain(pack.version), trustNames[pack.trust] or "unverified third-party"))
+			end
+
+			proStatusText.Text = string.format(
+				"License  <b>%s</b>\nPlan  %s\nPacks  %s",
+				plain(proData.maskedKey or ""),
+				plain(proData.plan or "not checked yet"),
+				if #packs > 0 then table.concat(packs, ", ") else "none installed"
+			)
+			removeButton.Visible = true
+		else
+			proStatusText.Text = "No license key is saved on this computer."
+			removeButton.Visible = false
+		end
+	end
+
+	local function showProMessage(text, good)
+		proMessage.Text = plain(text)
+		proMessage.TextColor3 = if good then GOOD else BAD
+	end
+
+	onTheme(function()
+		proTitle.TextColor3 = mainText()
+		proIntro.TextColor3 = dimText()
+		keyCard.BackgroundColor3 = card()
+		keyBox.TextColor3 = mainText()
+		keyBox.PlaceholderColor3 = dimText()
+		activateButton.BackgroundColor3 = ACCENT
+		activateButton.TextColor3 = ON_ACCENT
+		buyButton.BackgroundColor3 = card()
+		buyButton.TextColor3 = GOLD
+		proStatusCard.BackgroundColor3 = card()
+		proStatusText.TextColor3 = mainText()
+		removeButton.BackgroundColor3 = card()
+		removeButton.TextColor3 = dimText()
+	end)
+
+	loadPro = function()
+		task.spawn(function()
+			local ok, response = post("/pro", {action = "status"})
+			local decoded = decodeBody(ok, response)
+
+			if decoded and decoded.ok then
+				proData = decoded
+			end
+
+			renderPro()
+		end)
+	end
+
+	activateButton.MouseButton1Click:Connect(function()
+		if proBusy then
+			return
+		end
+
+		local key = string.gsub(keyBox.Text, "%s+", "")
+
+		if key == "" then
+			showProMessage("Paste your license key first.", false)
+
+			return
+		end
+
+		proBusy = true
+		activateButton.Text = "Activating..."
+		showProMessage("", true)
+
+		task.spawn(function()
+			local ok, response = post("/pro", {action = "activate", key = key})
+			local decoded = decodeBody(ok, response)
+
+			proBusy = false
+			activateButton.Text = "Activate"
+
+			if decoded and decoded.status then
+				proData = decoded.status
+				proData.ok = true
+			end
+
+			if decoded and decoded.ok then
+				keyBox.Text = ""
+				showProMessage(decoded.message or "License accepted.", true)
+			elseif decoded then
+				showProMessage(decoded.message or "The license could not be activated.", false)
+			else
+				showProMessage("Could not reach the Studio Bridge program. Check that your AI tool has started it.", false)
+			end
+
+			renderPro()
+		end)
+	end)
+
+	buyButton.MouseButton1Click:Connect(function()
+		task.spawn(function()
+			local ok, response = post("/pro", {action = "buy"})
+			local decoded = decodeBody(ok, response)
+
+			if decoded and decoded.message then
+				showProMessage(decoded.message, decoded.ok == true)
+			else
+				showProMessage("Could not reach the Studio Bridge program. Check that your AI tool has started it.", false)
+			end
+		end)
+	end)
+
+	removeButton.MouseButton1Click:Connect(function()
+		if proBusy then
+			return
+		end
+
+		proBusy = true
+		removeButton.Text = "Removing..."
+
+		task.spawn(function()
+			local ok, response = post("/pro", {action = "remove"})
+			local decoded = decodeBody(ok, response)
+
+			proBusy = false
+			removeButton.Text = "Remove the license from this computer"
+
+			if decoded and decoded.status then
+				proData = decoded.status
+				proData.ok = true
+			end
+
+			showProMessage(if decoded then (decoded.message or "License removed.") else "Could not reach the Studio Bridge program.", decoded ~= nil and decoded.ok == true)
+			renderPro()
+		end)
+	end)
 
 	local logPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),

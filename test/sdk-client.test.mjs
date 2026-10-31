@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { offeredCatalog } from './helpers/catalog.mjs';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
@@ -10,7 +11,7 @@ const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..
 const target = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const command = target ? target : process.execPath;
 const commandArgs = target ? ['serve'] : [path.join(bridgeDir, 'cli.mjs'), 'serve'];
-const expected = JSON.parse(fs.readFileSync(path.join(bridgeDir, 'tools.json'), 'utf8')).tools;
+const expected = offeredCatalog(bridgeDir).tools;
 const packageVersion = JSON.parse(fs.readFileSync(path.join(bridgeDir, 'package.json'), 'utf8')).version;
 
 const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-sdk-'));

@@ -1,0 +1,62 @@
+STUDIO BRIDGE PRO LICENSE
+
+Copyright (c) 2026 zrob407. All rights reserved.
+
+1. What this covers
+This license covers the Studio Bridge Pro packs and the license key you bought. It does
+not cover Studio Bridge itself (the free program and Studio plugin), which stays under
+its own license in the file named LICENSE, and buying Pro does not change that license.
+
+2. What you may do
+You may install the packs and use them for personal, educational, business and
+commercial work, on any number of projects and games. What you make with them is
+yours, with no royalties to me.
+
+3. Devices
+One key can be active on up to 3 devices at a time. You can free a device on your
+Polar purchases page.
+
+4. Plan length
+A key from a fixed-length plan (1, 3, 6 or 12 months) works until its end date.
+A lifetime key does not expire and covers every current and future version of Studio
+Bridge Pro, including packs added to it later. Things you made while a key was active
+stay yours when it ends.
+
+5. What you may not do
+- Do not share, sell or give out your key, or the packs, to anyone else.
+- Do not copy, resell, sublicense or publicly redistribute the packs or modified
+  versions of them.
+- Do not bypass, disable or alter license checks to use the packs without a valid key,
+  including for private use.
+Repeated failed license attempts, such as guessing keys, will pause the device and
+network for a time, up to a 30 day lockout for repeat offenses.
+Breaking these terms lets me revoke your key without a refund.
+
+6. Updates and support
+Updates are available while your key is valid. Support is provided on a reasonable
+effort basis.
+
+7. Refunds
+Refunds are handled through Polar, the seller of record, under its refund process.
+
+8. Warranty and liability
+The packs are provided "as is", without warranties, to the extent permitted by law.
+They change things in your Roblox place, so keep backups; snapshots are a safety net
+and not a guarantee. To the extent permitted by law I am not liable for lost data or
+indirect losses. Nothing here excludes rights or liability that cannot be excluded by
+law.
+
+9. Privacy and the license server
+The packs contact the Studio Bridge license server to check your key and to download
+the pack code. The server receives your license key, a random device id the packs create
+on your computer, your computer's name (shown as the device label on your Polar
+purchases page) and your internet address. It stores only a one-way hash of your key and
+of the device id, the Polar activation id, a short-lived record of which networks a key
+was used from to catch key sharing, and a count of failed attempts per hashed network and
+device to stop key guessing. Failed-attempt counts expire after 7 days and lockout
+records after at most 30 days. Your key is also checked with Polar, which sells
+the licenses. The packs never send your Roblox places, scripts, file names or anything
+else you work on to the server.
+
+10. Contact
+Use the support email on your purchase receipt.

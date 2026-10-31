@@ -5,13 +5,14 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { offeredCatalog } from './helpers/catalog.mjs';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const target = process.argv[2] ? path.resolve(process.argv[2]) : null;
 const base = target ? [target] : [process.execPath, path.join(bridgeDir, 'cli.mjs')];
 const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-profiles-'));
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const catalog = JSON.parse(fs.readFileSync(path.join(bridgeDir, 'tools.json'), 'utf8'));
+const catalog = offeredCatalog(bridgeDir);
 const allNames = catalog.tools.map((tool) => tool.name);
 
 let failures = 0;

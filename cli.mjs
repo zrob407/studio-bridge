@@ -7,7 +7,9 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { isHyprland, isWindows, pluginsDirs, wineRobloxFolders } from './platform.mjs';
+import { isHyprland, isWindows, pluginsDirs, unsupportedTools, wineRobloxFolders } from './platform.mjs';
+import { loadPacks, packsDir } from './packs.mjs';
+import { activate as proActivate, remove as proRemove, status as proStatus } from './pro.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 
@@ -387,6 +389,17 @@ async function doctor(args) {
     const xdotool = spawnSync('xdotool', ['--version'], { encoding: 'utf8' });
     note(xdotool.error ? 'WARN' : 'ok', xdotool.error ? 'xdotool is not installed, so input_keyboard, input_mouse and gui_click cannot focus the Studio window (X11 only); viewport_screenshot does not need it' : `xdotool ${(xdotool.stdout || '').trim()} can focus the Studio window`);
   }
+  const reservedTools = JSON.parse(readAsset('tools.json')).tools.map((tool) => tool.name);
+  const packNotes = [];
+  const preferencesNow = loadSettings();
+  const packTrust = preferencesNow.packTrust;
+  if (preferencesNow.unreadable) note('WARN', 'settings.json could not be read, so only packs signed by Studio Bridge are loaded until it is fixed or deleted (saving a setting keeps a copy of the broken file next to it)');
+  const installedPacks = loadPacks(packsDir(appDir), reservedTools, [], (message) => packNotes.push(message.replace('[studio-bridge] ', '')), { requireVerified: packTrust === 'verified' }).packs;
+  note('info', installedPacks.length ? `packs: ${installedPacks.map((pack) => `${pack.title}${pack.version ? ' ' + pack.version : ''} (${pack.tools.length} tools, ${{ official: 'official', pro: 'official Pro' }[pack.trust] || 'unverified third-party'})`).join(', ')}` : `no packs installed (a pack is a folder in ${packsDir(appDir)})`);
+  for (const message of packNotes) note('WARN', message);
+  note('info', `pack trust: ${packTrust} (${packTrust === 'verified' ? 'only packs signed by Studio Bridge are loaded' : 'unsigned third-party packs are loaded and labeled unverified'})`);
+  const hidden = [...unsupportedTools()];
+  if (hidden.length > 0) note('info', `tools not offered on this computer: ${hidden.join(', ')} (the window screenshot needs Windows, or Hyprland with hyprctl and grim; viewport_screenshot works everywhere)`);
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
   if (token) {
     const status = await bridgeStatus(token, port);
@@ -505,9 +518,22 @@ function settingsCommand(args) {
     console.log(`Tool profile set to ${wanted.join(',')}. A running bridge picks it up within a second or two; your AI client may need /mcp to refresh its tool list.`);
     return 0;
   }
+  if (key === 'pack-trust') {
+    if (value === undefined) {
+      console.log(`pack-trust     ${loadSettings().packTrust}  (all loads unsigned third-party packs and labels them unverified; verified loads only packs signed by Studio Bridge)`);
+      return 0;
+    }
+    if (!['all', 'verified'].includes(value)) {
+      console.log('Usage: studio-bridge settings pack-trust all|verified');
+      return 1;
+    }
+    saveSettings({ packTrust: value });
+    console.log(`Pack trust set to ${value}. A running bridge reloads its packs within a second or two; your AI client may need /mcp to refresh its tool list.`);
+    return 0;
+  }
   if (key) {
     if (!names[key] || !['on', 'off'].includes(value)) {
-      console.log('Usage: studio-bridge settings [check-updates|auto-update on|off] | settings tools [all|group,group]');
+      console.log('Usage: studio-bridge settings [check-updates|auto-update on|off] | settings tools [all|group,group] | settings pack-trust all|verified');
       return 1;
     }
     const changes = { [names[key]]: value === 'on' };
@@ -518,6 +544,7 @@ function settingsCommand(args) {
   console.log(`check-updates  ${current.checkUpdates ? 'on' : 'off'}  (look for a newer release once a day when the bridge starts)`);
   console.log(`auto-update    ${current.autoUpdate ? 'on' : 'off'}  (download, verify and install new releases yourself; applies at the next restart)`);
   console.log(`tools          ${current.toolProfile}  (settings tools lists the groups)`);
+  console.log(`pack-trust     ${current.packTrust}  (all: unsigned third-party packs load, labeled unverified; verified: only packs signed by Studio Bridge)`);
   return 0;
 }
 
@@ -538,9 +565,74 @@ Usage: studio-bridge <command>
   licenses               Print the license and the third-party notices
   doctor                 Check the installation (--offline skips the update check)
   update [--check]       Download and install the latest release (--check only reports)
+  pro activate|status|remove  Unlock Studio Bridge Pro with a license key (downloads the paid packs)
   settings [name on|off] Show or change check-updates and auto-update
   settings tools [list]  Choose which tool groups are offered (all, or core plus building,ui,...)
   version                Print the version`);
+}
+
+function promptHidden(question) {
+  return new Promise((resolve) => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout, terminal: true });
+    const write = rl._writeToOutput;
+    rl._writeToOutput = function (text) {
+      if (!rl.muted) write.call(rl, text);
+    };
+    rl.question(question, (answer) => {
+      rl.close();
+      console.log('');
+      resolve(answer);
+    });
+    rl.muted = true;
+  });
+}
+
+async function readStdin() {
+  const chunks = [];
+  for await (const chunk of process.stdin) chunks.push(chunk);
+  return Buffer.concat(chunks).toString('utf8');
+}
+
+async function proCommand(args) {
+  const [action, ...flags] = args;
+  if (action === 'status') {
+    const current = proStatus({ appDir });
+    console.log(`license key   ${current.hasKey ? current.maskedKey : 'none saved'}`);
+    console.log(`plan          ${current.plan || 'unknown'}`);
+    console.log(`checked until ${current.sessionValidUntil ? new Date(current.sessionValidUntil).toLocaleString() : 'not checked yet'}`);
+    console.log(current.packs.length ? `packs         ${current.packs.map((pack) => `${pack.title} ${pack.version} (${{ official: 'official', pro: 'official Pro' }[pack.trust] || pack.trust})`).join(', ')}` : 'packs         none installed');
+    return 0;
+  }
+  if (action === 'activate') {
+    const fileIndex = flags.indexOf('--key-file');
+    let key = '';
+    if (fileIndex >= 0) {
+      try {
+        key = fs.readFileSync(path.resolve(flags[fileIndex + 1] || ''), 'utf8').trim();
+      } catch (err) {
+        console.log(`Could not read the key file (${err.code || err.message}).`);
+        return 1;
+      }
+    } else if (process.env.STUDIO_BRIDGE_PRO_KEY) {
+      key = process.env.STUDIO_BRIDGE_PRO_KEY.trim();
+    } else if (process.stdin.isTTY) {
+      key = (await promptHidden('License key (typing is hidden): ')).trim();
+    } else {
+      key = (await readStdin()).trim();
+    }
+    const result = await proActivate({ key, appDir });
+    console.log(result.message);
+    return result.ok ? 0 : 1;
+  }
+  if (action === 'remove') {
+    const result = await proRemove({ appDir });
+    console.log(result.message);
+    return result.ok ? 0 : 1;
+  }
+  console.log('Usage: studio-bridge pro activate [--key-file <file>]  (or set STUDIO_BRIDGE_PRO_KEY, or type it at the hidden prompt)');
+  console.log('       studio-bridge pro status');
+  console.log('       studio-bridge pro remove');
+  return 1;
 }
 
 function pause() {
@@ -586,6 +678,8 @@ async function main() {
       console.log(readAsset('LICENSE'));
       console.log('\n' + readAsset('THIRD_PARTY_NOTICES.txt'));
     }
+  } else if (command === 'pro') {
+    process.exitCode = await proCommand(rest);
   } else if (command === 'settings') {
     process.exitCode = settingsCommand(rest);
   } else if (command === 'doctor') {

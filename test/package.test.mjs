@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
+import { offeredCatalog } from './helpers/catalog.mjs';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(bridgeDir, 'package.json'), 'utf8'));
@@ -78,7 +79,7 @@ const rpc = (method, params) =>
 await new Promise((resolve) => setTimeout(resolve, 900));
 const initialized = await rpc('initialize', {});
 const listed = await rpc('tools/list', {});
-const expectedTools = JSON.parse(fs.readFileSync(path.join(bridgeDir, 'tools.json'), 'utf8')).tools.length;
+const expectedTools = offeredCatalog(bridgeDir).tools.length;
 check('the installed server answers the MCP handshake', initialized.result && initialized.result.serverInfo.version === pkg.version);
 check('and lists every tool from the packaged tools.json', listed.result.tools.length === expectedTools, `${listed.result.tools.length} tools`);
 const batchEnum = listed.result.tools.find((tool) => tool.name === 'batch').inputSchema.properties.operations.items.properties.tool.enum;

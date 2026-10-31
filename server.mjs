@@ -15,7 +15,11 @@ import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } fr
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
-import { findHyprWindow, hyprGrimArgs, isHyprland, isWindows } from './platform.mjs';
+import { findHyprWindow, hyprGrimArgs, isHyprland, isWindows, unsupportedTools } from './platform.mjs';
+import { authorize as authorizePack, loadPacks, packsDir, serverTool } from './packs.mjs';
+import { activate as proActivate, openPurchasePage, remove as proRemove, status as proStatus } from './pro.mjs';
+
+let proBusy = false;
 
 const dir = appDir;
 
@@ -273,6 +277,24 @@ const server = http.createServer(async (req, res) => {
     log('[studio-bridge] a newer studio-bridge asked this server to stop and take over its port');
     setTimeout(() => process.exit(0), 200);
     return;
+  }
+
+  if (req.url === '/pro') {
+    if (body.action === 'buy') return respond(res, 200, openPurchasePage());
+    if (proBusy) return respond(res, 409, { ok: false, message: 'Another license action is still running. Wait a moment and try again.' });
+    proBusy = true;
+    try {
+      if (body.action === 'activate' || body.action === 'remove') {
+        const result = body.action === 'activate' ? await proActivate({ key: body.key, appDir }) : await proRemove({ appDir });
+        reloadTools(null, 'packs not reloaded');
+        return respond(res, 200, { ...result, status: proStatus({ appDir }) });
+      }
+      return respond(res, 200, { ok: true, ...proStatus({ appDir }) });
+    } catch (err) {
+      return respond(res, 500, { ok: false, message: `The license action failed: ${err.message}` });
+    } finally {
+      proBusy = false;
+    }
   }
 
   if (req.url === '/profile') {
@@ -591,6 +613,10 @@ let BATCHABLE = [];
 let toolGroups = {};
 let toolGroupInfo = {};
 let toolPresets = [];
+let packHandlerFiles = new Map();
+let packOwners = new Map();
+let packServerTools = new Map();
+let loadedPacks = [];
 
 function loadTools() {
   const data = JSON.parse(TOOLS_OVERRIDE ? fs.readFileSync(TOOLS_OVERRIDE, 'utf8') : readAsset('tools.json'));
@@ -610,6 +636,23 @@ function loadTools() {
   toolGroups = data.groups && typeof data.groups === 'object' ? data.groups : {};
   toolGroupInfo = data.groupInfo && typeof data.groupInfo === 'object' ? data.groupInfo : {};
   toolPresets = Array.isArray(data.presets) ? data.presets : [];
+  const unavailable = unsupportedTools();
+  if (unavailable.size > 0) {
+    allTools = allTools.filter((tool) => !unavailable.has(tool.name));
+    toolGroups = Object.fromEntries(Object.entries(toolGroups).map(([group, list]) => [group, list.filter((tool) => !unavailable.has(tool))]));
+  }
+  const settings = loadSettings();
+  if (settings.unreadable) log('[studio-bridge] settings.json could not be read, so only packs signed by Studio Bridge are loaded until it is fixed');
+  const packs = loadPacks(packsDir(appDir), data.tools.map((tool) => tool.name), Object.keys(toolGroups), log, { requireVerified: settings.packTrust === 'verified' });
+  allTools = [...allTools, ...packs.tools];
+  for (const name of packs.handlers.keys()) handlerToolNames.add(name);
+  toolMeta = { ...toolMeta, ...packs.meta };
+  toolGroups = { ...toolGroups, ...packs.groups };
+  toolGroupInfo = { ...toolGroupInfo, ...packs.groupInfo };
+  packHandlerFiles = packs.handlers;
+  packOwners = packs.owners;
+  packServerTools = packs.serverTools;
+  loadedPacks = packs.packs;
 }
 
 function profileText() {
@@ -682,6 +725,7 @@ function profileInfo() {
       name,
       title: (toolGroupInfo[name] && toolGroupInfo[name].title) || name,
       summary: (toolGroupInfo[name] && toolGroupInfo[name].summary) || '',
+      tier: (toolGroupInfo[name] && toolGroupInfo[name].tier) || null,
       tools: toolGroups[name].length,
       tokens: tokensOf(toolGroups[name]),
     })),
@@ -698,6 +742,18 @@ function hiddenToolMessage(name) {
 
 loadTools();
 
+function reloadTools(successMessage, failureLabel) {
+  try {
+    loadTools();
+    send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
+    if (successMessage) log(`[studio-bridge] ${successMessage()}`);
+    return true;
+  } catch (err) {
+    log(`[studio-bridge] ${failureLabel}: ${err.message}`);
+    return false;
+  }
+}
+
 let reloadTimer = null;
 function watchTools() {
   try {
@@ -708,13 +764,7 @@ function watchTools() {
       if (filename !== watched) return;
       clearTimeout(reloadTimer);
       reloadTimer = setTimeout(() => {
-        try {
-          loadTools();
-          send({ jsonrpc: '2.0', method: 'notifications/tools/list_changed' });
-          log('[studio-bridge] tools reloaded: ' + allTools.length + ' tools');
-        } catch (err) {
-          log('[studio-bridge] tools.json not reloaded: ' + err.message);
-        }
+        reloadTools(() => `tools reloaded: ${allTools.length} tools`, 'tools.json not reloaded');
       }, 300);
     });
   } catch (err) {
@@ -723,13 +773,36 @@ function watchTools() {
 }
 watchTools();
 
+let packsTimer = null;
+function watchPacks() {
+  const dir = packsDir(appDir);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.watch(dir, { recursive: true }, () => {
+      clearTimeout(packsTimer);
+      packsTimer = setTimeout(() => {
+        reloadTools(() => `packs reloaded: ${loadedPacks.length} pack(s), ${allTools.length} tools`, 'packs not reloaded');
+      }, 500);
+    });
+  } catch (err) {
+    log('[studio-bridge] cannot watch the packs folder: ' + err.message);
+  }
+}
+watchPacks();
+
 let lastProfile = profileText();
+let lastPackTrust = loadSettings().packTrust;
 let profileTimer = null;
 try {
   fs.watch(appDir, (event, filename) => {
     if (filename !== 'settings.json') return;
     clearTimeout(profileTimer);
     profileTimer = setTimeout(() => {
+      const nextTrust = loadSettings().packTrust;
+      if (nextTrust !== lastPackTrust) {
+        lastPackTrust = nextTrust;
+        reloadTools(() => `pack trust is now ${nextTrust}; ${loadedPacks.length} pack(s) loaded`, 'packs not reloaded');
+      }
       const next = profileText();
       if (next === lastProfile) return;
       lastProfile = next;
@@ -766,9 +839,13 @@ function handlerIncludes(names) {
 const MAX_BATCH_OPERATIONS = 50;
 
 function buildHandlerCode(name, args) {
+  const body = packHandlerFiles.has(name) ? fs.readFileSync(packHandlerFiles.get(name), 'utf8') : readAsset(`handlers/${name}.luau`);
+  return buildCode(body, [name], args);
+}
+
+function buildCode(body, includes, args) {
   const prelude = readAsset('handlers/_prelude.luau');
-  const body = readAsset(`handlers/${name}.luau`);
-  const scanner = handlerIncludes([name]);
+  const scanner = handlerIncludes(includes);
   const { studio, ...params } = args;
   const json = JSON.stringify(params);
   let level = 0;
@@ -1003,18 +1080,22 @@ function focusStudio(titleLike) {
   });
 }
 
-async function runHandlerOn(handler, params, base, timeoutS = DEFAULT_TIMEOUT_S) {
+async function dispatchLuau(base, code, timeoutS) {
   const { selector, target } = splitTarget(base);
   const picked = pickStudio(selector);
   if (picked.error) return { error: picked.error };
+  const result = await dispatch(picked.studio, code, timeoutS, target);
+  return { result, studio: picked.studio };
+}
+
+async function runHandlerOn(handler, params, base, timeoutS = DEFAULT_TIMEOUT_S) {
   let code;
   try {
     code = buildHandlerCode(handler, params);
   } catch (err) {
     return { error: `Could not load handler ${handler}: ${err.message}` };
   }
-  const result = await dispatch(picked.studio, code, timeoutS, target);
-  return { result, studio: picked.studio };
+  return dispatchLuau(base, code, timeoutS);
 }
 
 function textResult(text, isError = false) {
@@ -1285,7 +1366,18 @@ async function callTool(name, args) {
   if (name === 'batch') return runBatch(args);
   if (name === 'bridge_update') return runBridgeUpdate(args);
   if (name === 'viewport_screenshot') return viewportScreenshot(args);
+  if (packServerTools.has(name)) {
+    const pack = packServerTools.get(name);
+    const verdict = await authorizePack(pack, name, args);
+    if (!verdict.ok) return { content: [{ type: 'text', text: verdict.message }], isError: true };
+    return callPackServerTool(pack, name, args);
+  }
   if (handlerToolNames.has(name)) {
+    const pack = packOwners.get(name);
+    if (pack) {
+      const verdict = await authorizePack(pack, name, args);
+      if (!verdict.ok) return { content: [{ type: 'text', text: verdict.message }], isError: true };
+    }
     const forcedRole = (toolMeta[name] && toolMeta[name].role) || null;
     const base = forcedRole ? [args.studio, forcedRole].filter(Boolean).join(' ') : args.studio;
     const { selector, target } = splitTarget(base);
@@ -1308,6 +1400,52 @@ async function callTool(name, args) {
 
 function send(message) {
   process.stdout.write(JSON.stringify(message) + '\n');
+}
+
+function packApi(pack) {
+  const dataDir = path.join(appDir, 'pack-data', pack.name);
+  fs.mkdirSync(dataDir, { recursive: true });
+  const runSource = async (source, params = {}, options = {}) => {
+    if (typeof source !== 'string' || source.length === 0) throw new Error('source must be a non-empty string of Luau');
+    const base = [options.studio ? String(options.studio) : '', options.role || 'edit'].filter(Boolean).join(' ');
+    const requested = Number(options.timeoutSeconds);
+    const timeoutS = Number.isFinite(requested) && requested > 0 ? Math.min(requested, MAX_TIMEOUT_S) : DEFAULT_TIMEOUT_S;
+    const dispatched = await dispatchLuau(base, buildCode(source, [], params), timeoutS);
+    if (dispatched.error) return { ok: false, error: dispatched.error, output: [], returned: [], files: [], studio: null };
+    const { result, studio: picked } = dispatched;
+    return {
+      ok: result.ok === true,
+      error: result.error,
+      output: Array.isArray(result.output) ? result.output : [],
+      returned: Array.isArray(result.returned) ? result.returned : [],
+      files: (Array.isArray(result.files) ? result.files : []).map((entry) => ({ name: String(entry.name), bytes: Buffer.from(String(entry.base64 || ''), 'base64') })),
+      studio: { id: picked.id, placeId: picked.placeId, placeName: picked.placeName },
+    };
+  };
+  return {
+    dataDir,
+    text: (message, isError = false) => textResult(String(message), isError),
+    log: (message) => log(`[studio-bridge] pack ${pack.name}: ${message}`),
+    runLuau: runSource,
+    async runHandler(handlerName, params = {}, options = {}) {
+      if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(handlerName))) throw new Error('invalid handler name');
+      const file = path.join(pack.root, 'handlers', `${handlerName}.luau`);
+      if (!fs.existsSync(file)) throw new Error(`handler ${handlerName} does not exist in pack ${pack.name}`);
+      return runSource(fs.readFileSync(file, 'utf8'), params, options);
+    },
+  };
+}
+
+async function callPackServerTool(pack, name, args) {
+  try {
+    const run = await serverTool(pack, name);
+    if (!run) return textResult(`The ${pack.title} pack does not implement ${name}.`, true);
+    const result = await run(args, packApi(pack));
+    if (result && Array.isArray(result.content)) return result;
+    return textResult(String(result ?? ''), false);
+  } catch (err) {
+    return textResult(`The ${pack.title} pack failed: ${err.message}`, true);
+  }
 }
 
 async function handle(message) {
