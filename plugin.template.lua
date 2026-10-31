@@ -1,5 +1,6 @@
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
 local context = ({...})[1] or {}
@@ -966,6 +967,45 @@ local function buildStatusWidget()
 		end
 	end
 
+	-- A veil in the page color sits over the content and fades in, the page is swapped underneath, then it fades out.
+	local veil = create("Frame", {Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 1, -100), BorderSizePixel = 0, BackgroundTransparency = 1, Active = false, ZIndex = 10}, root)
+	local switchId = 0
+
+	onTheme(function()
+		veil.BackgroundColor3 = background()
+	end)
+
+	local function selectPage(name)
+		switchId += 1
+
+		local id = switchId
+
+		task.spawn(function()
+			local fadeOut = TweenService:Create(veil, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {BackgroundTransparency = 0})
+
+			fadeOut:Play()
+			fadeOut.Completed:Wait()
+
+			if id ~= switchId then
+				return
+			end
+
+			selected = name
+			paintTabs()
+
+			if name == "Tools" then
+				toolsPage.CanvasPosition = Vector2.zero
+				loadProfile()
+			elseif name == "Pro" then
+				loadPro()
+			elseif name == "Config" then
+				loadConfig()
+			end
+
+			TweenService:Create(veil, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+		end)
+	end
+
 	for index, name in PAGES do
 		local tabButton = create("TextButton", {
 			LayoutOrder = index,
@@ -981,33 +1021,13 @@ local function buildStatusWidget()
 		rounded(underline, 2)
 		tabs[name] = {button = tabButton, underline = underline}
 		tabButton.MouseButton1Click:Connect(function()
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+			selectPage(name)
 		end)
 	end
 
 	holder.show = function(name)
 		if tabs[name] then
-			selected = name
-			paintTabs()
-
-			if name == "Tools" then
-				toolsPage.CanvasPosition = Vector2.zero
-				loadProfile()
-			elseif name == "Pro" then
-				loadPro()
-			elseif name == "Config" then
-				loadConfig()
-			end
+			selectPage(name)
 		end
 	end
 
