@@ -103,6 +103,7 @@ await sleep(1200);
 const stranger = start('stranger', { version: null, token: crypto.randomBytes(16).toString('hex') });
 const strangerExit = await Promise.race([stranger.done, sleep(6000).then(() => 'still running')]);
 check('a server with a different token cannot stop another one', strangerExit === 1 && !stale.exited && (await answers(token)), `exit ${strangerExit}`);
+check('and says which Studio Bridge holds the port and how to stop it', /in use by Studio Bridge \d+\.\d+\.\d+/.test(stranger.stderr) && /ss -ltnp|Get-NetTCPConnection/.test(stranger.stderr), stranger.stderr.trim().split('\n').pop());
 await stale.stop();
 
 fs.rmSync(sandbox, { recursive: true, force: true });

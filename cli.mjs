@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { isHyprland, isWindows, pluginsDirs, unsupportedTools, wineRobloxFolders } from './platform.mjs';
+import { describeHolder, isHyprland, isWindows, pluginsDirs, portHolder, portHolderHint, unsupportedTools, wineRobloxFolders } from './platform.mjs';
 import { loadPacks, packsDir } from './packs.mjs';
 import { activate as proActivate, remove as proRemove, status as proStatus } from './pro.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
@@ -269,7 +269,7 @@ function registerCodex(command, port) {
   }
 }
 
-function install(args) {
+async function install(args) {
   const standalone = args.includes('--standalone');
   const skipRegister = args.includes('--no-register');
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
@@ -287,6 +287,8 @@ function install(args) {
   if (!skipRegister && client !== 'codex') register(command, port);
   if (!skipRegister && client !== 'claude') registerCodex(command, port);
   console.log('');
+  const running = await portHolder(port);
+  if (running && running.studioBridge) console.log(`A Studio Bridge server (${describeHolder(running)}) is still running on port ${port}. Restart your AI tool so the new version replaces it; if it keeps failing, stop the old one (${portHolderHint(port)}).`);
   console.log('Next steps:');
   console.log(client === 'codex' ? '  1. Restart Codex so it starts the bridge.' : '  1. Restart Claude Code, or run /mcp, so it starts the bridge.' + (client === 'all' ? ' Restart Codex too.' : ''));
   console.log('  2. Restart Roblox Studio. If it asks, allow HTTP requests and Script Injection for "Studio Bridge".');
@@ -364,9 +366,10 @@ async function doctor(args) {
   } catch (err) {
     note('FAIL', err.message);
   }
+  const installedSomewhere = folders.some((folder) => fs.existsSync(path.join(folder, PLUGIN_FILE)));
   for (const folder of folders) {
     const pluginPath = path.join(folder, PLUGIN_FILE);
-    if (!fs.existsSync(pluginPath)) note('FAIL', `${PLUGIN_FILE} is not in ${folder}; run install`);
+    if (!fs.existsSync(pluginPath)) note(installedSomewhere ? 'info' : 'FAIL', installedSomewhere ? `${PLUGIN_FILE} is not in ${folder}, which is fine because Studio loads it from another folder listed here` : `${PLUGIN_FILE} is not in ${folder}; run install`);
     else note('ok', `${PLUGIN_FILE} is installed in ${folder} (${fs.readFileSync(pluginPath, 'utf8').includes('hmacSha256Hex') ? 'loader' : 'standalone'})`);
     for (const legacyName of LEGACY_FILES) {
       if (fs.existsSync(path.join(folder, legacyName))) note('WARN', `old plugin file ${legacyName} is still there and will load a second copy; delete it`);
@@ -405,7 +408,10 @@ async function doctor(args) {
     const status = await bridgeStatus(token, port);
     if (status === 200) note('ok', `the bridge is running on port ${port}`);
     else if (status === 'down') note('info', `the bridge is not running on port ${port} (Claude Code starts it)`);
-    else note('WARN', `something on port ${port} answered unexpectedly (${status})`);
+    else if (status === 401) {
+      const holder = await portHolder(port);
+      note('WARN', holder && holder.studioBridge ? `port ${port} is held by ${describeHolder(holder)} that does not use this token or cannot be replaced; stop it (${portHolderHint(port)}) and reconnect your AI tool` : `something on port ${port} answered unexpectedly (401)`);
+    } else note('WARN', `something on port ${port} answered unexpectedly (${status})`);
   }
   const claude = runClaude(['--version']);
   if (claudeMissing(claude)) note('WARN', 'the claude command was not found');
@@ -658,7 +664,7 @@ async function main() {
     await import('./server.mjs');
   } else if (command === 'install') {
     try {
-      install(rest);
+      await install(rest);
     } catch (err) {
       console.error(`Install failed: ${err.message}`);
       process.exitCode = 1;
@@ -688,7 +694,7 @@ async function main() {
     console.log(`studio-bridge ${version()}`);
   } else if (!command && isPackaged && process.stdin.isTTY) {
     try {
-      install([]);
+      await install([]);
     } catch (err) {
       console.error(`Install failed: ${err.message}`);
       process.exitCode = 1;

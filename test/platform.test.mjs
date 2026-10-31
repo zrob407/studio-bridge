@@ -78,6 +78,29 @@ if (platform.isWindows) {
   check('Linux data dir follows XDG_DATA_HOME', platform.dataDirName() === 'studio-bridge');
 }
 
+check('describeHolder names what holds a port', platform.describeHolder(null) === 'nothing' && platform.describeHolder({ studioBridge: false }) === 'another program' && platform.describeHolder({ studioBridge: true, version: '0.6.9' }) === 'Studio Bridge 0.6.9' && /older Studio Bridge/.test(platform.describeHolder({ studioBridge: true, version: null })));
+check('the port hint names a command for this system', platform.portHolderHint(3010).includes('3010') && /ss -ltnp|Get-NetTCPConnection/.test(platform.portHolderHint(3010)));
+{
+  const { createServer } = await import('node:http');
+  const fake = (status, body) => new Promise((resolve) => {
+    const server = createServer((req, res) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); });
+    server.listen(0, '127.0.0.1', () => resolve(server));
+  });
+  const old = await fake(401, { error: 'unauthorized' });
+  const current = await fake(401, { error: 'unauthorized', version: '0.6.9' });
+  const other = await fake(200, { hello: 'world' });
+  const oldHolder = await platform.portHolder(old.address().port);
+  const currentHolder = await platform.portHolder(current.address().port);
+  const otherHolder = await platform.portHolder(other.address().port);
+  const freePort = await new Promise((resolve) => { const probe = createServer(); probe.listen(0, '127.0.0.1', () => { const port = probe.address().port; probe.close(() => resolve(port)); }); });
+  const nobody = await platform.portHolder(freePort);
+  check('a port held by an older Studio Bridge is recognized without a version', oldHolder.studioBridge === true && oldHolder.version === null);
+  check('a newer Studio Bridge reports its version', currentHolder.studioBridge === true && currentHolder.version === '0.6.9');
+  check('another program on the port is not mistaken for Studio Bridge', otherHolder.studioBridge === false);
+  check('a free port has no holder', nobody === null);
+  for (const server of [old, current, other]) server.close();
+}
+
 const clients = [
   { address: '0x1', title: 'Terminal', mapped: true, at: [0, 0], size: [800, 600] },
   { address: '0x2', title: 'Obby - Roblox Studio', mapped: true, at: [100, 50], size: [2000, 1000] },

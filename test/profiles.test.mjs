@@ -55,8 +55,8 @@ function start(label, { profile, settings } = {}) {
     home,
     notifications,
     rpc,
-    post: async (body, sendToken = true) => {
-      const response = await fetch('http://127.0.0.1:3970/profile', { method: 'POST', headers: { 'Content-Type': 'application/json', ...(sendToken ? { 'X-Bridge-Token': token } : {}) }, body: JSON.stringify(body) });
+    post: async (body, sendToken = true, route = '/profile') => {
+      const response = await fetch(`http://127.0.0.1:3970${route}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(sendToken ? { 'X-Bridge-Token': token } : {}) }, body: JSON.stringify(body) });
       return { status: response.status, body: await response.json().catch(() => ({})) };
     },
     tools: async () => (await rpc('tools/list', {})).result.tools,
@@ -142,9 +142,21 @@ const everything2 = await panel.post({ action: 'set', profile: 'core,all' });
 check('all wins over named groups', everything2.status === 200 && everything2.body.profile === 'all');
 const bogusSet = await panel.post({ action: 'set', profile: 'bogus' });
 check('an unknown group is rejected and the setting is unchanged', bogusSet.status === 400 && /unknown tool group/.test(bogusSet.body.error) && JSON.parse(fs.readFileSync(path.join(panel.home, 'settings.json'), 'utf8')).toolProfile === 'all');
+const settingsFile = () => JSON.parse(fs.readFileSync(path.join(panel.home, 'settings.json'), 'utf8'));
+const config = (body, sendToken = true) => panel.post(body, sendToken, '/settings');
+const configGet = await config({ action: 'get' });
+check('the Config tab can read the update and pack settings', configGet.status === 200 && configGet.body.checkUpdates === true && configGet.body.autoUpdate === false && configGet.body.packTrust === 'all' && configGet.body.offline === true && typeof configGet.body.version === 'string' && configGet.body.profile === 'all');
+check('the settings endpoint refuses a request without the token', (await config({ action: 'get' }, false)).status === 401);
+const trusted = await config({ action: 'set', name: 'packTrust', value: 'verified' });
+check('only-signed-packs can be switched on and is saved', trusted.status === 200 && trusted.body.packTrust === 'verified' && settingsFile().packTrust === 'verified');
+const autoOn = await config({ action: 'set', name: 'checkUpdates', value: false }).then(() => config({ action: 'set', name: 'autoUpdate', value: true }));
+check('turning on automatic updates also turns on update checks', autoOn.body.autoUpdate === true && autoOn.body.checkUpdates === true && settingsFile().autoUpdate === true && settingsFile().checkUpdates === true);
+const badName = await config({ action: 'set', name: 'toolProfile', value: 'ui' });
+const badValue = await config({ action: 'set', name: 'packTrust', value: 'maybe' });
+check('unknown settings and values are rejected without changing anything', badName.status === 400 && badValue.status === 400 && settingsFile().packTrust === 'verified' && settingsFile().toolProfile === 'all');
 await panel.stop();
 
-const fixed = start('fixed', { profile: 'ui' });
+const fixed =start('fixed', { profile: 'ui' });
 await fixed.ready;
 const lockedInfo = await fixed.post({ action: 'get' });
 const lockedSet = await fixed.post({ action: 'set', profile: 'all' });
