@@ -2,7 +2,7 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
-## Unreleased
+## 0.6.8 - 2026-10-31
 
 - Added a project website at https://zrob407.github.io/studio-bridge/ with install steps, a searchable tool list, a comparison with other Roblox Studio MCP tools, Studio Bridge Pro and this changelog.
 - The **Buy a license** button now explains when the running Studio Bridge program is older than the plugin, and tells you to restart your AI tool, instead of saying it could not be reached.
