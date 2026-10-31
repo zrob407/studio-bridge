@@ -14,17 +14,22 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="logo-128.png">
 <link rel="stylesheet" href="style.css">
+<script src="script.js"></script>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="wash"></div></div>
+<div class="progress" aria-hidden="true"><i></i></div>
+<button class="totop" type="button" aria-label="Back to top">&uarr;</button>
 <header class="site">
 <div class="wrap">
-<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="30" height="30">Studio Bridge</a>
-<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="pro.html" aria-current="page" class="pro-link">Pro</a><a href="license.html">License</a><a href="https://github.com/zrob407/studio-bridge">GitHub</a></nav>
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.7</span></a>
+<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="compare.html">Compare</a><a href="pro.html" aria-current="page" class="pro-link">Pro</a><a href="changelog.html">Changelog</a><a href="license.html">License</a><a class="gh" href="https://github.com/zrob407/studio-bridge"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></nav>
 </div>
 </header>
 <main>
 <div class="wrap">
-<div class="hero" style="padding-bottom:20px">
+<div class="page-hero" data-reveal>
+<p class="eyebrow gold">Add-on packs</p>
 <h1>Studio Bridge <span class="badge pro" style="font-size:0.4em">Pro</span></h1>
 <p class="lead">Paid add-on packs for any MCP-ready AI tool. The free program, with all 79 tools, is not going behind a paywall. Pro adds extra packs on top.</p>
 <div class="cta">
@@ -33,7 +38,7 @@
 </div>
 </div>
 
-<section class="tight">
+<section class="tight" data-reveal>
 <div class="split">
 <div>
 <h2>Plans</h2>
@@ -51,7 +56,7 @@
 </div>
 </section>
 
-<section class="tight">
+<section class="tight" data-reveal>
 <h2>Packs</h2>
 <div class="grid">
 <div class="card pro"><h3>Snapshots and diffs <span class="badge live">Available</span></h3><p>Save part of your place, see exactly what changed since, and roll it back. Restoring takes an automatic safety snapshot first. Five tools: <code>snapshot_create</code>, <code>snapshot_list</code>, <code>snapshot_diff</code>, <code>snapshot_restore</code> and <code>snapshot_delete</code>.</p></div>
@@ -63,7 +68,7 @@
 <p class="note gold">Planned packs have no dates, may change or be dropped, and are not promised until they ship. Lifetime licenses include whichever of them are released, and existing licenses pick up new packs automatically.</p>
 </section>
 
-<section class="tight" id="how">
+<section class="tight" id="how" data-reveal>
 <h2>How it works</h2>
 <ol class="steps">
 <li><h3>Buy a license</h3><p>Checkout is handled by Polar, the seller of record. You get a license key by email.</p></li>
@@ -72,7 +77,7 @@
 </ol>
 </section>
 
-<section class="tight">
+<section class="tight" data-reveal>
 <h2>What is sent, and what is not</h2>
 <div class="grid">
 <div class="card"><h3>Sent to the license server</h3><p>Your license key, a random device id the program creates, your computer's name (shown as the device label on your Polar purchases page) and your internet address.</p></div>
@@ -81,7 +86,7 @@
 </div>
 </section>
 
-<section class="tight">
+<section class="tight" data-reveal>
 <h2>A separate license</h2>
 <p>Pro has its own license, apart from the free program's. It covers devices, what you may and may not share, plan length, privacy and refunds. Read it in plain terms on the <a href="license.html">license page</a>, or the full <a href="https://github.com/zrob407/studio-bridge/blob/main/PRO-LICENSE.txt">Pro license text</a>.</p>
 <p style="margin-top:22px"><a class="btn gold" href="https://buy.polar.sh/polar_cl_5c8YQvxi93De84kvcyfDl0CkAtxiYMb6dnDR61HbTDI">Buy a license</a></p>

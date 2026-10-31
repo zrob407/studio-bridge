@@ -272,6 +272,10 @@ Release builds are produced by the GitHub Actions workflow in `.github/workflows
 
 The exe is not code-signed. If you download it in a browser, Windows SmartScreen may show "Windows protected your PC": choose "More info" and then "Run anyway" after checking the checksum. Files fetched by `studio-bridge update`, the `bridge_update` tool or command-line tools such as `gh` do not normally carry that browser mark.
 
+## Changelog
+
+Every release is listed in [CHANGELOG.md](CHANGELOG.md) and on the [website](https://zrob407.github.io/studio-bridge/changelog.html).
+
 ## License
 
 Studio Bridge is source-available under the Studio Bridge License in `LICENSE`. In plain terms:

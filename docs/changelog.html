@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Studio Bridge changelog</title>
+<meta name="description" content="Every Studio Bridge release, newest first, with what was added, changed and fixed.">
+<meta name="theme-color" content="#12151c">
+<meta property="og:title" content="Studio Bridge changelog">
+<meta property="og:description" content="Every Studio Bridge release, newest first, with what was added, changed and fixed.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://zrob407.github.io/studio-bridge/changelog.html">
+<meta property="og:image" content="https://zrob407.github.io/studio-bridge/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="logo-128.png">
+<link rel="stylesheet" href="style.css">
+<script src="script.js"></script>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="wash"></div></div>
+<div class="progress" aria-hidden="true"><i></i></div>
+<button class="totop" type="button" aria-label="Back to top">&uarr;</button>
+<header class="site">
+<div class="wrap">
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.7</span></a>
+<nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="compare.html">Compare</a><a href="pro.html" class="pro-link">Pro</a><a href="changelog.html" aria-current="page">Changelog</a><a href="license.html">License</a><a class="gh" href="https://github.com/zrob407/studio-bridge"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></nav>
+</div>
+</header>
+<main>
+<div class="wrap">
+<div class="page-hero" data-reveal>
+<p class="eyebrow">Releases</p>
+<h1>Changelog</h1>
+<p class="lead">Every release, newest first. The same list is in <a href="https://github.com/zrob407/studio-bridge/blob/main/CHANGELOG.md">CHANGELOG.md</a> in the repository, and each release has downloads on the <a href="https://github.com/zrob407/studio-bridge/releases">releases page</a>.</p>
+</div>
+<section class="tight release" id="unreleased" data-reveal>
+<h2>Unreleased <span class="badge soon">Next</span></h2>
+<ul class="changes"><li>Added a project website at https://zrob407.github.io/studio-bridge/ with install steps, a searchable tool list, a comparison with other Roblox Studio MCP tools, Studio Bridge Pro and this changelog.</li><li>The <strong>Buy a license</strong> button now explains when the running Studio Bridge program is older than the plugin, and tells you to restart your AI tool, instead of saying it could not be reached.</li></ul>
+</section>
+<section class="tight release" id="v0-6-7" data-reveal>
+<h2>0.6.7 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-31</span> <span class="badge live">Latest</span></h2>
+<h3>Added</h3><ul class="changes"><li><strong>Studio Bridge Pro</strong>: optional paid add-on packs. The first, Snapshots and diffs, saves part of a place, shows exactly what changed since, and rolls it back with an automatic safety snapshot first. The free program is unchanged. Pro has its own separate license in <code>PRO-LICENSE.txt</code>.</li><li>A <strong>Pro</strong> tab in the Studio Bridge window: paste a license key, press Activate, and the packs download automatically. A <strong>Buy a license</strong> button opens the checkout page.</li><li><code>studio-bridge pro activate</code>, <code>pro status</code> and <code>pro remove</code>.</li><li>Packs are digitally signed in two tiers, free official and paid Pro. Unsigned third-party packs still load and are labeled as unverified. <code>studio-bridge settings pack-trust verified</code> loads only signed packs. A PRO or unverified badge shows on each pack's tool group, and <code>doctor</code> lists every pack.</li></ul>
+<h3>Changed</h3><ul class="changes"><li>The window screenshot tool is no longer offered where it cannot work (Linux without Hyprland, macOS), which also trims the tool list there.</li><li>A settings file that cannot be read now falls back to loading only signed packs, and a copy of the broken file is kept instead of being overwritten.</li><li>Pack timeouts are capped like every other tool.</li></ul>
+<h3>Fixed</h3><ul class="changes"><li><code>pro remove</code> now exits with an error code when it fails.</li><li>The release source zip now includes every program file.</li></ul>
+</section>
+<section class="tight release" id="v0-6-6" data-reveal>
+<h2>0.6.6 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Linux: the plugin is written to Vinegar's app data folder and to the Wine prefix, so Studio finds it either way.</li><li>Added <code>npm run test:changed</code>, which runs only the tests affected by your changes.</li></ul>
+</section>
+<section class="tight release" id="v0-6-5" data-reveal>
+<h2>0.6.5 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Linux: the plugin goes into Vinegar's app data plugin folder.</li><li><code>doctor</code> now checks that Studio Bridge is registered with your AI tool.</li></ul>
+</section>
+<section class="tight release" id="v0-6-4" data-reveal>
+<h2>0.6.4 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Linux support through Wine (Vinegar and Grapejuice). This includes the work from 0.6.3, which was tagged but never published.</li><li>Hyprland support: Studio Bridge focuses the Studio window with <code>hyprctl</code> and takes window screenshots with <code>grim</code>.</li></ul>
+</section>
+<section class="tight release" id="v0-6-2" data-reveal>
+<h2>0.6.2 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>The Studio Bridge window was redone with themed tabs, tool group presets, and switches that are saved to the bridge.</li><li>The exe now has the Studio Bridge icon.</li><li>Files the bridge writes when run from source are no longer tracked.</li></ul>
+</section>
+<section class="tight release" id="v0-6-1" data-reveal>
+<h2>0.6.1 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Added a logo and gave the Studio toolbar button its icon.</li><li>Rewrote the top of the README with everyday time-savers and what is new.</li></ul>
+</section>
+<section class="tight release" id="v0-6-0" data-reveal>
+<h2>0.6.0 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li><strong>Tool groups</strong>: clients can load only the tools they need. <code>studio-bridge settings tools core</code> offers just the 28 everyday tools and keeps the tool list small.</li></ul>
+</section>
+<section class="tight release" id="v0-5-0" data-reveal>
+<h2>0.5.0 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Playtest control: character movement with pathfinding, plus keyboard and mouse input.</li><li><code>generate_model</code> makes a model from a text prompt.</li><li><code>roblox_docs</code> searches and reads the official Roblox documentation.</li></ul>
+</section>
+<section class="tight release" id="v0-4-1" data-reveal>
+<h2>0.4.1 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Releases are now published to npm with Trusted Publishing and build provenance.</li><li>Trimmed the README license section.</li></ul>
+</section>
+<section class="tight release" id="v0-4-0" data-reveal>
+<h2>0.4.0 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>New tools for terrain, lighting and environment presets, scatter, raycasts, spatial queries, tags, tweens, physics groups and reports, audio, effects, assets, instances and scripts.</li><li>Animation authoring, editing and preview, and audio management.</li><li><code>ui_autoscale</code>, <code>ui_responsive_check</code> and <code>device_emulator</code> to build GUIs that fit every device.</li><li>A Studio status window.</li><li>Fixes from a full review: a scan guard, release file lists, a tween timeout, probe cleanup, PrimaryPart pivots, design sizes, per-joint animation blending, typed bulk adjust, name escaping and scatter.</li></ul>
+</section>
+<section class="tight release" id="v0-3-5" data-reveal>
+<h2>0.3.5 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Internal maintenance.</li></ul>
+</section>
+<section class="tight release" id="v0-3-4" data-reveal>
+<h2>0.3.4 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-30</span></h2>
+<ul class="changes"><li>Added a quick start, issue templates and npm keywords, and fixed backslashes that were dropped from paths in the README.</li></ul>
+</section>
+<section class="tight release" id="v0-3-3" data-reveal>
+<h2>0.3.3 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li>A newer Studio Bridge server can now take over the port from an older one.</li></ul>
+</section>
+<section class="tight release" id="v0-3-2" data-reveal>
+<h2>0.3.2 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li>Maintenance release. It includes the unpublished 0.3.1.</li></ul>
+</section>
+<section class="tight release" id="v0-3-0" data-reveal>
+<h2>0.3.0 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li><strong>npm package</strong>: install with <code>npm install -g @zrob407/studio-bridge</code>. It runs on Node, which Windows does not block the way it can block an unsigned exe.</li><li><strong>OpenAI Codex CLI</strong> setup is included, with a conformance test. It has not been tried against Codex itself.</li><li>An old source install is carried over instead of starting from scratch.</li><li>Future releases moved to the Studio Bridge License (source-available, free for commercial games). Versions 0.2.3 and earlier stay available under the MIT License. The license also states that separate paid add-ons may exist.</li></ul>
+</section>
+<section class="tight release" id="v0-2-3" data-reveal>
+<h2>0.2.3 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li>An update notice, a <code>bridge_update</code> tool, and opt-in auto-update.</li></ul>
+</section>
+<section class="tight release" id="v0-2-2" data-reveal>
+<h2>0.2.2 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li>Fixed updating over a running exe that had a stale leftover copy.</li></ul>
+</section>
+<section class="tight release" id="v0-2-1" data-reveal>
+<h2>0.2.1 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<ul class="changes"><li>The release workflow now uses Node 24 action versions.</li></ul>
+</section>
+<section class="tight release" id="v0-2-0" data-reveal>
+<h2>0.2.0 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-29</span></h2>
+<p style="color:var(--dim)">First public release.</p>
+<ul class="changes"><li>An MCP server and a Roblox Studio plugin that run commands inside Studio.</li><li>Every command runs in its own thread with a deadline, and results are retried so they survive a reconnect.</li><li>A <code>batch</code> tool that runs many edits in one call, with a WebSocket transport and an HTTP fallback.</li><li>A signed, hot-reloading plugin loader, and the plugin loads in play clients through the play server.</li><li>A single-file exe with a command line and an installer, plus an <code>update</code> command and update notice.</li><li>Tool definitions live in <code>tools.json</code>, and <code>doctor</code> checks the setup.</li><li>The server exits with a clear error when its port is already in use.</li></ul>
+</section>
+</div>
+</main>
+<footer class="site">
+<div class="wrap">
+<div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
+<div>Studio Bridge 0.6.7 &middot; by zrob407. Not affiliated with Roblox.</div>
+</div>
+</footer>
+</body>
+</html>

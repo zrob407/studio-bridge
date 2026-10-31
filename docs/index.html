@@ -14,73 +14,222 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="logo-128.png">
 <link rel="stylesheet" href="style.css">
+<script src="script.js"></script>
 </head>
 <body>
+<div class="ambient" aria-hidden="true"><div class="orb a"></div><div class="orb b"></div><div class="wash"></div></div>
+<div class="progress" aria-hidden="true"><i></i></div>
+<button class="totop" type="button" aria-label="Back to top">&uarr;</button>
 <header class="site">
 <div class="wrap">
-<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="30" height="30">Studio Bridge</a>
-<nav class="main" aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="pro.html" class="pro-link">Pro</a><a href="license.html">License</a><a href="https://github.com/zrob407/studio-bridge">GitHub</a></nav>
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.7</span></a>
+<nav class="main" aria-label="Main"><a href="index.html" aria-current="page">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="compare.html">Compare</a><a href="pro.html" class="pro-link">Pro</a><a href="changelog.html">Changelog</a><a href="license.html">License</a><a class="gh" href="https://github.com/zrob407/studio-bridge"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></nav>
 </div>
 </header>
 <main>
 <div class="wrap">
 <div class="hero">
-<img class="logo" src="logo.png" alt="Studio Bridge logo" width="96" height="96">
+<div class="hero-grid">
+<div data-reveal>
+<p class="eyebrow">Free for commercial games &middot; Runs on your PC &middot; MCP</p>
 <h1>Let your AI work inside Roblox Studio</h1>
-<p class="lead">Studio Bridge is an MCP server and Studio plugin. It lets an AI coding assistant read and edit your place, run Luau, drive playtests, take screenshots and publish assets. 79 tools, free to use for commercial games.</p>
+<p class="lead">Studio Bridge is an MCP server and Studio plugin. It lets an AI coding assistant read and edit your place, run Luau, drive playtests, take screenshots and publish assets. 79 tools, one install.</p>
 <div class="cta">
 <a class="btn" href="install.html">Get started</a>
 <a class="btn secondary" href="https://github.com/zrob407/studio-bridge">View on GitHub</a>
 </div>
+<p class="chips"><span>Windows</span><span>&middot;</span><span>Linux via Wine</span><span>&middot;</span><span>Claude Code and other MCP clients</span></p>
+<div class="pills">
+<a class="pill" href="https://github.com/zrob407/studio-bridge/releases"><span class="dot"></span>latest <b>v0.6.7</b></a>
+<a class="pill" href="tools.html"><b>79</b> tools</a>
+<a class="pill" href="license.html">free for commercial games</a>
+</div>
+</div>
+
+<div class="widget" data-reveal data-delay="120" data-widget>
+<div class="bar"><span>HOW A REQUEST TRAVELS &middot; DEMO</span><span class="live"><i></i>running</span></div>
+<div class="pipe" aria-label="Your AI, MCP, the bridge, the plugin, then Studio">
+<div class="rail"><i></i></div>
+<div class="node"><b>1</b><span>Your AI</span></div>
+<div class="node"><b>2</b><span>MCP</span></div>
+<div class="node"><b>3</b><span>Bridge</span></div>
+<div class="node"><b>4</b><span>Plugin</span></div>
+<div class="node"><b>5</b><span>Studio</span></div>
+</div>
+<div class="log" data-log aria-label="Example tool calls"><div><span class="p">&gt; </span>batch  12 edits, one undo step<span class="ok">  ok</span></div></div>
+<div class="meter" style="--fill:25%"><div class="row"><span>CORE TOOLS &middot; 28</span><em>about 5,700 tokens</em></div><div class="track"><i data-fill="25"></i></div></div>
+<div class="meter gold" style="--fill:100%"><div class="row"><span>ALL TOOLS &middot; 79</span><em>about 23,000 tokens</em></div><div class="track"><i data-fill="100"></i></div></div>
+<div class="foot"><span>127.0.0.1 only</span><span>no telemetry</span></div>
+</div>
+</div>
+</div>
+
+<div class="ticker" aria-hidden="true"><div class="run"><span>Roblox Studio</span><span>Luau</span><span>MCP</span><span>Batch edits</span><span>Terrain</span><span>UI checks</span><span>Playtests</span><span>Animation</span><span>Audio</span><span>Publishing</span><span>Tool groups</span><span>Snapshots</span><span>Roblox Studio</span><span>Luau</span><span>MCP</span><span>Batch edits</span><span>Terrain</span><span>UI checks</span><span>Playtests</span><span>Animation</span><span>Audio</span><span>Publishing</span><span>Tool groups</span><span>Snapshots</span></div></div>
+</div>
+
+<section>
+<div class="wrap">
+<div class="section-head" data-reveal>
+<p class="eyebrow">What it does</p>
+<h2>Not a dashboard. A toolbox.</h2>
+<p>These are the jobs that take the most clicking by hand and the least time with Studio Bridge.</p>
+</div>
+
+<div class="feat-row" data-reveal>
+<div>
+<div class="num">01 &middot; BULK EDITING</div>
+<h3>Edit hundreds of things in one step</h3>
+<p><code>batch</code> runs up to 50 edits as a single undo step. <code>instance_bulk</code> sets, adjusts or deletes everything that matches a filter, with dry runs first.</p>
+<ul><li>Rename, duplicate in rows, grids and circles</li><li>Snap to a grid and change pivots</li></ul>
+</div>
+<div class="mock">
+<div class="title"><span>batch</span><span>1 call</span></div>
+<div class="line"><span class="t">instance_rename</span><span>40 parts</span></div>
+<div class="line"><span class="t">instance_duplicate</span><span>a circle of copies</span></div>
+<div class="line"><span class="t">snap_grid</span><span>align to the grid</span></div>
+<div class="line"><span class="t">instance_bulk</span><span>dry run, then apply</span></div>
+<div class="total">one undo step</div>
+</div>
+</div>
+
+<div class="feat-row flip" data-reveal>
+<div>
+<div class="num">02 &middot; WORLD BUILDING</div>
+<h3>Build a world quickly</h3>
+<p><code>terrain</code> generates hills with a biome, water level and seed. <code>environment</code> switches lighting between day, sunset, night and fog. <code>scatter</code> drops props with spacing and slope alignment.</p>
+<ul><li><code>spatial_find</code> finds flat spots, free space and spawn points</li><li><code>spatial_check</code> tells you what floats or overlaps</li></ul>
+</div>
+<div class="mock">
+<div class="title"><span>world</span><span>one prompt</span></div>
+<div class="tags"><span>terrain</span><span>hills</span><span>water level</span><span class="g">sunset</span><span class="g">night</span><span class="g">fog</span><span>scatter</span><span>spatial_find</span></div>
+<div class="rule">Lighting presets</div>
+<div class="tags"><span class="g">day</span><span class="g">sunset</span><span class="g">night</span><span class="g">fog</span></div>
+</div>
+</div>
+
+<div class="feat-row" data-reveal>
+<div>
+<div class="num">03 &middot; UI</div>
+<h3>UI that fits every device</h3>
+<p><code>ui_build</code> makes a whole GUI from one description. <code>ui_autoscale</code> turns a pixel-based GUI into responsive Scale. <code>ui_responsive_check</code> lays it out on real phones, tablets and consoles.</p>
+<ul><li>Reports what runs off the screen</li><li>What is too small to tap, and text that is too tiny</li></ul>
+</div>
+<div class="mock">
+<div class="title"><span>ui_responsive_check</span><span>device emulator</span></div>
+<div class="tags"><span>iPhone</span><span>iPad</span><span>Xbox</span></div>
+<div class="rule">It checks for</div>
+<div class="line"><span class="t">off screen</span><span>parts that run out of view</span></div>
+<div class="line"><span class="t">tap size</span><span>buttons too small to press</span></div>
+<div class="line"><span class="t">text</span><span>tiny or unreadable text</span></div>
+</div>
+</div>
+
+<div class="feat-row flip" data-reveal>
+<div>
+<div class="num">04 &middot; PLAYTESTS</div>
+<h3>Playtest without touching the keyboard</h3>
+<p><code>character_move</code> walks the character to a spot with pathfinding. <code>input_keyboard</code> and <code>input_mouse</code> send real input, <code>gui_click</code> presses buttons by path, and <code>run_test</code> reports what happened.</p>
+</div>
+<div class="mock">
+<div class="title"><span>playtest</span><span>hands off</span></div>
+<div class="line"><span class="t">character_move</span><span>walk to the shop door</span></div>
+<div class="line"><span class="t">gui_click</span><span>press Buy</span></div>
+<div class="line"><span class="t">run_test</span><span>report the errors</span></div>
+<div class="total">no keyboard needed</div>
+</div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="section-head" data-reveal>
+<p class="eyebrow">Local by design</p>
+<h2>Easy to trust</h2>
+<p>The bridge runs on your computer and talks only to your own Studio.</p>
+</div>
+<div class="grid" data-reveal>
+<div class="card"><h3>127.0.0.1 only</h3><p>It listens only on your own machine and needs a secret on every request.</p></div>
+<div class="card"><h3>Signed plugin</h3><p>The plugin's signature is verified, and releases ship with build provenance.</p></div>
+<div class="card"><h3>No telemetry</h3><p>Nothing about you or your places is collected.</p></div>
+<div class="card"><h3>No forced restarts</h3><p>Every command has a deadline and can be cancelled, and results survive a reconnect.</p></div>
+</div>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="section-head" data-reveal>
+<p class="eyebrow">Side by side</p>
+<h2>How it compares</h2>
+<p>Roblox's built-in MCP server and the community projects each have strengths. See what each one says about itself, next to Studio Bridge.</p>
+</div>
+<p data-reveal><a class="btn secondary" href="compare.html">Compare Studio Bridge</a> <a class="btn secondary" href="tools.html">Search the tools</a></p>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="section-head" data-reveal>
+<p class="eyebrow gold">Free and Pro</p>
+<h2>The free program stays free</h2>
+<p>Pro adds extra packs on top. Nothing in the free program moves behind a paywall.</p>
+</div>
+<div class="compare" data-reveal>
+<div class="h"></div><div class="h">Free</div><div class="h pro">Pro</div>
+<div class="l">Studio Bridge tools</div><div class="yes">All 79</div><div class="yes pro-col">All 79 plus pack tools</div>
+<div class="l">Plugin and Studio window</div><div class="yes">Included</div><div class="yes pro-col">Included</div>
+<div class="l">Pack system for your own packs</div><div class="yes">Included</div><div class="yes pro-col">Included</div>
+<div class="l">Snapshots and diffs</div><div class="no">Not included</div><div class="yes pro-col">Included</div>
+<div class="l">Future Pro packs</div><div class="no">Not included</div><div class="yes pro-col">Included, lifetime covers all</div>
+<div class="l">License</div><div>Studio Bridge License</div><div class="pro-col">Separate Pro license</div>
+<div class="l">Cost</div><div>Free, even for commercial games</div><div class="pro-col">Paid plans or lifetime</div>
+</div>
+<p style="margin-top:20px" data-reveal><a class="btn gold" href="pro.html">See Pro</a></p>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="section-head" data-reveal>
+<p class="eyebrow">Roadmap</p>
+<h2>What works, and what is coming</h2>
+</div>
+<div class="roadmap" data-reveal>
+<div class="card">
+<h3>Shipped</h3>
+<ul class="road-list">
+<li><b>Tool groups</b>Load only the tools you need.</li>
+<li><b>Linux and Hyprland</b>Studio under Wine, with Vinegar or Grapejuice.</li>
+<li><b>Studio Bridge Pro</b>Paid packs, starting with Snapshots and diffs.</li>
+<li><b>This website</b>Install guide, searchable tool list, comparison and changelog.</li>
+</ul>
+</div>
+<div class="card pro">
+<h3>Planned</h3>
+<ul class="road-list planned">
+<li><b>Dead-code finder</b>Find scripts, modules and remotes nothing uses.</li>
+<li><b>Audit pack</b>A broader sweep of a place with a written report.</li>
+<li><b>QA playtests</b>Scripted playtests that report what broke.</li>
+<li><b>Localization</b>Move hard-coded text into translation tables.</li>
+</ul>
+</div>
+</div>
+<p style="color:var(--faint);font-size:14.5px;margin-top:14px">Planned packs have no dates and are not promised until they ship.</p>
+</div>
+</section>
+
+<section>
+<div class="wrap">
+<div class="cta-band" data-reveal>
+<p class="eyebrow">Ready when you are</p>
+<h2>Install it in two commands</h2>
 <pre><code>npm install -g @zrob407/studio-bridge
 studio-bridge install</code></pre>
+<div class="cta">
+<a class="btn" href="install.html">Full install guide</a>
+<a class="btn secondary" href="changelog.html">What is new</a>
 </div>
-</div>
-
-<section>
-<div class="wrap">
-<h2>Why Studio Bridge</h2>
-<div class="grid">
-<div class="card"><h3>No forced restarts</h3><p>Every command has a deadline and can be cancelled. Results survive a reconnect, and the plugin reloads itself when it changes.</p></div>
-<div class="card"><h3>Fewer calls and tokens</h3><p>One <code>batch</code> call runs up to 50 edits as a single undo step. Tool groups keep the tool list small: the 28 everyday tools cost about 5,700 tokens.</p></div>
-<div class="card"><h3>Easy to trust</h3><p>It listens only on 127.0.0.1, needs a secret on every request, verifies the plugin's signature, collects no telemetry and ships with build provenance.</p></div>
-<div class="card"><h3>Free for commercial games</h3><p>Use it to make anything you like, including paid games. The core program stays free.</p></div>
-</div>
-</div>
-</section>
-
-<section>
-<div class="wrap">
-<h2>What you can ask for</h2>
-<div class="grid">
-<div class="card"><p>"Generate a rocky island with a beach, scatter palm trees on it, and switch the lighting to sunset."</p></div>
-<div class="card"><p>"Build a main menu, make it responsive, and check it on an iPhone, an iPad and an Xbox."</p></div>
-<div class="card"><p>"Run a playtest, walk the character to the shop door, click Buy and tell me what errors show up."</p></div>
-<div class="card"><p>"Find every script that uses DataStore and list the risky ones."</p></div>
-<div class="card"><p>"List every asset this place uses that I do not own."</p></div>
-<div class="card"><p>"Export every animation in this rig's AnimSaves folder and publish them to my group."</p></div>
-</div>
-<p style="margin-top:18px"><a href="tools.html">Browse all 79 tools</a></p>
-</div>
-</section>
-
-<section>
-<div class="wrap">
-<div class="card pro">
-<h2>Studio Bridge <span class="badge pro">Pro</span></h2>
-<p style="margin-bottom:16px">Optional paid add-on packs on top of the free program. The first, Snapshots and diffs, saves part of a place, shows exactly what changed and rolls it back. More are planned. Nothing in the free program moves behind a paywall.</p>
-<a class="btn gold" href="pro.html">See Pro</a>
-</div>
-</div>
-</section>
-
-<section>
-<div class="wrap">
-<h2>Works with</h2>
-<div class="grid">
-<div class="card"><h3>Claude Code</h3><p>Used and tested here. <code>studio-bridge install</code> registers it for you.</p></div>
-<div class="card"><h3>Other MCP clients</h3><p>Studio Bridge speaks standard MCP. Setup for OpenAI's Codex CLI is included but has not been tried with Codex itself.</p></div>
-<div class="card"><h3>Windows and Linux</h3><p>Windows is the main platform. Linux works through Wine with Vinegar or Grapejuice, including Hyprland. Linux support is new, so reports are welcome.</p></div>
 </div>
 </div>
 </section>
