@@ -689,9 +689,12 @@ local function runSocketSession()
 	local nextBeat = os.clock() + HEARTBEAT_SECONDS
 
 	while not session.closed and not stopped do
-		task.wait(0.25)
+		-- Sleep until the next heartbeat is due, or until the session closes or the plugin stops.
+		waitUntil(session.changed, function()
+			return session.closed or stopped
+		end, math.max(nextBeat - os.clock(), 0))
 
-		if os.clock() >= nextBeat then
+		if not session.closed and not stopped and os.clock() >= nextBeat then
 			nextBeat = os.clock() + HEARTBEAT_SECONDS
 
 			if not sendJson(session, {type = "heartbeat"}) then
@@ -1815,6 +1818,7 @@ local function stop()
 
 	if session then
 		session.closed = true
+		session.changed:Fire()
 
 		pcall(function()
 			session.client:Close()
