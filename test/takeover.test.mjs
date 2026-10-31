@@ -14,7 +14,7 @@ const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-takeover-')
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function start(label, { version, token }) {
-  const env = { ...process.env, STUDIO_BRIDGE_HOME: path.join(sandbox, label), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1', LOCALAPPDATA: sandbox };
+  const env = { ...process.env, STUDIO_BRIDGE_HOME: path.join(sandbox, label), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1', LOCALAPPDATA: sandbox, STUDIO_BRIDGE_PLUGINS_DIR: path.join(sandbox, 'Roblox', 'Plugins') };
   if (version) env.STUDIO_BRIDGE_TEST_VERSION = version;
   else delete env.STUDIO_BRIDGE_TEST_VERSION;
   const child = spawn(base[0], [...base.slice(1), 'serve'], { env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });

@@ -43,7 +43,7 @@ const token = crypto.randomBytes(16).toString('hex');
 const port = 3984;
 
 function startServer(home) {
-  const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1' };
+  const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1' };
   const child = spawn(base[0], [...base.slice(1), 'serve'], { env, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
   const waiters = new Map();
   readline.createInterface({ input: child.stdout }).on('line', (line) => {
@@ -143,7 +143,7 @@ const missingInit = await missing.rpc('initialize', {});
 check('an emptied license file is treated as tampering', /Tampering detected/.test(missingInit.result.instructions || ''));
 await missing.stop();
 
-const cliEnv = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: tamperedHome, STUDIO_BRIDGE_OFFLINE: '1' };
+const cliEnv = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: tamperedHome, STUDIO_BRIDGE_OFFLINE: '1' };
 fs.writeFileSync(path.join(tamperedHome, 'overrides', 'LICENSE'), realLicense.replace('Permission is granted', 'Permission is not granted'));
 const runCli = (...args) => {
   const finished = spawnSync(base[0], [...base.slice(1), ...args], { env: cliEnv, encoding: 'utf8', windowsHide: true, timeout: 60000 });

@@ -45,7 +45,7 @@ const newHome = (name, settings) => {
 };
 const baseEnv = (home) => ({
   ...process.env,
-  LOCALAPPDATA: localAppData,
+  LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'),
   CODEX_HOME: path.join(sandbox, 'codex'),
   STUDIO_BRIDGE_HOME: home,
   STUDIO_BRIDGE_INSTALL_MODE: 'npm',

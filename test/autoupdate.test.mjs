@@ -59,7 +59,7 @@ async function until(condition, ms) {
 }
 
 function startServer(home) {
-  const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: 'auto', STUDIO_BRIDGE_PORT: String(serverPort), STUDIO_BRIDGE_RELEASES_URL: `${origin}/releases/latest` };
+  const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: 'auto', STUDIO_BRIDGE_PORT: String(serverPort), STUDIO_BRIDGE_RELEASES_URL: `${origin}/releases/latest` };
   delete env.STUDIO_BRIDGE_OFFLINE;
   const child = spawn(command[0], command.slice(1), { env, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });
   const waiters = new Map();

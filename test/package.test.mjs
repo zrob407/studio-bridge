@@ -40,7 +40,7 @@ const cli = path.join(packageDir, 'cli.mjs');
 check('npm installs the tarball', installed.status === 0 && fs.existsSync(cli), (installed.stderr || '').trim().split('\n').pop());
 check('npm creates the studio-bridge command', fs.existsSync(path.join(prefix, 'node_modules', '.bin', 'studio-bridge.cmd')));
 
-const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_OFFLINE: '1', STUDIO_BRIDGE_PORT: '3977', CODEX_HOME: path.join(sandbox, 'codex') };
+const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_OFFLINE: '1', STUDIO_BRIDGE_PORT: '3977', CODEX_HOME: path.join(sandbox, 'codex') };
 delete env.STUDIO_BRIDGE_HOME;
 const run = (...args) => {
   const finished = spawnSync(process.execPath, [cli, ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 60000 });

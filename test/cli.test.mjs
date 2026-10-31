@@ -15,7 +15,7 @@ const home = path.join(sandbox, 'home');
 const pluginsDir = path.join(localAppData, 'Roblox', 'Plugins');
 fs.mkdirSync(pluginsDir, { recursive: true });
 
-const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991', STUDIO_BRIDGE_OFFLINE: '1', CODEX_HOME: path.join(sandbox, 'unused-codex-home') };
+const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PORT: '3991', STUDIO_BRIDGE_OFFLINE: '1', CODEX_HOME: path.join(sandbox, 'unused-codex-home') };
 const run = (...args) => spawnSync(command[0], [...command.slice(1), ...args], { env, encoding: 'utf8', windowsHide: true, timeout: 60000 });
 
 let failures = 0;
@@ -191,7 +191,7 @@ if (target) {
   const leftover = path.join(lockHome, 'studio-bridge.exe.old');
   fs.copyFileSync(target, installed);
   fs.copyFileSync(target, leftover);
-  const lockEnv = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: lockHome, STUDIO_BRIDGE_TOKEN: 'lock', STUDIO_BRIDGE_OFFLINE: '1' };
+  const lockEnv = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: lockHome, STUDIO_BRIDGE_TOKEN: 'lock', STUDIO_BRIDGE_OFFLINE: '1' };
   const holders = [
     spawn(installed, ['serve'], { env: { ...lockEnv, STUDIO_BRIDGE_PORT: '3981' }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }),
     spawn(leftover, ['serve'], { env: { ...lockEnv, STUDIO_BRIDGE_PORT: '3982' }, stdio: ['pipe', 'ignore', 'ignore'], windowsHide: true }),
