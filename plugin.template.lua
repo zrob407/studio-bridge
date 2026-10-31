@@ -1091,6 +1091,13 @@ local function buildStatusWidget()
 		cogHovered = false
 		paintCog()
 	end)
+	-- No leave event arrives when the window is hidden under the pointer, so clear the hover then as well.
+	widget:GetPropertyChangedSignal("Enabled"):Connect(function()
+		if not widget.Enabled then
+			cogHovered = false
+			paintCog()
+		end
+	end)
 
 	for index, name in PAGES do
 		local tabButton = create("TextButton", {
