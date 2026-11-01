@@ -820,6 +820,7 @@ local statusUi
 
 -- Fixed colors that look the same in light and dark. Text, card and border colors come from Studio's theme instead (see color(), mainText() and friends in buildStatusWidget).
 local ACCENT = Color3.fromRGB(79, 216, 255)
+local ACCENT2 = Color3.fromRGB(150, 112, 255)
 local ON_ACCENT = Color3.fromRGB(10, 22, 44)
 local GOOD = Color3.fromRGB(80, 200, 120)
 local GOLD = Color3.fromRGB(255, 209, 102)
@@ -933,33 +934,36 @@ local function buildStatusWidget()
 	-- Theme handling. Colors come from Studio's theme, and anything that uses them is registered with onTheme so it is repainted when the theme changes.
 	local themed = {}
 
-	local function color(guide)
-		return studioSettings.Theme:GetColor(guide)
-	end
-
+	-- The window uses its own fixed dark palette so it looks the same in every Studio theme. Change these five colors to restyle the whole window.
 	local function background()
-		return color(Enum.StudioStyleGuideColor.MainBackground)
+		return Color3.fromRGB(11, 14, 26)
 	end
 
 	local function card()
-		return color(Enum.StudioStyleGuideColor.InputFieldBackground)
+		return Color3.fromRGB(21, 26, 44)
 	end
 
 	local function line()
-		return color(Enum.StudioStyleGuideColor.Border)
+		return Color3.fromRGB(50, 60, 96)
 	end
 
 	local function mainText()
-		return color(Enum.StudioStyleGuideColor.MainText)
+		return Color3.fromRGB(238, 243, 255)
 	end
 
 	local function dimText()
-		return color(Enum.StudioStyleGuideColor.DimmedText)
+		return Color3.fromRGB(140, 152, 186)
 	end
 
 	local function onTheme(apply)
 		table.insert(themed, apply)
 		apply()
+	end
+
+	local tweenService = game:GetService("TweenService")
+
+	local function tweenTo(instance, seconds, goal)
+		tweenService:Create(instance, TweenInfo.new(seconds, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
 	end
 
 	-- Small UI helpers. create builds an instance from a property table and parents it, rounded adds corners, and label makes a themed text label.
@@ -972,11 +976,33 @@ local function buildStatusWidget()
 
 		instance.Parent = parent
 
+		-- Every filled text button gets a hover highlight. The connections belong to the button, so they go away when it is destroyed.
+		if className == "TextButton" and instance.BackgroundTransparency < 1 and instance.Text ~= "" then
+			local rest
+
+			instance.MouseEnter:Connect(function()
+				rest = instance.BackgroundColor3
+				tweenTo(instance, 0.12, {BackgroundColor3 = rest:Lerp(Color3.new(1, 1, 1), 0.14)})
+			end)
+			instance.MouseLeave:Connect(function()
+				if rest then
+					tweenTo(instance, 0.12, {BackgroundColor3 = rest})
+				end
+			end)
+		end
+
 		return instance
 	end
 
 	local function rounded(parent, radius)
 		return create("UICorner", {CornerRadius = UDim.new(0, radius)}, parent)
+	end
+
+	-- A raised card: rounded corners, a thin border and a soft top-to-bottom shade.
+	local function panel(parent, radius)
+		rounded(parent, radius or 12)
+		create("UIStroke", {Color = line(), Transparency = 0.3, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, parent)
+		create("UIGradient", {Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(196, 204, 230)), Rotation = 90}, parent)
 	end
 
 	local function label(parent, properties)
@@ -998,50 +1024,113 @@ local function buildStatusWidget()
 		return made
 	end
 
+	-- A card with a switch on the left and up to three lines of text on the right (title, one short detail line, and a wrapped description). The Tools and Config pages both use it, and it grows to fit its text, so nothing gets cut off at any window width.
+	-- options: title (rich text allowed), meta, body, on, faded (dims the switch), onClick (leave nil for a read-only switch).
+	local function switchRow(parent, order, options)
+		local row = create("Frame", {LayoutOrder = order, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, BackgroundColor3 = card()}, parent)
+
+		panel(row)
+
+		local track = create("TextButton", {
+			AnchorPoint = Vector2.new(0, 0.5),
+			Position = UDim2.new(0, 14, 0.5, 0),
+			Size = UDim2.fromOffset(40, 22),
+			BorderSizePixel = 0,
+			AutoButtonColor = false,
+			Text = "",
+			BackgroundColor3 = if options.on then ACCENT else line(),
+			BackgroundTransparency = if options.faded then 0.55 else 0,
+		}, row)
+
+		rounded(track, 11)
+
+		local knob = create("Frame", {
+			Position = if options.on then UDim2.fromOffset(21, 3) else UDim2.fromOffset(3, 3),
+			Size = UDim2.fromOffset(16, 16),
+			BorderSizePixel = 0,
+			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+		}, track)
+
+		rounded(knob, 8)
+
+		local text = create("Frame", {Position = UDim2.fromOffset(68, 0), Size = UDim2.new(1, -80, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1}, row)
+
+		create("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}, text)
+		create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10)}, text)
+		label(text, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = options.title})
+
+		if options.meta then
+			label(text, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 16), TextSize = 12, TextColor3 = dimText(), Text = options.meta})
+		end
+
+		if options.body then
+			label(text, {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 12, TextColor3 = dimText(), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top, Text = options.body})
+		end
+
+		if options.onClick then
+			track.MouseButton1Click:Connect(function()
+				local tween = game:GetService("TweenService")
+				local info = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+				tween:Create(knob, info, {Position = if options.on then UDim2.fromOffset(3, 3) else UDim2.fromOffset(21, 3)}):Play()
+				tween:Create(track, info, {BackgroundColor3 = if options.on then line() else ACCENT}):Play()
+				task.delay(0.13, options.onClick)
+			end)
+		end
+
+		return row
+	end
+
 	local root = create("Frame", {Size = UDim2.fromScale(1, 1), BorderSizePixel = 0}, widget)
 
 	onTheme(function()
 		root.BackgroundColor3 = background()
 	end)
 
-	-- Header: logo, title, bridge version and the connection pill.
-	local header = create("Frame", {Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1}, root)
-	local logo = create("ImageLabel", {Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1, Image = BUTTON_ICON}, header)
+	-- Header: a gradient band with the logo, title, bridge version and the connection pill.
+	local header = create("Frame", {Size = UDim2.new(1, 0, 0, 72), BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1)}, root)
 
-	rounded(logo, 10)
+	create("UIGradient", {Color = ColorSequence.new(Color3.fromRGB(20, 74, 118), Color3.fromRGB(74, 42, 134)), Rotation = 20}, header)
 
-	local title = label(header, {Position = UDim2.fromOffset(64, 10), Size = UDim2.new(1, -262, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Studio Bridge"})
-	local subtitle = label(header, {Position = UDim2.fromOffset(64, 34), Size = UDim2.new(1, -262, 0, 18), TextSize = 13})
-	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 32), Size = UDim2.fromOffset(176, 28), BorderSizePixel = 0}, header)
+	local logo = create("ImageLabel", {Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = BUTTON_ICON}, header)
 
-	rounded(pill, 14)
+	rounded(logo, 12)
+	create("UIStroke", {Color = Color3.new(1, 1, 1), Transparency = 0.7, Thickness = 1}, logo)
 
-	local dot = create("Frame", {Position = UDim2.fromOffset(12, 9), Size = UDim2.fromOffset(10, 10), BorderSizePixel = 0}, pill)
+	label(header, {Position = UDim2.fromOffset(70, 14), Size = UDim2.new(1, -198, 0, 26), Font = Enum.Font.BuilderSansBold, TextSize = 20, TextColor3 = Color3.new(1, 1, 1), Text = "Studio Bridge"})
+	local subtitle = label(header, {Position = UDim2.fromOffset(70, 42), Size = UDim2.new(1, -198, 0, 18), TextSize = 13, TextColor3 = Color3.fromRGB(196, 212, 240)})
+	local pill = create("Frame", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0, 36), Size = UDim2.fromOffset(112, 30), BorderSizePixel = 0, BackgroundColor3 = Color3.fromRGB(8, 10, 20), BackgroundTransparency = 0.4}, header)
+
+	rounded(pill, 15)
+	create("UIStroke", {Color = Color3.new(1, 1, 1), Transparency = 0.85, Thickness = 1}, pill)
+
+	local dot = create("Frame", {Position = UDim2.fromOffset(12, 10), Size = UDim2.fromOffset(10, 10), BorderSizePixel = 0}, pill)
 
 	rounded(dot, 5)
 
-	local pillText = label(pill, {Position = UDim2.fromOffset(28, 0), Size = UDim2.new(1, -34, 1, 0), Font = Enum.Font.BuilderSansBold, TextSize = 13})
+	local pillText = label(pill, {Position = UDim2.fromOffset(29, 0), Size = UDim2.new(1, -33, 1, 0), Font = Enum.Font.BuilderSansBold, TextSize = 13, TextColor3 = Color3.new(1, 1, 1)})
 
-	onTheme(function()
-		title.TextColor3 = mainText()
-		subtitle.TextColor3 = dimText()
-		pill.BackgroundColor3 = card()
-		pillText.TextColor3 = mainText()
-	end)
+	-- A thin accent line under the header.
+	local headerLine = create("Frame", {Position = UDim2.fromOffset(0, 72), Size = UDim2.new(1, 0, 0, 2), BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1)}, root)
 
-	-- Tab bar. The tab buttons are built from PAGES in the loop below.
-	local tabBar = create("Frame", {Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1}, root)
+	create("UIGradient", {Color = ColorSequence.new(ACCENT, ACCENT2)}, headerLine)
 
-	create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder}, tabBar)
+	-- Tab bar: a rounded track with a highlight that slides under the selected tab. The tab buttons are built from PAGES in the loop below.
+	local tabBar = create("Frame", {Position = UDim2.fromOffset(14, 86), Size = UDim2.new(1, -28, 0, 38), BorderSizePixel = 0, BackgroundColor3 = card()}, root)
 
-	local divider = create("Frame", {Position = UDim2.fromOffset(0, 99), Size = UDim2.new(1, 0, 0, 1), BorderSizePixel = 0}, root)
+	panel(tabBar, 12)
 
-	onTheme(function()
-		divider.BackgroundColor3 = line()
-	end)
+	local highlight = create("Frame", {Position = UDim2.new(0, 3, 0, 3), Size = UDim2.new(1 / #PAGES, -6, 1, -6), BorderSizePixel = 0, BackgroundColor3 = Color3.new(1, 1, 1)}, tabBar)
+
+	rounded(highlight, 9)
+	create("UIGradient", {Color = ColorSequence.new(ACCENT, ACCENT2)}, highlight)
+
+	local tabRow = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1}, tabBar)
+
+	create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder}, tabRow)
 
 	-- Page area. Every page is a frame inside content, and only the selected one is visible.
-	local content = create("Frame", {Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 1, -100), BackgroundTransparency = 1}, root)
+	local content = create("Frame", {Position = UDim2.fromOffset(0, 134), Size = UDim2.new(1, 0, 1, -134), BackgroundTransparency = 1}, root)
 	local tabs = {}
 	local pages = {}
 	local selected = "Status"
@@ -1052,15 +1141,17 @@ local function buildStatusWidget()
 	local toolsPage
 	local proPage
 
-	-- Highlights the selected tab and shows only its page.
+	-- Moves the highlight to the selected tab, colors the tab names and shows only the selected page.
 	local function paintTabs()
 		for name, entry in tabs do
 			local active = name == selected
 
-			entry.button.TextColor3 = if active then mainText() else dimText()
-			entry.underline.BackgroundColor3 = ACCENT
-			entry.underline.Visible = active
+			entry.button.TextColor3 = if active then ON_ACCENT else dimText()
 			pages[name].Visible = active
+
+			if active then
+				tweenTo(highlight, 0.18, {Position = UDim2.new((entry.index - 1) / #PAGES, 3, 0, 3)})
+			end
 		end
 	end
 
@@ -1071,13 +1162,21 @@ local function buildStatusWidget()
 			BackgroundTransparency = 1,
 			AutoButtonColor = false,
 			Font = Enum.Font.BuilderSansBold,
-			TextSize = 15,
+			TextSize = 14,
 			Text = name,
-		}, tabBar)
-		local underline = create("Frame", {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.new(0.6, 0, 0, 3), BorderSizePixel = 0}, tabButton)
+		}, tabRow)
 
-		rounded(underline, 2)
-		tabs[name] = {button = tabButton, underline = underline}
+		tabs[name] = {button = tabButton, index = index}
+		tabButton.MouseEnter:Connect(function()
+			if selected ~= name then
+				tabButton.TextColor3 = mainText()
+			end
+		end)
+		tabButton.MouseLeave:Connect(function()
+			if selected ~= name then
+				tabButton.TextColor3 = dimText()
+			end
+		end)
 		tabButton.MouseButton1Click:Connect(function()
 			selected = name
 			paintTabs()
@@ -1110,23 +1209,74 @@ local function buildStatusWidget()
 		end
 	end
 
-	-- Status page: counters for commands run and failed, the last command, and uptime.
-	local statusPage = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1}, content)
+	-- Status page: a plain-language connection banner, counters for commands run and failed, the last command, uptime, and the latest events. It scrolls when the window is short.
+	local statusPage = create("ScrollingFrame", {
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		BorderSizePixel = 0,
+		ScrollBarThickness = 6,
+		AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		CanvasSize = UDim2.new(),
+		ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, content)
 
 	pages.Status = statusPage
-	create("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, statusPage)
+	create("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, statusPage)
+	create("UIListLayout", {Padding = UDim.new(0, 12), SortOrder = Enum.SortOrder.LayoutOrder}, statusPage)
 
-	local grid = create("Frame", {Size = UDim2.new(1, 0, 0, 170), BackgroundTransparency = 1}, statusPage)
+	local banner = create("Frame", {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0}, statusPage)
+
+	panel(banner, 14)
+
+	-- The beacon on the left of the banner: a solid dot in the connection color with a ring that pulses outward.
+	local halo = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(38, 38), Size = UDim2.fromOffset(24, 24), BorderSizePixel = 0}, banner)
+
+	create("UICorner", {CornerRadius = UDim.new(0.5, 0)}, halo)
+
+	local core = create("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(38, 38), Size = UDim2.fromOffset(24, 24), BorderSizePixel = 0}, banner)
+
+	create("UICorner", {CornerRadius = UDim.new(0.5, 0)}, core)
+
+	local bannerBody = create("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1}, banner)
+
+	create("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 74), PaddingRight = UDim.new(0, 14)}, bannerBody)
+	create("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}, bannerBody)
+
+	local bannerTitle = label(bannerBody, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 24), Font = Enum.Font.BuilderSansBold, TextSize = 19})
+	local bannerText = label(bannerBody, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
+	local bannerMeta = label(bannerBody, {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 16), TextSize = 12})
+
+	onTheme(function()
+		bannerTitle.TextColor3 = mainText()
+		bannerText.TextColor3 = dimText()
+		bannerMeta.TextColor3 = dimText()
+	end)
+
+	task.spawn(function()
+		while not stopped and halo.Parent do
+			halo.Size = UDim2.fromOffset(24, 24)
+			halo.BackgroundTransparency = 0.4
+			tweenTo(halo, 1.6, {Size = UDim2.fromOffset(54, 54), BackgroundTransparency = 1})
+			task.wait(1.8)
+		end
+	end)
+
+	local grid = create("Frame", {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 170), BackgroundTransparency = 1}, statusPage)
 
 	create("UIGridLayout", {CellSize = UDim2.new(0.5, -7, 0, 78), CellPadding = UDim2.fromOffset(14, 14), SortOrder = Enum.SortOrder.LayoutOrder}, grid)
 
-	local function tile(order, caption)
+	-- A stat tile: a colored edge, a big value and a small caption. accent colors the edge and the value.
+	local function tile(order, caption, accent)
 		local cardFrame = create("Frame", {LayoutOrder = order, BorderSizePixel = 0}, grid)
 
-		rounded(cardFrame, 10)
+		panel(cardFrame)
 
-		local value = label(cardFrame, {Position = UDim2.fromOffset(12, 10), Size = UDim2.new(1, -24, 0, 30), Font = Enum.Font.BuilderSansBold, TextSize = 24})
-		local caption2 = label(cardFrame, {Position = UDim2.fromOffset(12, 46), Size = UDim2.new(1, -24, 0, 20), TextSize = 13, Text = caption})
+		local edge = create("Frame", {Position = UDim2.fromOffset(0, 16), Size = UDim2.fromOffset(3, 46), BorderSizePixel = 0, BackgroundColor3 = accent}, cardFrame)
+
+		rounded(edge, 2)
+
+		local value = label(cardFrame, {Position = UDim2.fromOffset(16, 10), Size = UDim2.new(1, -28, 0, 30), Font = Enum.Font.BuilderSansBold, TextSize = 24, TextColor3 = accent})
+		local caption2 = label(cardFrame, {Position = UDim2.fromOffset(16, 46), Size = UDim2.new(1, -28, 0, 20), TextSize = 13, Text = caption})
 
 		onTheme(function()
 			cardFrame.BackgroundColor3 = card()
@@ -1136,11 +1286,31 @@ local function buildStatusWidget()
 		return value, caption2
 	end
 
-	local commandsValue = tile(1, "commands run")
-	local failedValue = tile(2, "failed")
-	local lastValue, lastCaption = tile(3, "last command")
-	local uptimeValue = tile(4, "plugin uptime")
-	local infoLabel = label(statusPage, {Position = UDim2.fromOffset(0, 184), Size = UDim2.new(1, 0, 0, 90), TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
+	local commandsValue = tile(1, "commands run", ACCENT)
+	local failedValue = tile(2, "failed", GOOD)
+	local lastValue, lastCaption = tile(3, "last command", ACCENT2)
+	local uptimeValue = tile(4, "plugin uptime", GOLD)
+
+	local activity = create("Frame", {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0}, statusPage)
+
+	panel(activity)
+	create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)}, activity)
+	create("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, activity)
+
+	local activityTitle = label(activity, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 18), Font = Enum.Font.BuilderSansBold, TextSize = 14, Text = "Recent activity"})
+	local activityText = label(activity, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top, RichText = false})
+	local activityLink = create("TextButton", {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, Font = Enum.Font.BuilderSansMedium, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Text = "See the full log", AutoButtonColor = false}, activity)
+
+	onTheme(function()
+		activity.BackgroundColor3 = card()
+		activityTitle.TextColor3 = mainText()
+		activityText.TextColor3 = dimText()
+		activityLink.TextColor3 = ACCENT
+	end)
+
+	activityLink.MouseButton1Click:Connect(function()
+		holder.show("Log")
+	end)
 
 	-- Tools page: presets and a switch for each tool group. Changes are saved to the bridge, which tells the AI client its tool list changed.
 	toolsPage = create("ScrollingFrame", {
@@ -1158,11 +1328,21 @@ local function buildStatusWidget()
 
 	local summary = create("Frame", {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 72), BorderSizePixel = 0}, toolsPage)
 
-	rounded(summary, 10)
+	panel(summary)
 
 	local totalLabel = label(summary, {Position = UDim2.fromOffset(14, 10), Size = UDim2.new(1, -28, 0, 30), Font = Enum.Font.BuilderSansBold, TextSize = 24, Text = "Loading"})
 	local totalNote = label(summary, {Position = UDim2.fromOffset(14, 42), Size = UDim2.new(1, -28, 0, 20), TextSize = 13})
 	local messageLabel = label(toolsPage, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None})
+	-- A message line takes no room (and no list gap) while it is empty.
+	local function hideWhenEmpty(target)
+		target.Visible = target.Text ~= ""
+		target:GetPropertyChangedSignal("Text"):Connect(function()
+			target.Visible = target.Text ~= ""
+		end)
+	end
+
+	hideWhenEmpty(messageLabel)
+
 	local presetsTitle = label(toolsPage, {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Presets"})
 	local presetsFrame = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1}, toolsPage)
 
@@ -1318,55 +1498,18 @@ local function buildStatusWidget()
 		for index, group in profileData.groups do
 			local on = enabled[group.name] == true
 			local isCore = group.name == "core"
-			local row = create("Frame", {LayoutOrder = index, Size = UDim2.new(1, 0, 0, 72), BorderSizePixel = 0, BackgroundColor3 = card()}, groupsFrame)
+			local badge = ({pro = '  <font color="#ffd166"><b>PRO</b></font>', official = '  <font color="#4fd8ff">official</font>', unverified = '  <font color="#ff9f43">unverified</font>'})[group.tier or ""] or ""
 
-			rounded(row, 10)
-
-			local track = create("TextButton", {
-				Position = UDim2.fromOffset(14, 26),
-				Size = UDim2.fromOffset(40, 22),
-				BorderSizePixel = 0,
-				AutoButtonColor = false,
-				Text = "",
-				BackgroundColor3 = if on then ACCENT else line(),
-				BackgroundTransparency = if isCore or locked then 0.55 else 0,
-			}, row)
-
-			rounded(track, 11)
-
-			local knob = create("Frame", {
-				Position = if on then UDim2.fromOffset(21, 3) else UDim2.fromOffset(3, 3),
-				Size = UDim2.fromOffset(16, 16),
-				BorderSizePixel = 0,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			}, track)
-
-			rounded(knob, 8)
-
-			label(row, {
-				Position = UDim2.fromOffset(68, 8),
-				Size = UDim2.new(1, -80, 0, 20),
-				Font = Enum.Font.BuilderSansBold,
-				TextSize = 15,
-				TextColor3 = mainText(),
-				Text = string.format('%s%s  <font color="%s">%d tools  ·  about %s tokens%s</font>', group.title, (({pro = '  <font color="#ffd166"><b>PRO</b></font>', official = '  <font color="#4fd8ff">official</font>', unverified = '  <font color="#ff9f43">unverified</font>'})[group.tier or ""] or ""), hexOf(dimText()), group.tools, tokenText(group.tokens), if isCore then "  ·  always on" else ""),
-			})
-			label(row, {
-				Position = UDim2.fromOffset(68, 30),
-				Size = UDim2.new(1, -80, 0, 36),
-				TextSize = 12,
-				TextColor3 = dimText(),
-				TextWrapped = true,
-				TextTruncate = Enum.TextTruncate.None,
-				TextYAlignment = Enum.TextYAlignment.Top,
-				Text = group.summary,
-			})
-
-			if not isCore and not locked then
-				track.MouseButton1Click:Connect(function()
+			switchRow(groupsFrame, index, {
+				title = group.title .. badge,
+				meta = string.format("%d tools  ·  about %s tokens%s", group.tools, tokenText(group.tokens), if isCore then "  ·  always on" else ""),
+				body = if isCore then string.gsub(group.summary, "%s*Always on%.?%s*$", "") else group.summary,
+				on = on,
+				faded = isCore or locked,
+				onClick = if not isCore and not locked then function()
 					toggleGroup(group.name)
-				end)
-			end
+				end else nil,
+			})
 		end
 
 		task.defer(function()
@@ -1434,7 +1577,7 @@ local function buildStatusWidget()
 	local proMessage = label(proPage, {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None})
 	local proStatusCard = create("Frame", {LayoutOrder = 7, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0}, proPage)
 
-	rounded(proStatusCard, 10)
+	panel(proStatusCard)
 	create("UIPadding", {PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, proStatusCard)
 
 	local proStatusText = label(proStatusCard, {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
@@ -1612,6 +1755,8 @@ local function buildStatusWidget()
 	local configTitle = label(configPage, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 26), Font = Enum.Font.BuilderSansBold, TextSize = 20, Text = "Config"})
 	local configIntro = label(configPage, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, Text = "Switch these here instead of asking your AI. They are saved on this computer."})
 	local configMessage = label(configPage, {LayoutOrder = 3, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None})
+	hideWhenEmpty(configMessage)
+
 	local configRows = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1}, configPage)
 
 	create("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, configRows)
@@ -1625,13 +1770,74 @@ local function buildStatusWidget()
 
 	rounded(doctorButton, 8)
 
-	local doctorOutput = label(configPage, {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Code, TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, RichText = false, TextYAlignment = Enum.TextYAlignment.Top, Visible = false})
+	-- The doctor report sits in its own card: a one-line verdict on top, then the report with each line's ok / info / WARN / FAIL marker colored.
+	local doctorCard = create("Frame", {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, Visible = false}, configPage)
+
+	panel(doctorCard)
+	create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)}, doctorCard)
+	create("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, doctorCard)
+
+	local doctorVerdict = label(doctorCard, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15})
+	local doctorReport = label(doctorCard, {LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Code, TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
 	local doctorRunning = false
+	local doctorText = nil
+
+	local function escapeRich(text)
+		return (string.gsub(string.gsub(string.gsub(text, "&", "&amp;"), "<", "&lt;"), ">", "&gt;"))
+	end
+
+	-- Shows a doctor report (or an error message) in the card. The first word of each line is the marker doctor prints.
+	local function renderDoctor()
+		if not doctorText then
+			doctorCard.Visible = false
+
+			return
+		end
+
+		local markers = {ok = GOOD, info = dimText(), WARN = WARN, FAIL = BAD}
+		local counts = {ok = 0, WARN = 0, FAIL = 0}
+		local rich = {}
+
+		for rawLine in string.gmatch(doctorText.report, "[^\r\n]+") do
+			local marker, rest = string.match(rawLine, "^(%a+)%s+(.*)$")
+
+			if marker and markers[marker] then
+				if counts[marker] then
+					counts[marker] += 1
+				end
+
+				table.insert(rich, string.format('<font color="%s"><b>%s</b></font>  %s', hexOf(markers[marker]), string.upper(marker), escapeRich(rest)))
+			else
+				table.insert(rich, escapeRich(rawLine))
+			end
+		end
+
+		doctorCard.BackgroundColor3 = card()
+		doctorReport.TextColor3 = mainText()
+		doctorReport.RichText = true
+		doctorReport.Text = table.concat(rich, "\n")
+
+		if not doctorText.ran then
+			doctorVerdict.Text = "Doctor could not run"
+			doctorVerdict.TextColor3 = BAD
+		elseif counts.FAIL > 0 then
+			doctorVerdict.Text = string.format("%d problem%s found", counts.FAIL, if counts.FAIL == 1 then "" else "s")
+			doctorVerdict.TextColor3 = BAD
+		elseif counts.WARN > 0 then
+			doctorVerdict.Text = string.format("%d warning%s, no problems", counts.WARN, if counts.WARN == 1 then "" else "s")
+			doctorVerdict.TextColor3 = WARN
+		else
+			doctorVerdict.Text = "All checks passed"
+			doctorVerdict.TextColor3 = GOOD
+		end
+
+		doctorCard.Visible = true
+	end
 
 	onTheme(function()
 		doctorButton.BackgroundColor3 = ACCENT
 		doctorButton.TextColor3 = ON_ACCENT
-		doctorOutput.TextColor3 = mainText()
+		renderDoctor()
 	end)
 
 	local function configSwitches(data)
@@ -1706,63 +1912,41 @@ local function buildStatusWidget()
 		configMessage.Text = table.concat(notes, "\n")
 
 		for index, switch in configSwitches(configData) do
-			local row = create("Frame", {LayoutOrder = index, Size = UDim2.new(1, 0, 0, 84), BorderSizePixel = 0, BackgroundColor3 = card()}, configRows)
-
-			rounded(row, 10)
-
-			local track = create("TextButton", {
-				Position = UDim2.fromOffset(14, 31),
-				Size = UDim2.fromOffset(40, 22),
-				BorderSizePixel = 0,
-				AutoButtonColor = false,
-				Text = "",
-				BackgroundColor3 = if switch.on then ACCENT else line(),
-			}, row)
-
-			rounded(track, 11)
-
-			create("Frame", {
-				Position = if switch.on then UDim2.fromOffset(21, 3) else UDim2.fromOffset(3, 3),
-				Size = UDim2.fromOffset(16, 16),
-				BorderSizePixel = 0,
-				BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			}, track)
-			rounded(track:FindFirstChildOfClass("Frame"), 8)
-			label(row, {Position = UDim2.fromOffset(68, 8), Size = UDim2.new(1, -80, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = switch.title})
-			label(row, {
-				Position = UDim2.fromOffset(68, 30),
-				Size = UDim2.new(1, -80, 0, 48),
-				TextSize = 12,
-				TextColor3 = dimText(),
-				TextWrapped = true,
-				TextTruncate = Enum.TextTruncate.None,
-				TextYAlignment = Enum.TextYAlignment.Top,
-				Text = switch.text,
+			switchRow(configRows, index, {
+				title = switch.title,
+				body = switch.text,
+				on = switch.on,
+				onClick = function()
+					if switch.key == "packTrust" then
+						setConfig(switch.key, if switch.on then "all" else "verified")
+					else
+						setConfig(switch.key, not switch.on)
+					end
+				end,
 			})
-			track.MouseButton1Click:Connect(function()
-				if switch.key == "packTrust" then
-					setConfig(switch.key, if switch.on then "all" else "verified")
-				else
-					setConfig(switch.key, not switch.on)
-				end
-			end)
 		end
 
-		local toolsRow = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 84), BorderSizePixel = 0, BackgroundColor3 = card()}, configRows)
+		local toolsRow = create("Frame", {LayoutOrder = 4, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BorderSizePixel = 0, BackgroundColor3 = card()}, configRows)
 
-		rounded(toolsRow, 10)
-		label(toolsRow, {Position = UDim2.fromOffset(14, 8), Size = UDim2.new(1, -28, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = "Tool groups"})
+		panel(toolsRow)
+		create("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 12), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, toolsRow)
+		create("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}, toolsRow)
+		label(toolsRow, {LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 20), Font = Enum.Font.BuilderSansBold, TextSize = 15, TextColor3 = mainText(), Text = "Tool groups"})
 		label(toolsRow, {
-			Position = UDim2.fromOffset(14, 30),
-			Size = UDim2.new(1, -28, 0, 20),
+			LayoutOrder = 2,
+			Size = UDim2.new(1, 0, 0, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
 			TextSize = 12,
 			TextColor3 = dimText(),
+			TextWrapped = true,
+			TextTruncate = Enum.TextTruncate.None,
+			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = string.format("Offered now: %s%s", plain(configData.profile), if configData.profileLocked then "  ·  fixed by STUDIO_BRIDGE_TOOLS" else ""),
 		})
 
 		local openTools = create("TextButton", {
-			Position = UDim2.fromOffset(14, 52),
-			Size = UDim2.fromOffset(150, 24),
+			LayoutOrder = 3,
+			Size = UDim2.fromOffset(150, 26),
 			BorderSizePixel = 0,
 			BackgroundColor3 = line(),
 			TextColor3 = mainText(),
@@ -1771,7 +1955,7 @@ local function buildStatusWidget()
 			Text = "Open the Tools tab",
 		}, toolsRow)
 
-		rounded(openTools, 12)
+		rounded(openTools, 13)
 		openTools.MouseButton1Click:Connect(function()
 			holder.show("Tools")
 		end)
@@ -1797,8 +1981,8 @@ local function buildStatusWidget()
 			local ok, response = post("/doctor", {})
 			local decoded = decodeBody(ok, response)
 
-			doctorOutput.Text = if decoded and decoded.output then decoded.output else "Doctor could not run: " .. ((decoded and decoded.error) or "the bridge did not answer")
-			doctorOutput.Visible = true
+			doctorText = if decoded and decoded.output then {ran = true, report = decoded.output} else {ran = false, report = (if decoded and decoded.error then decoded.error else "The bridge did not answer. If your AI tool was just updated, restart it.")}
+			renderDoctor()
 			doctorButton.Text = "Run doctor"
 			doctorRunning = false
 		end)
@@ -1840,16 +2024,12 @@ local function buildStatusWidget()
 		TextWrapped = true,
 		Font = Enum.Font.RobotoMono,
 		TextSize = 12,
+		RichText = true,
 		Text = "",
 	}, logPage)
 
 	onTheme(function()
 		logText.TextColor3 = dimText()
-		infoLabel.TextColor3 = dimText()
-		commandsValue.TextColor3 = mainText()
-		lastValue.TextColor3 = mainText()
-		uptimeValue.TextColor3 = mainText()
-		failedValue.TextColor3 = if status.failures > 0 then BAD else mainText()
 		paintTabs()
 	end)
 
@@ -1860,19 +2040,55 @@ local function buildStatusWidget()
 		local state = STATES[status.state] or STATES.offline
 
 		dot.BackgroundColor3 = state[2]
-		pillText.Text = state[1] .. (if status.state == "connected" and status.transport then "  ·  " .. status.transport else "")
-		subtitle.Text = (if profileData and profileData.version then "bridge v" .. profileData.version .. "  ·  " else "") .. ROLE .. " window"
+		pillText.Text = state[1]
+		subtitle.Text = if profileData and profileData.version then "bridge v" .. profileData.version else "Roblox Studio bridge"
 		commandsValue.Text = tostring(status.commands)
 		failedValue.Text = tostring(status.failures)
-		failedValue.TextColor3 = if status.failures > 0 then BAD else mainText()
+		failedValue.TextColor3 = if status.failures > 0 then BAD else GOOD
 		lastValue.Text = status.lastCommand or "none yet"
 		lastCaption.Text = if status.lastCommand then "last command  ·  " .. elapsed(math.floor(os.clock() - status.lastCommandAt)) .. " ago" else "last command"
 		uptimeValue.Text = elapsed(math.floor(os.clock() - status.startedAt))
-		infoLabel.Text = if status.detail ~= "" then status.detail else "Commands from your AI assistant run here. Open the Tools tab to choose which tool groups it can use."
+
+		local headline, advice
+		if status.state == "connected" then
+			headline, advice = "Connected", "Your AI assistant can control Studio. Commands it runs show up here."
+		elseif status.state == "offline" then
+			headline, advice = "Not connected", "Start your AI tool. If it is already running, open Config and press Run doctor to find out why."
+		else
+			headline, advice = state[1] .. "...", "If this stays, restart your AI tool."
+		end
+
+		banner.BackgroundColor3 = card():Lerp(state[2], 0.14)
+		core.BackgroundColor3 = state[2]
+		halo.BackgroundColor3 = state[2]
+		bannerTitle.Text = headline
+		bannerText.Text = advice
+		bannerMeta.Text = string.format("%s  ·  %s%s", ROLE, status.transport or "no transport", if status.detail ~= "" then "  ·  " .. status.detail else "")
+
+		local recent = {}
+
+		for index = math.max(1, #status.log - 5), #status.log do
+			table.insert(recent, status.log[index])
+		end
+
+		activityText.Text = if #recent == 0 then "Nothing yet. Ask your AI to do something in Studio." else table.concat(recent, "\n")
 
 		if #status.log ~= shownLog then
 			shownLog = #status.log
-			logText.Text = if shownLog == 0 then "No events yet." else table.concat(status.log, "\n")
+			-- Timestamps are dim, failures are red and connections are green.
+			local rows = {}
+
+			for _, entry in status.log do
+				local stamp, rest = string.match(entry, "^(%S+) (.*)$")
+
+				stamp, rest = stamp or "", rest or entry
+
+				local tint = if string.find(rest, "failed") or string.find(rest, "offline") or string.find(rest, "disconnect") then "#e65a5a" elseif string.find(rest, "connected") then "#50c878" else "#eef3ff"
+
+				table.insert(rows, '<font color="#8c98ba">' .. escapeRich(stamp) .. "</font>  " .. '<font color="' .. tint .. '">' .. escapeRich(rest) .. "</font>")
+			end
+
+			logText.Text = if shownLog == 0 then "No events yet." else table.concat(rows, "\n")
 			logPage.CanvasPosition = Vector2.new(0, 1000000)
 		end
 	end

@@ -2,6 +2,13 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
+## 0.6.12 - 2026-11-01
+
+- The Studio Bridge window has a new look: its own dark palette, a gradient header, a sliding tab bar, raised cards, colored stat tiles, a pulsing connection beacon, hover highlights on buttons and colored log lines.
+- The Studio Bridge window is easier to read: the connection pill and version no longer cut off, and Tools and Config use the same switch rows with the tool count and token cost on their own line.
+- The Status page now says in plain words whether your AI assistant is connected and what to do if it is not, and shows the latest activity with a link to the full log.
+- **Run doctor** shows its report as a colored card with a one-line verdict instead of plain text.
+
 ## 0.6.11 - 2026-11-01
 
 - The plugin source, the shared handler helpers and the `script_get` example handler are now commented, so it is easier to customize the plugin and add tools.
