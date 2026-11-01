@@ -13,7 +13,7 @@ const toolsFile = path.join(workDir, 'tools.json');
 fs.copyFileSync(path.join(bridgeDir, 'tools.json'), toolsFile);
 
 const server = spawn('node', [path.join(bridgeDir, 'server.mjs')], {
-  env: { ...process.env, STUDIO_BRIDGE_TOKEN: crypto.randomBytes(16).toString('hex'), STUDIO_BRIDGE_PORT: '3994', STUDIO_BRIDGE_TOOLS_FILE: toolsFile, STUDIO_BRIDGE_PACKS_DIR: path.join(workDir, 'no-packs') },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: workDir, STUDIO_BRIDGE_TOKEN: crypto.randomBytes(16).toString('hex'), STUDIO_BRIDGE_PORT: '3994', STUDIO_BRIDGE_TOOLS_FILE: toolsFile, STUDIO_BRIDGE_PACKS_DIR: path.join(workDir, 'no-packs') },
   stdio: ['pipe', 'pipe', 'ignore'],
 });
 

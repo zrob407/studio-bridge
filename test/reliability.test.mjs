@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import readline from 'node:readline';
@@ -9,7 +11,7 @@ const token = crypto.randomBytes(16).toString('hex');
 const port = 3999;
 
 const server = spawn('node', [path.join(bridgeDir, 'server.mjs')], {
-  env: { ...process.env, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_GRACE_MS: '1500', STUDIO_BRIDGE_QUEUE_WAIT_MS: '3000' },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-home-')), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_GRACE_MS: '1500', STUDIO_BRIDGE_QUEUE_WAIT_MS: '3000' },
   stdio: ['pipe', 'pipe', 'ignore'],
 });
 

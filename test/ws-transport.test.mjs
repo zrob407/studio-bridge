@@ -3,13 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import os from 'node:os';
 import readline from 'node:readline';
 
 const bridgeDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const token = crypto.randomBytes(16).toString('hex');
 const port = 3996;
 const server = spawn('node', [path.join(bridgeDir, 'server.mjs')], {
-  env: { ...process.env, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_SOCKET_SILENCE_MS: '1500', STUDIO_BRIDGE_GRACE_MS: '1000', STUDIO_BRIDGE_QUEUE_WAIT_MS: '4000' },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-home-')), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_SOCKET_SILENCE_MS: '1500', STUDIO_BRIDGE_GRACE_MS: '1000', STUDIO_BRIDGE_QUEUE_WAIT_MS: '4000' },
   stdio: ['pipe', 'pipe', 'ignore'],
 });
 const waiters = new Map();
