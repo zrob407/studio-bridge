@@ -350,6 +350,23 @@ elseif ROLE == "client" then
 	end)
 end
 
+-- Sleeps until isDone() holds or `seconds` pass. It wakes only when `changed` fires, so whoever changes the state
+-- isDone() looks at has to fire it, instead of this loop waking every few milliseconds to look.
+local function waitUntil(changed, isDone, seconds)
+	local deadline = os.clock() + seconds
+	local timer = task.delay(seconds, function()
+		changed:Fire()
+	end)
+
+	while not isDone() and os.clock() < deadline do
+		changed.Event:Wait()
+	end
+
+	pcall(task.cancel, timer)
+
+	return isDone()
+end
+
 local function relayToClient(code, timeout)
 	local player = game:GetService("Players"):GetPlayers()[1]
 
@@ -358,6 +375,7 @@ local function relayToClient(code, timeout)
 	end
 
 	local limit = math.max(RELAY_TIMEOUT, timeout or 0)
+	local changed = Instance.new("BindableEvent")
 	local result
 
 	task.spawn(function()
@@ -366,13 +384,12 @@ local function relayToClient(code, timeout)
 		end)
 
 		result = if ok and type(value) == "table" then value else {ok = false, error = "relay failed: " .. tostring(value), output = {}}
+		changed:Fire()
 	end)
 
-	local deadline = os.clock() + limit
-
-	while not result and os.clock() < deadline do
-		task.wait(0.05)
-	end
+	waitUntil(changed, function()
+		return result ~= nil
+	end, limit)
 
 	return result or {ok = false, error = "the client did not answer within " .. limit .. "s (is the client plugin loaded?)", output = {}}
 end
@@ -435,6 +452,7 @@ local function runCommand(decoded)
 	local startedAt = os.clock()
 	local limit = if type(decoded.timeout) == "number" and decoded.timeout > 0 then decoded.timeout else DEFAULT_COMMAND_TIMEOUT
 	local context = {}
+	local changed = Instance.new("BindableEvent")
 	local finished = false
 	local result
 
@@ -453,13 +471,12 @@ local function runCommand(decoded)
 
 		result = value
 		finished = true
+		changed:Fire()
 	end)
 
-	local deadline = os.clock() + limit
-
-	while not finished and os.clock() < deadline do
-		task.wait(0.05)
-	end
+	waitUntil(changed, function()
+		return finished
+	end, limit)
 
 	if not finished then
 		pcall(task.cancel, worker)
@@ -578,6 +595,7 @@ local function handleSocketMessage(session, raw)
 		session.acknowledged = true
 		session.ready = true
 		socket = session
+		session.changed:Fire()
 	elseif message.type == "command" then
 		acceptCommand(message, session)
 	elseif message.type == "result_ack" then
@@ -598,30 +616,29 @@ local function runSocketSession()
 		return false, tostring(client)
 	end
 
-	local session = {client = client, opened = false, closed = false, acknowledged = false, ready = false}
+	local session = {client = client, changed = Instance.new("BindableEvent"), opened = false, closed = false, acknowledged = false, ready = false}
 
 	client.Opened:Connect(function()
 		session.opened = true
+		session.changed:Fire()
 	end)
 	client.Closed:Connect(function()
 		session.closed = true
+		session.changed:Fire()
 	end)
 	client.Error:Connect(function(status, message)
 		session.closed = true
 		session.problem = tostring(status) .. " " .. tostring(message)
+		session.changed:Fire()
 	end)
 	client.MessageReceived:Connect(function(raw)
 		handleSocketMessage(session, raw)
 	end)
 
 	local function waitFor(condition)
-		local deadline = os.clock() + OPEN_TIMEOUT
-
-		while not condition() and not session.closed and os.clock() < deadline do
-			task.wait(0.05)
-		end
-
-		return condition()
+		return waitUntil(session.changed, function()
+			return condition() or session.closed
+		end, OPEN_TIMEOUT) and condition()
 	end
 
 	local function endSession(problem)
@@ -672,9 +689,12 @@ local function runSocketSession()
 	local nextBeat = os.clock() + HEARTBEAT_SECONDS
 
 	while not session.closed and not stopped do
-		task.wait(0.25)
+		-- Sleep until the next heartbeat is due, or until the session closes or the plugin stops.
+		waitUntil(session.changed, function()
+			return session.closed or stopped
+		end, math.max(nextBeat - os.clock(), 0))
 
-		if os.clock() >= nextBeat then
+		if not session.closed and not stopped and os.clock() >= nextBeat then
 			nextBeat = os.clock() + HEARTBEAT_SECONDS
 
 			if not sendJson(session, {type = "heartbeat"}) then
@@ -1798,6 +1818,7 @@ local function stop()
 
 	if session then
 		session.closed = true
+		session.changed:Fire()
 
 		pcall(function()
 			session.client:Close()

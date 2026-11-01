@@ -2,6 +2,11 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
+## Unreleased
+
+- The websocket connection no longer wakes the plugin four times a second to check whether a heartbeat is due. It sleeps until the next heartbeat or until the connection closes.
+- The plugin no longer polls every 50 ms while it waits for a command to finish or for the connection to open. It sleeps until the result arrives, so commands return up to 50 ms sooner and Studio does less work while idle.
+
 ## 0.6.10 - 2026-10-31
 
 - New **Config** tab in the Studio Bridge window: switch update checks, automatic updates and signed-packs-only on or off without asking your AI or using the command line. It also shows the current tool groups with a shortcut to the Tools tab. Needs the matching Studio Bridge program, so restart your AI tool after updating.
