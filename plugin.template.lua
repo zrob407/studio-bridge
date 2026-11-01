@@ -1538,6 +1538,19 @@ local function buildStatusWidget()
 	local configBusy = false
 	local renderConfig
 
+	local doctorButton = create("TextButton", {LayoutOrder = 5, Size = UDim2.new(1, 0, 0, 38), BorderSizePixel = 0, AutoButtonColor = true, Font = Enum.Font.BuilderSansBold, TextSize = 15, Text = "Run doctor"}, configPage)
+
+	rounded(doctorButton, 8)
+
+	local doctorOutput = label(configPage, {LayoutOrder = 6, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, Font = Enum.Font.Code, TextSize = 12, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, RichText = false, TextYAlignment = Enum.TextYAlignment.Top, Visible = false})
+	local doctorRunning = false
+
+	onTheme(function()
+		doctorButton.BackgroundColor3 = ACCENT
+		doctorButton.TextColor3 = ON_ACCENT
+		doctorOutput.TextColor3 = mainText()
+	end)
+
 	local function configSwitches(data)
 		local source = if data.updateMode == "source" then " This copy runs from source, so it cannot update itself." else ""
 
@@ -1687,6 +1700,25 @@ local function buildStatusWidget()
 
 	table.insert(themed, function()
 		renderConfig()
+	end)
+
+	doctorButton.MouseButton1Click:Connect(function()
+		if doctorRunning then
+			return
+		end
+
+		doctorRunning = true
+		doctorButton.Text = "Running doctor..."
+
+		task.spawn(function()
+			local ok, response = post("/doctor", {})
+			local decoded = decodeBody(ok, response)
+
+			doctorOutput.Text = if decoded and decoded.output then decoded.output else "Doctor could not run: " .. ((decoded and decoded.error) or "the bridge did not answer")
+			doctorOutput.Visible = true
+			doctorButton.Text = "Run doctor"
+			doctorRunning = false
+		end)
 	end)
 
 	loadConfig = function()

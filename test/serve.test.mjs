@@ -15,7 +15,7 @@ const home = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-serve-'));
 const token = crypto.randomBytes(32).toString('hex');
 const port = 3990;
 const server = spawn(command[0], command.slice(1), {
-  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_NO_BROWSER: '1' },
+  env: { ...process.env, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_PLUGINS_DIR: path.join(home, 'Roblox', 'Plugins'), STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_NO_BROWSER: '1' },
   stdio: ['pipe', 'pipe', 'ignore'],
   windowsHide: true,
 });
@@ -97,6 +97,9 @@ check('the plugin source carries the status window', plugin.source.includes('bui
 check('the plugin source has a Pro tab that only talks to the local bridge', plugin.source.includes('PAGES = {"Status", "Tools", "Pro", "Config", "Log"}') && plugin.source.includes('post("/settings", {action = "set"') && plugin.source.includes('post("/pro", {action = "activate"') && plugin.source.includes('ClearTextOnFocus = false') && !/api\.polar\.sh|workers\.dev|studio-bridge-license/.test(plugin.source));
 check('the plugin waits on events instead of polling every 50 ms', plugin.source.includes('local function waitUntil') && !plugin.source.includes('task.wait(0.05)'));
 check('the websocket loop sleeps until the next heartbeat instead of waking every 0.25 s', !plugin.source.includes('task.wait(0.25)') && plugin.source.includes('math.max(nextBeat - os.clock(), 0)'));
+const doctorRun = await post('/doctor', {});
+check('the Config tab can run doctor through the bridge', typeof doctorRun.output === 'string' && /studio-bridge \d+\.\d+\.\d+/.test(doctorRun.output), (doctorRun.output || doctorRun.error || '').split('\n')[0]);
+check('the Config tab has a Run doctor button that asks the local bridge', plugin.source.includes('Text = "Run doctor"') && plugin.source.includes('post("/doctor", {})'));
 const buy = await post('/pro', { action: 'buy' });
 check('the bridge answers the buy button with the checkout link', buy.ok === true && /^https:\/\/buy\.polar\.sh\//.test(buy.url) && buy.message.includes(buy.url));
 check('the Pro tab has a Buy a license button below Activate that only asks the local bridge', plugin.source.includes('Text = "Buy a license"') && plugin.source.includes('post("/pro", {action = "buy"})') && plugin.source.indexOf('Text = "Buy a license"') > plugin.source.indexOf('Text = "Activate"') && !/buy\.polar\.sh/.test(plugin.source) && plugin.source.includes('Restart your AI tool to update it'));

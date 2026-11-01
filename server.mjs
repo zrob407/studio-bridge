@@ -20,6 +20,7 @@ import { authorize as authorizePack, loadPacks, packsDir, serverTool } from './p
 import { activate as proActivate, openPurchasePage, remove as proRemove, status as proStatus } from './pro.mjs';
 
 let proBusy = false;
+let doctorBusy = false;
 
 const dir = appDir;
 
@@ -308,6 +309,19 @@ const server = http.createServer(async (req, res) => {
       log(`[studio-bridge] tool profile is now ${lastProfile}`);
     }
     return respond(res, 200, profileInfo());
+  }
+
+  if (req.url === '/doctor') {
+    if (doctorBusy) return respond(res, 409, { error: 'doctor is already running' });
+    doctorBusy = true;
+    const command = isPackaged ? [process.execPath, ['doctor', '--offline']] : [process.execPath, [fileURLToPath(new URL('./cli.mjs', import.meta.url)), 'doctor', '--offline']];
+    execFile(command[0], command[1], { timeout: 30000, windowsHide: true, env: process.env }, (err, stdout, stderr) => {
+      doctorBusy = false;
+      const output = `${stdout || ''}${stderr || ''}`.trim();
+      if (!output) return respond(res, 500, { error: err ? err.message : 'doctor printed nothing' });
+      respond(res, 200, { ok: !err, output });
+    });
+    return;
   }
 
   if (req.url === '/settings') {
