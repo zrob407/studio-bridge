@@ -22,7 +22,7 @@
 <button class="totop" type="button" aria-label="Back to top">&uarr;</button>
 <header class="site">
 <div class="wrap">
-<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.10</span></a>
+<a class="brand" href="index.html"><img src="logo-128.png" alt="" width="34" height="34">Studio Bridge <span class="ver">v0.6.11</span></a>
 <nav class="main" aria-label="Main"><a href="index.html">Home</a><a href="install.html">Install</a><a href="tools.html">Tools</a><a href="compare.html">Compare</a><a href="pro.html" class="pro-link">Pro</a><a href="changelog.html" aria-current="page">Changelog</a><a href="license.html">License</a><a class="gh" href="https://github.com/zrob407/studio-bridge"><svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a></nav>
 </div>
 </header>
@@ -33,8 +33,12 @@
 <h1>Changelog</h1>
 <p class="lead">Every release, newest first. The same list is in <a href="https://github.com/zrob407/studio-bridge/blob/main/CHANGELOG.md">CHANGELOG.md</a> in the repository, and each release has downloads on the <a href="https://github.com/zrob407/studio-bridge/releases">releases page</a>.</p>
 </div>
+<section class="tight release" id="v0-6-11" data-reveal>
+<h2>0.6.11 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-11-01</span> <span class="badge live">Latest</span></h2>
+<ul class="changes"><li>The plugin source, the shared handler helpers and the <code>script_get</code> example handler are now commented, so it is easier to customize the plugin and add tools.</li><li>The websocket connection no longer wakes the plugin four times a second to check whether a heartbeat is due. It sleeps until the next heartbeat or until the connection closes.</li><li>The plugin no longer polls every 50 ms while it waits for a command to finish or for the connection to open. It sleeps until the result arrives, so commands return up to 50 ms sooner and Studio does less work while idle.</li><li>Config has a <strong>Run doctor</strong> button that shows the <code>doctor</code> report in the window. Needs the matching Studio Bridge program, so restart your AI tool after updating.</li></ul>
+</section>
 <section class="tight release" id="v0-6-10" data-reveal>
-<h2>0.6.10 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-31</span> <span class="badge live">Latest</span></h2>
+<h2>0.6.10 <span style="color:var(--dim);font-size:0.6em;font-weight:600">2026-10-31</span></h2>
 <ul class="changes"><li>New <strong>Config</strong> tab in the Studio Bridge window: switch update checks, automatic updates and signed-packs-only on or off without asking your AI or using the command line. It also shows the current tool groups with a shortcut to the Tools tab. Needs the matching Studio Bridge program, so restart your AI tool after updating.</li><li>When the port is already taken, <code>serve</code> now says what holds it (which Studio Bridge version, or another program) and how to find and stop it, instead of just failing. <code>doctor</code> says the same instead of a generic 401 warning, and <code>install</code> warns when an older server is still running. A running server now includes its version in the reply to an unauthorized request.</li><li><code>doctor</code> no longer reports a failure for a plugin folder that is missing the plugin when another Studio plugin folder it checks has it (Linux with Vinegar writes to both).</li></ul>
 </section>
 <section class="tight release" id="v0-6-8" data-reveal>
@@ -125,7 +129,7 @@
 <footer class="site">
 <div class="wrap">
 <div><a href="https://github.com/zrob407/studio-bridge">GitHub</a><a href="https://github.com/zrob407/studio-bridge/releases">Releases</a><a href="https://www.npmjs.com/package/@zrob407/studio-bridge">npm</a><a href="license.html">License</a></div>
-<div>Studio Bridge 0.6.10 &middot; by zrob407. Not affiliated with Roblox.</div>
+<div>Studio Bridge 0.6.11 &middot; by zrob407. Not affiliated with Roblox.</div>
 </div>
 </footer>
 </body>

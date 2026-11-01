@@ -1,5 +1,11 @@
+-- Shared helpers. The bridge puts this file in front of every tool handler before it is sent to Studio,
+-- so every function here is available to handlers/<name>.luau without a require.
+-- Keep it small: it is sent with every call. Put helpers used by only a few tools in their own _name.luau file
+-- and list them in HANDLER_INCLUDES in server.mjs.
+
 local HttpService = game:GetService("HttpService")
 local CollectionService = game:GetService("CollectionService")
+-- Returns a service, or nil when this Studio build does not have it.
 local function optionalService(name)
 	local ok, service = pcall(game.GetService, game, name)
 
@@ -9,6 +15,7 @@ end
 local ScriptEditorService = optionalService("ScriptEditorService")
 local ReflectionService = optionalService("ReflectionService")
 
+-- State that survives between calls (the table lives in shared). Use it for things a later call needs to see, such as when a play session last ended.
 local function bridgeState()
 	local state = shared.__StudioBridge
 
@@ -20,6 +27,7 @@ local function bridgeState()
 	return state
 end
 
+-- Reads {x, y, z} from tool arguments into a Vector3. The label names the argument in the error message.
 local function toVector3(value, label)
 	if type(value) ~= "table" or type(value[1]) ~= "number" or type(value[2]) ~= "number" or type(value[3]) ~= "number" then
 		error(label .. " must be an array of three numbers")
@@ -28,6 +36,7 @@ local function toVector3(value, label)
 	return Vector3.new(value[1], value[2], value[3])
 end
 
+-- The reverse of resolve: an Instance as a path like game.Workspace.Model["Part 1"]. Names that are not plain identifiers use brackets.
 local function pathOf(instance)
 	if instance == game then
 		return "game"
@@ -51,6 +60,7 @@ local function pathOf(instance)
 	return "game" .. table.concat(parts)
 end
 
+-- Splits a path string into names, handling both .Name and ["Name"] segments.
 local function splitPath(path)
 	local segments = {}
 	local index = 1
@@ -81,6 +91,7 @@ local function splitPath(path)
 	return segments
 end
 
+-- Finds an Instance from a path string such as game.Workspace.Model, with or without the leading "game". Services are found even when they are not children yet. Throws "not found" with the parent that was searched.
 local function resolve(path)
 	if type(path) ~= "string" or path == "" then
 		error("path is required")
@@ -112,6 +123,7 @@ local function resolve(path)
 	return current
 end
 
+-- Turns a Roblox value into something JSON can carry: Vector3 becomes {Vector3 = {x, y, z}}, an Instance becomes its path, and so on. Add a branch here when a tool needs to return a new type, and a matching one in decode.
 local function encode(value)
 	local kind = typeof(value)
 
@@ -152,6 +164,7 @@ local function encode(value)
 	return {Unsupported = kind .. ": " .. tostring(value)}
 end
 
+-- The reverse of encode: turns the JSON forms back into Roblox values, so tool arguments such as {Color3 = {255, 0, 0}} or {Instance = "game.Workspace.Part"} can set properties.
 local function decode(value)
 	if type(value) ~= "table" then
 		return value
@@ -197,6 +210,7 @@ local function decode(value)
 	error("unknown value form: " .. HttpService:JSONEncode(value))
 end
 
+-- Reads a script's source, preferring the open editor's copy so unsaved edits are seen.
 local function readSource(script)
 	local ok, text = pcall(function()
 		return ScriptEditorService:GetEditorSource(script)
@@ -205,6 +219,7 @@ local function readSource(script)
 	return if ok then text else script.Source
 end
 
+-- Writes a script's source through the script editor, which keeps the open tab in sync, and falls back to setting Source directly.
 local function writeSource(script, text)
 	local ok = pcall(function()
 		ScriptEditorService:UpdateSourceAsync(script, function()
@@ -217,6 +232,7 @@ local function writeSource(script, text)
 	end
 end
 
+-- resolve, but throws unless the result is a script.
 local function requireScript(path)
 	local script = resolve(path)
 
@@ -227,6 +243,7 @@ local function requireScript(path)
 	return script
 end
 
+-- Returns the compile error for a source string, or nil when it compiles.
 local function syntaxError(source)
 	local fn, message = loadstring(source, "=validate")
 

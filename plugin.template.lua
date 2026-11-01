@@ -1,16 +1,44 @@
+-- Studio Bridge plugin.
+--
+-- How it fits together:
+--   * The bridge (server.mjs) serves this file to a small signed loader (plugin.stub.lua), which runs it inside Studio.
+--     Editing this file hot-reloads the plugin, so you do not need to restart Studio.
+--   * One copy runs per Studio window: "edit", plus "server" and "client" while a play session is running.
+--   * The plugin connects to the bridge (a WebSocket, with HTTP long-polling as a fallback). The bridge sends commands,
+--     each one a chunk of Luau. The plugin runs it, collects the output and sends the result back.
+--
+-- Where to change things:
+--   * Adding or changing a TOOL does not happen here. Tools are handlers/<name>.luau plus an entry in tools.json (see
+--     "Adding a tool" in the README). Handlers are sent to this plugin as ordinary commands and run by execute() below.
+--   * The Studio Bridge window (status, tools, Pro, config and log pages) starts at buildStatusWidget(). To add a page,
+--     see PAGES and the page sections inside it.
+--   * Everything above the window code is the connection and command runner. Change it only if you are changing how
+--     commands are delivered.
+--
+-- Note for editors: the server fills in the port and the token by replacing the two placeholder words that appear once
+-- each, in the URL and TOKEN lines below. Do not write those placeholder words anywhere else in this file, comments included.
+
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 
+-- The loader passes a table: version, clientId, plugin (the Plugin object) and, for the server window, clientBody (the source the client window runs).
 local context = ({...})[1] or {}
 
+-- Which Studio window this copy runs in: "edit" (no play session), or "server" / "client" during Play. Each role connects on its own, and tools pick one with their studio argument.
 local ROLE = if not RunService:IsRunning() then "edit" elseif RunService:IsServer() then "server" else "client"
 
 print("[Studio Bridge:" .. ROLE .. "] plugin " .. tostring(context.version or "standalone") .. " loaded")
 
+-- The bridge address and secret. The server fills these in when it serves the file, and leaves the token empty for the client role, which never talks to the bridge itself (it receives commands through the relay below).
 local URL = "http://127.0.0.1:__PORT__"
 local TOKEN = "__TOKEN__"
 local CLIENT_ID = context.clientId or HttpService:GenerateGUID(false)
+-- Limits and timings (seconds unless noted).
+-- MAX_OUTPUT_CHARS, MAX_TABLE_ENTRIES and MAX_DEPTH keep one reply small: output and returned values are cut at that many characters, and tables print only that many entries and levels deep.
+-- DEFAULT_COMMAND_TIMEOUT is how long a command may run before it is cancelled; a command can ask for a different timeout.
+-- RESULT_ATTEMPTS, RETRY_DELAY, HEARTBEAT_SECONDS, OPEN_TIMEOUT and MAX_RECONNECT_DELAY control retries, keep-alives and reconnecting.
+-- MAX_RESULT_BYTES caps one result. SOCKET_PROTOCOL must match the bridge.
 local MAX_OUTPUT_CHARS = 30000
 local MAX_TABLE_ENTRIES = 60
 local MAX_DEPTH = 3
@@ -24,8 +52,10 @@ local MAX_RESULT_BYTES = 32 * 1024 * 1024
 local SOCKET_PROTOCOL = 1
 local WS_URL = string.gsub(URL, "^http", "ws") .. "/ws"
 
+-- Connection and activity state, shown on the window's Status and Log pages. state is "connecting", "connected", "reconnecting" or "offline".
 local status = {state = "connecting", detail = "", transport = nil, commands = 0, failures = 0, lastCommand = nil, lastCommandAt = 0, startedAt = os.clock(), log = {}}
 
+-- Adds a timestamped line to the Log page, keeping the newest 40.
 local function record(text)
 	table.insert(status.log, os.date("%H:%M:%S") .. " " .. text)
 
@@ -44,6 +74,7 @@ local function setStatus(state, detail, transport)
 	status.transport = transport
 end
 
+-- format and formatTable turn any Luau value into text for print output and returned values. They call each other, hence the forward declaration. Cycles are marked, and depth and entry limits stop huge tables.
 local format
 
 local function formatTable(value, depth, seen)
@@ -90,6 +121,7 @@ function format(value, depth, seen)
 	return tostring(value)
 end
 
+-- Joins print arguments the way print does, separated by tabs.
 local function join(...)
 	local parts = table.pack(...)
 	local out = {}
@@ -101,6 +133,7 @@ local function join(...)
 	return table.concat(out, "\t")
 end
 
+-- Base64 is used to attach files (images, exported models) to a result. See bridge.attachFile in makeEnv.
 local BASE64_ALPHABET = {}
 
 for index = 0, 63 do
@@ -128,6 +161,7 @@ local function encodeBase64(data)
 	return table.concat(parts)
 end
 
+-- The environment that command code runs in. print and warn are captured into the result instead of going to Studio's output, and bridge.attachFile(name, data) sends a file back with the result. Everything else is the normal global environment.
 local function makeEnv(lines, files)
 	local env = {
 		print = function(...)
@@ -147,6 +181,7 @@ local function makeEnv(lines, files)
 	return setmetatable(env, {__index = getfenv()})
 end
 
+-- Turns source text into a function with loadstring. If loadstring is not available it falls back to wrapping the code in a temporary ModuleScript and requiring it. Returns the function, or nil and the error.
 local function compile(code)
 	local available, fn, compileError = pcall(loadstring, code, "=run_luau")
 
@@ -169,6 +204,7 @@ local function compile(code)
 	return built, nil
 end
 
+-- Commits the undo step opened for a command, so everything the command changed is one entry in Studio's undo history.
 local function finishRecording(context)
 	local recording = context.recording
 
@@ -181,6 +217,7 @@ local function finishRecording(context)
 	end
 end
 
+-- Runs one chunk of Luau. Returns {ok = true, returned, output, files} or {ok = false, error, output}. The run is one undo step, and errors include a traceback. This is what runs every tool handler.
 local function execute(code, context)
 	context = context or {}
 
@@ -221,6 +258,7 @@ local function execute(code, context)
 	return {ok = true, returned = returned, output = lines, files = files}
 end
 
+-- Cuts output, returned values and errors down to MAX_OUTPUT_CHARS so one reply cannot flood the AI client.
 local function truncate(result)
 	local total = 0
 
@@ -251,6 +289,7 @@ local function truncate(result)
 	end
 end
 
+-- POSTs JSON to the bridge with the token header. Returns pcall's (ok, response); the HTTP result is response.Success and response.StatusCode.
 local function post(path, payload)
 	return pcall(function()
 		return HttpService:RequestAsync({
@@ -273,6 +312,7 @@ local function placeName()
 	return if ok then name else "Unknown"
 end
 
+-- Who this window is. The bridge shows it in studio_list and uses it to route commands to the right window.
 local function hello()
 	return {
 		id = CLIENT_ID,
@@ -283,6 +323,7 @@ local function hello()
 	}
 end
 
+-- The last connection problem, so it is logged once instead of on every retry.
 local lastFailure
 
 local function describeFailure(ok, response)
@@ -299,6 +340,12 @@ local function reportFailure(ok, response)
 	end
 end
 
+-- Transport state.
+-- socket is the live WebSocket session, or nil.
+-- unacked holds finished results the bridge has not confirmed yet, so they can be replayed after a reconnect.
+-- seen holds request ids already started, so a command that is sent twice never runs twice.
+-- running counts commands in progress.
+-- stopped is set by stop() when this copy is being replaced.
 local socket
 local unacked = {}
 local seen = {}
@@ -315,6 +362,8 @@ local function sendJson(session, payload)
 	return sendText(session, HttpService:JSONEncode(payload))
 end
 
+-- Play-session relay. The server window cannot run code in the client window directly, so it asks the client plugin to do it through this RemoteFunction in ReplicatedStorage.
+-- It is used when a command targets the client, and the client window also fetches its plugin source through it.
 local RELAY_NAME = "__BridgeRelay"
 local RELAY_TIMEOUT = 30
 local relay
@@ -367,6 +416,7 @@ local function waitUntil(changed, isDone, seconds)
 	return isDone()
 end
 
+-- Server window only. Runs code in the first player's client window and waits for the answer, up to the timeout.
 local function relayToClient(code, timeout)
 	local player = game:GetService("Players"):GetPlayers()[1]
 
@@ -394,6 +444,7 @@ local function relayToClient(code, timeout)
 	return result or {ok = false, error = "the client did not answer within " .. limit .. "s (is the client plugin loaded?)", output = {}}
 end
 
+-- Fallback delivery over HTTP. Retries with a growing pause, and if it still cannot deliver it reports that instead, so the AI client is not left waiting.
 local function deliverOverHttp(result)
 	local reason = "unknown"
 
@@ -416,6 +467,7 @@ local function deliverOverHttp(result)
 	})
 end
 
+-- Sends a finished result. Over the WebSocket if it is up (kept in unacked until the bridge confirms it), otherwise over HTTP. A result bigger than MAX_RESULT_BYTES is replaced by an error.
 local function deliver(result)
 	local session = socket
 
@@ -448,6 +500,7 @@ local function deliver(result)
 	seen[result.requestId] = nil
 end
 
+-- Runs one command from the bridge. decoded has requestId, code, an optional target ("client" for the play client) and an optional timeout. It runs the code, cancels it at the timeout, updates the Status counters and delivers the result.
 local function runCommand(decoded)
 	local startedAt = os.clock()
 	local limit = if type(decoded.timeout) == "number" and decoded.timeout > 0 then decoded.timeout else DEFAULT_COMMAND_TIMEOUT
@@ -501,6 +554,7 @@ local function runCommand(decoded)
 	deliver(result)
 end
 
+-- Entry point for every command, from either transport. It acknowledges receipt, answers a repeated request with the stored result instead of running it again, and otherwise runs the command in its own thread.
 local function acceptCommand(command, session)
 	local requestId = command.requestId
 
@@ -541,6 +595,7 @@ local function acceptCommand(command, session)
 	end)
 end
 
+-- Retries over HTTP any results the bridge never confirmed.
 local function flushUnacked()
 	for requestId, stored in unacked do
 		local ok, response = post("/result", stored)
@@ -552,6 +607,7 @@ local function flushUnacked()
 	end
 end
 
+-- One round of the HTTP fallback: send back unconfirmed results, then ask /poll for the next command (the bridge holds the request open until one is ready) and run it. Only used while the WebSocket is down.
 local function step()
 	if next(unacked) then
 		flushUnacked()
@@ -582,6 +638,7 @@ local function step()
 	end
 end
 
+-- Messages from the bridge over the WebSocket: hello_ack (handshake done), command (run it) and result_ack (the result arrived, so it can be forgotten).
 local function handleSocketMessage(session, raw)
 	local decoded, message = pcall(function()
 		return HttpService:JSONDecode(raw)
@@ -604,6 +661,7 @@ local function handleSocketMessage(session, raw)
 	end
 end
 
+-- One WebSocket connection from start to end: open it, handshake (hello and hello_ack), replay unconfirmed results, announce ready, then send a heartbeat every HEARTBEAT_SECONDS until it closes. Returns whether it got as far as connecting, and why it ended.
 local function runSocketSession()
 	local created, client = pcall(function()
 		return HttpService:CreateWebStreamClient(Enum.WebStreamClientType.WebSocket, {
@@ -706,6 +764,7 @@ local function runSocketSession()
 	return true, endSession(session.problem or "connection closed")
 end
 
+-- Tell the bridge this server is shutting down, so it does not wait for it.
 if ROLE == "server" then
 	game:BindToClose(function()
 		local session = socket
@@ -717,6 +776,7 @@ if ROLE == "server" then
 	end)
 end
 
+-- Start the two connection loops: the HTTP long-poll (it idles while the WebSocket is up) and the WebSocket loop, which reconnects with a growing delay. The client window starts neither; it only answers the relay.
 if ROLE ~= "client" then
 	task.spawn(function()
 		while not stopped do
@@ -752,17 +812,22 @@ if ROLE ~= "client" then
 	end)
 end
 
+-- The Studio Bridge window.
+-- Everything from here to the end of buildStatusWidget() is user interface only. The commands above keep working if the window fails to build.
 local studioPlugin = context.plugin or plugin
 local BUTTON_ICON = "rbxassetid://111845153082022"
 local statusUi
 
+-- Fixed colors that look the same in light and dark. Text, card and border colors come from Studio's theme instead (see color(), mainText() and friends in buildStatusWidget).
 local ACCENT = Color3.fromRGB(79, 216, 255)
 local ON_ACCENT = Color3.fromRGB(10, 22, 44)
 local GOOD = Color3.fromRGB(80, 200, 120)
 local GOLD = Color3.fromRGB(255, 209, 102)
 local WARN = Color3.fromRGB(230, 180, 60)
 local BAD = Color3.fromRGB(230, 90, 90)
+-- Tab order. Each name needs a page frame stored in pages[name] (for example pages.Status = statusPage) and, if it loads data when opened, a branch in the tab click handler and holder.show.
 local PAGES = {"Status", "Tools", "Pro", "Config", "Log"}
+-- Text and dot color of the connection pill for each status.state.
 local STATES = {
 	connected = {"Connected", GOOD},
 	connecting = {"Connecting", WARN},
@@ -770,6 +835,7 @@ local STATES = {
 	offline = {"Not connected", BAD},
 }
 
+-- Formats a number of seconds as "42s", "5m" or "2h 10m".
 local function elapsed(seconds)
 	if seconds < 60 then
 		return string.format("%ds", seconds)
@@ -780,6 +846,7 @@ local function elapsed(seconds)
 	return string.format("%dh %dm", seconds // 3600, (seconds % 3600) // 60)
 end
 
+-- Formats a token count as "850" or "1.2k".
 local function tokenText(tokens)
 	if tokens >= 1000 then
 		return string.format("%.1fk", tokens / 1000)
@@ -788,6 +855,7 @@ local function tokenText(tokens)
 	return tostring(tokens)
 end
 
+-- Puts a tool-group list into one canonical form ("all", "core", or a sorted comma list) so two spellings of the same selection compare equal.
 local function normalizeProfile(profile)
 	local wanted = {}
 
@@ -812,10 +880,13 @@ local function normalizeProfile(profile)
 	return if #names == 0 then "core" else table.concat(names, ",")
 end
 
+-- Formats a Color3 as #rrggbb for rich text.
 local function hexOf(value)
 	return string.format("#%02x%02x%02x", math.round(value.R * 255), math.round(value.G * 255), math.round(value.B * 255))
 end
 
+-- Builds the dockable window. It runs again on every plugin reload, so it reuses the existing widget and toolbar button (kept in shared) instead of creating duplicates, and clears the old contents first.
+-- Returns {destroy = ...}, called when this copy of the plugin is replaced.
 local function buildStatusWidget()
 	local holder = shared.__StudioBridgeStatusUi
 
@@ -859,6 +930,7 @@ local function buildStatusWidget()
 		widget.Enabled = not widget.Enabled
 	end)
 
+	-- Theme handling. Colors come from Studio's theme, and anything that uses them is registered with onTheme so it is repainted when the theme changes.
 	local themed = {}
 
 	local function color(guide)
@@ -890,6 +962,7 @@ local function buildStatusWidget()
 		apply()
 	end
 
+	-- Small UI helpers. create builds an instance from a property table and parents it, rounded adds corners, and label makes a themed text label.
 	local function create(className, properties, parent)
 		local instance = Instance.new(className)
 
@@ -931,6 +1004,7 @@ local function buildStatusWidget()
 		root.BackgroundColor3 = background()
 	end)
 
+	-- Header: logo, title, bridge version and the connection pill.
 	local header = create("Frame", {Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1}, root)
 	local logo = create("ImageLabel", {Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(14, 12), BackgroundTransparency = 1, Image = BUTTON_ICON}, header)
 
@@ -955,6 +1029,7 @@ local function buildStatusWidget()
 		pillText.TextColor3 = mainText()
 	end)
 
+	-- Tab bar. The tab buttons are built from PAGES in the loop below.
 	local tabBar = create("Frame", {Position = UDim2.fromOffset(0, 64), Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1}, root)
 
 	create("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder}, tabBar)
@@ -965,16 +1040,19 @@ local function buildStatusWidget()
 		divider.BackgroundColor3 = line()
 	end)
 
+	-- Page area. Every page is a frame inside content, and only the selected one is visible.
 	local content = create("Frame", {Position = UDim2.fromOffset(0, 100), Size = UDim2.new(1, 0, 1, -100), BackgroundTransparency = 1}, root)
 	local tabs = {}
 	local pages = {}
 	local selected = "Status"
+	-- loadProfile, loadPro and loadConfig each fetch fresh data from the local bridge when their page is opened. They are defined next to their pages further down.
 	local loadProfile
 	local loadPro
 	local loadConfig
 	local toolsPage
 	local proPage
 
+	-- Highlights the selected tab and shows only its page.
 	local function paintTabs()
 		for name, entry in tabs do
 			local active = name == selected
@@ -1015,6 +1093,7 @@ local function buildStatusWidget()
 		end)
 	end
 
+	-- Lets other code (the Tools shortcut on the Config page, for example) switch pages by name.
 	holder.show = function(name)
 		if tabs[name] then
 			selected = name
@@ -1031,6 +1110,7 @@ local function buildStatusWidget()
 		end
 	end
 
+	-- Status page: counters for commands run and failed, the last command, and uptime.
 	local statusPage = create("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1}, content)
 
 	pages.Status = statusPage
@@ -1062,6 +1142,7 @@ local function buildStatusWidget()
 	local uptimeValue = tile(4, "plugin uptime")
 	local infoLabel = label(statusPage, {Position = UDim2.fromOffset(0, 184), Size = UDim2.new(1, 0, 0, 90), TextSize = 13, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top})
 
+	-- Tools page: presets and a switch for each tool group. Changes are saved to the bridge, which tells the AI client its tool list changed.
 	toolsPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -1310,6 +1391,7 @@ local function buildStatusWidget()
 		end)
 	end
 
+	-- Pro page: enter a license key to download the paid add-on packs. It only talks to the local bridge, never to a web service directly.
 	proPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -1513,6 +1595,7 @@ local function buildStatusWidget()
 		end)
 	end)
 
+	-- Config page: switches for update checks, automatic updates and signed-packs-only. Settings are read and saved through the local bridge.
 	local configPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -1735,6 +1818,7 @@ local function buildStatusWidget()
 		end)
 	end
 
+	-- Log page: the recent connection and command events from status.log.
 	local logPage = create("ScrollingFrame", {
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
@@ -1771,6 +1855,7 @@ local function buildStatusWidget()
 
 	local shownLog = -1
 
+	-- Repaints the Status page and the Log. It runs once a second while the window is open.
 	local function refresh()
 		local state = STATES[status.state] or STATES.offline
 
@@ -1792,6 +1877,7 @@ local function buildStatusWidget()
 		end
 	end
 
+	-- Repaint everything when Studio switches between light and dark.
 	holder.theme = studioSettings.ThemeChanged:Connect(function()
 		for _, apply in themed do
 			apply()
@@ -1828,6 +1914,7 @@ local function buildStatusWidget()
 	}
 end
 
+-- Only the edit window shows the interface. A failure here must never stop the bridge, so it is wrapped in pcall.
 if ROLE == "edit" and studioPlugin then
 	local built, result = pcall(buildStatusWidget)
 
@@ -1838,6 +1925,7 @@ if ROLE == "edit" and studioPlugin then
 	end
 end
 
+-- Called by the loader before it reloads or unloads this copy: stops the loops, removes the window connections and closes the socket.
 local function stop()
 	stopped = true
 
@@ -1858,8 +1946,10 @@ local function stop()
 	end
 end
 
+-- The loader only hot-reloads while this is false, so a reload never interrupts a running command or drops a result the bridge has not confirmed.
 local function busy()
 	return running > 0 or next(unacked) ~= nil
 end
 
+-- The loader keeps this table and calls stop and busy.
 return {stop = stop, busy = busy}

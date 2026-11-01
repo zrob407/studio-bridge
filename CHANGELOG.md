@@ -2,8 +2,9 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
-## Unreleased
+## 0.6.11 - 2026-11-01
 
+- The plugin source, the shared handler helpers and the `script_get` example handler are now commented, so it is easier to customize the plugin and add tools.
 - The websocket connection no longer wakes the plugin four times a second to check whether a heartbeat is due. It sleeps until the next heartbeat or until the connection closes.
 - The plugin no longer polls every 50 ms while it waits for a command to finish or for the connection to open. It sleeps until the result arrives, so commands return up to 50 ms sooner and Studio does less work while idle.
 - Config has a **Run doctor** button that shows the `doctor` report in the window. Needs the matching Studio Bridge program, so restart your AI tool after updating.
