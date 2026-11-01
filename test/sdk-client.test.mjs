@@ -29,7 +29,7 @@ const transport = new StdioClientTransport({
   command,
   args: commandArgs,
   stderr: 'ignore',
-  env: { STUDIO_BRIDGE_HOME: sandbox, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1', LOCALAPPDATA: sandbox },
+  env: { STUDIO_BRIDGE_HOME: sandbox, STUDIO_BRIDGE_TOKEN: token, STUDIO_BRIDGE_PORT: String(port), STUDIO_BRIDGE_OFFLINE: '1', LOCALAPPDATA: sandbox, STUDIO_BRIDGE_PLUGINS_DIR: path.join(sandbox, 'Roblox', 'Plugins') },
 });
 
 await client.connect(transport);

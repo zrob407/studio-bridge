@@ -47,7 +47,7 @@ const release = (tag, assetOrigin = origin, withSums = true) => ({
 const sandbox = fs.mkdtempSync(path.join(os.tmpdir(), 'studio-bridge-update-'));
 const localAppData = path.join(sandbox, 'LocalAppData');
 const home = path.join(sandbox, 'home');
-const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_RELEASES_URL: `${origin}/releases/latest` };
+const env = { ...process.env, LOCALAPPDATA: localAppData, STUDIO_BRIDGE_PLUGINS_DIR: path.join(localAppData, 'Roblox', 'Plugins'), STUDIO_BRIDGE_HOME: home, STUDIO_BRIDGE_RELEASES_URL: `${origin}/releases/latest` };
 const run = (...args) =>
   new Promise((resolve) => {
     const child = spawn(command[0], [...command.slice(1), ...args], { env, windowsHide: true });
