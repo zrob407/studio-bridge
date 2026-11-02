@@ -4,7 +4,7 @@
 
 An MCP server and Roblox Studio plugin that let an AI coding assistant such as Claude Code read and edit a place, run Luau, drive playtests, take screenshots and publish assets. Free to use, including for commercial games, under the Studio Bridge License (source-available, see License below); no dependencies beyond Node 22.
 
-**New: Studio Bridge Pro.** Paid add-on packs are now available, starting with Snapshots and diffs, with more planned (audit, QA playtests, localization, a dead-code finder). The free program is unchanged. Pro has its own separate license; see [Studio Bridge Pro](#studio-bridge-pro).
+**New: Studio Bridge Pro.** Paid add-on packs are now available, Snapshots and diffs, QA playtests, a place audit report, a dead-code finder and localization. The free program is unchanged. Pro has its own separate license; see [Studio Bridge Pro](#studio-bridge-pro).
 
 Studio Bridge speaks standard MCP, so it is not tied to one assistant. It is used and tested with Claude Code. Setup for OpenAI's Codex CLI is included (see Install), but it has not yet been tried with Codex itself.
 
@@ -224,14 +224,12 @@ Studio Bridge Pro is a set of paid add-on packs for any MCP-ready AI tool. Every
 
 **Available now**
 - **Snapshots and diffs.** Save part of a place, see exactly what changed since, and roll it back with an automatic safety snapshot first.
+- **QA playtests.** Write playtest scenarios once, run them on demand, and get a pass/fail report you can keep.
+- **Place audit report.** Scan a whole place for performance, safety and cleanliness problems and get a scored report you can compare over time.
+- **Dead-code finder.** Find modules, remotes, disabled scripts and empty folders nothing uses, and move them into a quarantine folder you can undo.
+- **Localization.** Find every player-facing string, apply translations with placeholder checks, test layouts with a pseudo-locale and export CSV for translators.
 
-**Planned, in no particular order and with no dates**
-- **Audit pack.** A broader sweep of a place for problems, with a written report.
-- **QA playtests.** Scripted playtests that exercise a game and report what broke.
-- **Localization.** Find hard-coded text and move it into translation tables.
-- **Dead-code finder.** Find scripts, modules and remotes that nothing uses.
-
-Planned packs may change or be dropped, and none of them are promised until they ship. Lifetime licenses include whichever of them are released. Existing licenses pick up new packs automatically.
+Lifetime licenses include every pack added later, and existing licenses pick up new packs automatically.
 
 To unlock Pro, open the **Pro** tab in the Studio Bridge window, paste your license key and press **Activate**. Or run `studio-bridge pro activate` (it asks for the key with the typing hidden; `--key-file` and the `STUDIO_BRIDGE_PRO_KEY` variable also work). `studio-bridge pro status` shows what is installed and `studio-bridge pro remove` takes the license off this computer and frees its device slot.
 

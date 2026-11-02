@@ -60,8 +60,8 @@ check('the tool count on the pages matches the program', text['tools.html'].incl
 check('the footer shows the current version', Object.values(text).every((html) => html.includes(`Studio Bridge ${packageVersion}`)), packageVersion);
 
 check('the two licenses are linked and kept apart', text['license.html'].includes('/blob/main/LICENSE"') && text['license.html'].includes('/blob/main/PRO-LICENSE.txt"') && text['pro.html'].includes('A separate license'));
-check('planned packs are marked as planned and available ones as available', /Snapshots and diffs <span class="badge live">Available<\/span>/.test(text['pro.html']) && ['Dead-code finder', 'Audit pack', 'QA playtests', 'Localization'].every((title) => new RegExp(`${title} <span class="badge soon">Planned</span>`).test(text['pro.html'])));
-check('the Pro page promises no dates for planned packs', /no dates/.test(text['pro.html']));
+check('every Pro pack is marked as available', ['Snapshots and diffs', 'QA playtests', 'Place audit report', 'Dead-code finder', 'Localization'].every((name) => text['pro.html'].includes(name + ' <span class="badge live">Available</span>')) && !/badge soon/.test(text['pro.html']));
+check('the Pro page no longer lists planned packs', !/Planned/.test(text['pro.html']));
 check('nothing on the site names the internal checks', !/tamper|integrity check|license check/i.test(Object.values(text).join(' ')));
 
 const changelogFile = fs.readFileSync(path.join(bridgeDir, 'CHANGELOG.md'), 'utf8');

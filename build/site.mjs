@@ -231,6 +231,7 @@ const index = page({
 <div class="l">Plugin and Studio window</div><div class="yes">Included</div><div class="yes pro-col">Included</div>
 <div class="l">Pack system for your own packs</div><div class="yes">Included</div><div class="yes pro-col">Included</div>
 <div class="l">Snapshots and diffs</div><div class="no">Not included</div><div class="yes pro-col">Included</div>
+<div class="l">QA playtests, place audit, dead-code finder, localization</div><div class="no">Not included</div><div class="yes pro-col">Included</div>
 <div class="l">Future Pro packs</div><div class="no">Not included</div><div class="yes pro-col">Included, lifetime covers all</div>
 <div class="l">License</div><div>Studio Bridge License</div><div class="pro-col">Separate Pro license</div>
 <div class="l">Cost</div><div>Free, even for commercial games</div><div class="pro-col">Paid plans or lifetime</div>
@@ -243,7 +244,7 @@ const index = page({
 <div class="wrap">
 <div class="section-head" data-reveal>
 <p class="eyebrow">Roadmap</p>
-<h2>What works, and what is coming</h2>
+<h2>What works today</h2>
 </div>
 <div class="roadmap" data-reveal>
 <div class="card">
@@ -251,21 +252,11 @@ const index = page({
 <ul class="road-list">
 <li><b>Tool groups</b>Load only the tools you need.</li>
 <li><b>Linux and Hyprland</b>Studio under Wine, with Vinegar or Grapejuice.</li>
-<li><b>Studio Bridge Pro</b>Paid packs, starting with Snapshots and diffs.</li>
+<li><b>Studio Bridge Pro</b>Paid packs: snapshots, QA playtests, place audit, dead-code finder and localization.</li>
 <li><b>This website</b>Install guide, searchable tool list, comparison and changelog.</li>
 </ul>
 </div>
-<div class="card pro">
-<h3>Planned</h3>
-<ul class="road-list planned">
-<li><b>Dead-code finder</b>Find scripts, modules and remotes nothing uses.</li>
-<li><b>Audit pack</b>A broader sweep of a place with a written report.</li>
-<li><b>QA playtests</b>Scripted playtests that report what broke.</li>
-<li><b>Localization</b>Move hard-coded text into translation tables.</li>
-</ul>
 </div>
-</div>
-<p style="color:var(--faint);font-size:14.5px;margin-top:14px">Planned packs have no dates and are not promised until they ship.</p>
 </div>
 </section>
 
@@ -402,7 +393,7 @@ const COMPARE_ROWS = [
   ['Plugin', 'Source is in the repository; the signature is verified', 'No separate plugin; built into Studio', 'Repository is public and the author says the source is on GitHub. The license is not called open source','Not stated', 'Compiled and obfuscated; its README says the plugin source is private'],
   ['Platforms', 'Windows, and Linux through Wine with Vinegar or Grapejuice', 'Windows and macOS setup shown in the docs', 'Windows 10+ and macOS 12+ in its requirements; Linux is not listed','Not stated for macOS or Linux', 'Only Windows paths shown'],
   ['Local security', '127.0.0.1 only, a secret on every request, signed plugin, no telemetry', 'Docs advise connecting only clients you trust', 'Localhost only and rate limited. Authentication not stated. Anonymous Google Analytics telemetry, which can be turned off','README says it works "locally and safely"; authentication not described', 'Authentication not described'],
-  ['License', `Source-available. All ${TOOLS} tools are free, including for commercial games. Optional paid Pro packs add snapshots and diffs and more`, 'Not stated on the docs page', 'Its own license: Basic is free; Pro needs a paid license and includes bidirectional sync, UI Studio, bulk operations, terrain, spatial analysis, and audio and animation control','MIT', 'MIT (repository page)'],
+  ['License', `Source-available. All ${TOOLS} tools are free, including for commercial games. Optional paid Pro packs add snapshots and diffs, QA playtests, a place audit, a dead-code finder and localization`, 'Not stated on the docs page', 'Its own license: Basic is free; Pro needs a paid license and includes bidirectional sync, UI Studio, bulk operations, terrain, spatial analysis, and audio and animation control','MIT', 'MIT (repository page)'],
 ];
 
 const compareHead = ['', 'Studio Bridge', 'Roblox built-in server', 'WEPPY', 'robloxstudio-mcp (boshyxd)', 'robloxstudio-mcp (6xvl)'];
@@ -430,7 +421,7 @@ ${compareTable}
 <section class="tight" data-reveal>
 <div class="grid">
 <div class="card"><h3>Where Studio Bridge helps most</h3>
-<ul class="plain"><li><code>batch</code> runs up to 50 edits as one undo step.</li><li>Tool groups keep your AI's tool list small: the 28 everyday tools cost about 5,700 tokens.</li><li><code>ui_responsive_check</code> and the device emulator check a GUI on phones, tablets and consoles, and none of the 26 tools in Roblox's list does that.</li><li>Terrain, lighting, scatter, animation, audio and publishing tools.</li><li>Linux through Wine, and an optional Pro pack for snapshots and diffs.</li></ul></div>
+<ul class="plain"><li><code>batch</code> runs up to 50 edits as one undo step.</li><li>Tool groups keep your AI's tool list small: the 28 everyday tools cost about 5,700 tokens.</li><li><code>ui_responsive_check</code> and the device emulator check a GUI on phones, tablets and consoles, and none of the 26 tools in Roblox's list does that.</li><li>Terrain, lighting, scatter, animation, audio and publishing tools.</li><li>Linux through Wine, and optional Pro packs for snapshots, QA playtests, audits, dead code and localization.</li></ul></div>
 <div class="card"><h3>Where WEPPY helps most</h3>
 <ul class="plain"><li>Two-way sync between Studio and local files, with a history (a Pro feature).</li><li>UI Studio for building in-game UI, a web dashboard, and a VS Code explorer extension.</li><li>Works with up to five open Studio windows.</li></ul>
 <p class="small">If you want that sync workflow, it is built for it. Its terrain, bulk and animation tools sit behind its Pro license.</p></div>
@@ -467,7 +458,7 @@ ${compareTable}
 const pro = page({
   file: 'pro.html',
   title: 'Studio Bridge Pro',
-  description: 'Paid add-on packs for Studio Bridge. Snapshots and diffs is available now, with more planned. The free program is unchanged.',
+  description: 'Paid add-on packs for Studio Bridge: snapshots and diffs, QA playtests, place audit, dead-code finder and localization. The free program is unchanged.',
   body: `<div class="wrap">
 <div class="page-hero" data-reveal>
 <p class="eyebrow gold">Add-on packs</p>
@@ -501,12 +492,12 @@ const pro = page({
 <h2>Packs</h2>
 <div class="grid">
 <div class="card pro"><h3>Snapshots and diffs <span class="badge live">Available</span></h3><p>Save part of your place, see exactly what changed since, and roll it back. Restoring takes an automatic safety snapshot first. Five tools: <code>snapshot_create</code>, <code>snapshot_list</code>, <code>snapshot_diff</code>, <code>snapshot_restore</code> and <code>snapshot_delete</code>.</p></div>
-<div class="card"><h3>Dead-code finder <span class="badge soon">Planned</span></h3><p>Find scripts, modules and remotes that nothing uses.</p></div>
-<div class="card"><h3>Audit pack <span class="badge soon">Planned</span></h3><p>A broader sweep of a place for problems, with a written report.</p></div>
-<div class="card"><h3>QA playtests <span class="badge soon">Planned</span></h3><p>Scripted playtests that exercise a game and report what broke.</p></div>
-<div class="card"><h3>Localization <span class="badge soon">Planned</span></h3><p>Find hard-coded text and move it into translation tables.</p></div>
+<div class="card pro"><h3>QA playtests <span class="badge live">Available</span></h3><p>Write playtest scenarios once, run them on demand, and get a pass/fail report you can keep. Five tools: <code>qa_scenario_save</code>, <code>qa_scenario_list</code>, <code>qa_scenario_delete</code>, <code>qa_run</code> and <code>qa_report</code>.</p></div>
+<div class="card pro"><h3>Place audit report <span class="badge live">Available</span></h3><p>Scan a whole place for performance, safety and cleanliness problems and get a scored report you can compare over time. Three tools: <code>audit_run</code>, <code>audit_report</code> and <code>audit_compare</code>.</p></div>
+<div class="card pro"><h3>Dead-code finder <span class="badge live">Available</span></h3><p>Find modules, remotes, disabled scripts and empty folders nothing uses, and move them into a quarantine folder you can undo. Four tools: <code>deadcode_scan</code>, <code>deadcode_report</code>, <code>deadcode_quarantine</code> and <code>deadcode_restore</code>.</p></div>
+<div class="card pro"><h3>Localization <span class="badge live">Available</span></h3><p>Find every player-facing string, apply translations with placeholder checks, test layouts with a pseudo-locale and export CSV for translators. Five tools: <code>localize_scan</code>, <code>localize_apply</code>, <code>localize_status</code>, <code>localize_pseudo</code> and <code>localize_export</code>.</p></div>
 </div>
-<p class="note gold">Planned packs have no dates, may change or be dropped, and are not promised until they ship. Lifetime licenses include whichever of them are released, and existing licenses pick up new packs automatically.</p>
+<p class="note gold">Existing licenses pick up new packs automatically, and a lifetime license covers every pack added later.</p>
 </section>
 
 <section class="tight" id="how" data-reveal>
