@@ -75,7 +75,7 @@ function ok(text) {
 }
 
 function missingKeyMessage() {
-  return `No Roblox Open Cloud API key found. Put the key in ${KEY_FILE} (run in your own terminal: Set-Content "$env:USERPROFILE\\.roblox-key.txt" -Value 'YOUR_KEY' -NoNewline) or set ROBLOX_API_KEY for the MCP server. The key needs the Assets read and write permissions for the target creator.`;
+  return `No Roblox Open Cloud API key found. Put the key in ${KEY_FILE} (run in your own terminal: ${process.platform === 'win32' ? `Set-Content "$env:USERPROFILE\\.roblox-key.txt" -Value 'YOUR_KEY' -NoNewline` : `printf '%s' 'YOUR_KEY' > ~/.roblox-key.txt && chmod 600 ~/.roblox-key.txt`}) or set ROBLOX_API_KEY for the MCP server. The key needs the Assets read and write permissions for the target creator.`;
 }
 
 async function requestJson(url, options) {

@@ -15,7 +15,7 @@ npm install -g @zrob407/studio-bridge
 studio-bridge install
 ```
 
-Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested). Linux works through Wine and is untested; see the Linux section.
+Restart Claude Code and Roblox Studio, then allow HTTP requests and Script Injection for "Studio Bridge" if Studio asks. Run `studio-bridge doctor` if anything looks wrong. Windows, Node 22 or newer, Roblox Studio and Claude Code are required (Codex CLI setup is included but untested). macOS is supported but untested, and Linux works through Wine and is untested; see the macOS and Linux sections.
 
 ## Everyday time-savers
 
@@ -63,7 +63,7 @@ Studio Bridge exposes seventy-nine tools, listed under Tools below. Roblox's own
 
 ## Install
 
-Windows, Roblox Studio and Claude Code are required. Linux works through Wine (see the Linux section below).
+Windows, Roblox Studio and Claude Code are required. macOS is supported but untested, and Linux works through Wine (see the macOS and Linux sections below).
 
 **With npm (recommended).** Needs Node 22 or newer: `npm install -g @zrob407/studio-bridge`, then `studio-bridge install`. It runs on Node, which is signed by the OpenJS Foundation, so Windows protections such as Smart App Control do not block it the way they can block an unsigned exe. Data lives in `%LOCALAPPDATA%\StudioBridge` like the exe's, and `studio-bridge update` upgrades it through npm. The package is published on npm with build provenance, which `npm audit signatures` can verify.
 
@@ -130,6 +130,21 @@ The plugin adds a Studio Bridge button to the Plugins toolbar that opens a theme
 - **Status:** whether the bridge is connected and over which transport, how many commands have run and failed, the last command and how long ago it ran, and how long the plugin has been up.
 - **Tools:** a summary of how many tools are offered and their approximate token cost, one-click presets (Everything, Essentials, World builder, UI designer, Animator, Publisher) and a switch for each tool group. Changes are saved to the bridge straight away; your AI client may need `/mcp` to refresh its tool list. If the profile is fixed by the `STUDIO_BRIDGE_TOOLS` environment variable, the switches are read-only.
 - **Log:** a short log of connection events and commands.
+
+## macOS
+
+Studio Bridge runs natively on macOS with the official Roblox Studio. It has not been tested on a real Mac yet, so please report anything that does not work, with the output of `studio-bridge doctor`.
+
+1. Install Node 22 or newer, then `npm install -g @zrob407/studio-bridge` and `studio-bridge install`.
+2. Reports disagree on where Studio for Mac reads plugins, so `install` writes the plugin to both `~/Documents/Roblox/Plugins` and `~/Library/Application Support/Roblox/Plugins`; Studio reads only one of them, so it never loads twice. To see which folder yours uses, click Plugins Folder in Studio's Plugins tab. If it is somewhere else, run `install` with `STUDIO_BRIDGE_PLUGINS_DIR` set to that folder. Studio only loads plugins at startup, so quit and reopen it afterwards.
+3. Data (token, uploads, exports, settings) lives in `~/Library/Application Support/StudioBridge`.
+4. Open Studio, allow HTTP requests and Script Injection for "Studio Bridge" if it asks, and run `studio-bridge doctor`.
+
+Differences from Windows:
+
+- The `screenshot` tool (a screen capture of the Studio window) uses the built-in `screencapture`, `osascript` and `sips`, and needs Screen & System Audio Recording permission for the terminal or app that runs Claude Code (System Settings > Privacy & Security). `viewport_screenshot` captures the 3D view from inside Studio and needs no permission.
+- `input_keyboard`, `input_mouse` and `gui_click` bring Studio to the front with `open -a "Roblox Studio"` before sending input.
+- The packaged exe is Windows only. Use the npm package.
 
 ## Linux
 

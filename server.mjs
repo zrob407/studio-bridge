@@ -15,7 +15,7 @@ import { appDir, assetExists, assetFile, isPackaged, readAsset, assetOnDisk } fr
 import { checkLicense, TAMPER_MESSAGE } from './checks.mjs';
 import { applyRelease, checkForUpdate, currentVersion, isNewer, latestUpdate, loadSettings, saveSettings, updateMode } from './updater.mjs';
 import { acceptWebSocket } from './ws.mjs';
-import { describeHolder, findHyprWindow, hyprGrimArgs, isHyprland, isWindows, portHolder, portHolderHint, unsupportedTools } from './platform.mjs';
+import { describeHolder, findHyprWindow, findMacWindow, hyprGrimArgs, isHyprland, isMac, isWindows, MAC_WINDOW_SCRIPT, macCaptureArgs, parsePixelWidth, portHolder, portHolderHint, unsupportedTools } from './platform.mjs';
 import { authorize as authorizePack, loadPacks, packsDir, serverTool } from './packs.mjs';
 import { activate as proActivate, openPurchasePage, remove as proRemove, status as proStatus } from './pro.mjs';
 
@@ -1081,9 +1081,52 @@ async function hyprFocus(titleLike) {
   return !dispatched.err && dispatched.stdout.trim().startsWith('ok');
 }
 
+const MAC_PERMISSION_HINT = 'Allow your terminal (or the app that runs Claude Code) under System Settings > Privacy & Security > Screen & System Audio Recording, then restart it.';
+
+async function macStudioWindow(titleLike) {
+  const listed = await runTool('osascript', ['-l', 'JavaScript', '-e', MAC_WINDOW_SCRIPT], 15000);
+  if (listed.err) return { error: `osascript failed: ${listed.stderr.trim() || listed.err.message}` };
+  let windows;
+  try {
+    windows = JSON.parse(listed.stdout);
+  } catch {
+    return { error: 'osascript returned output that is not JSON' };
+  }
+  const window = findMacWindow(windows, titleLike);
+  return window ? { window } : { error: `No Roblox Studio window was found on screen. If Studio is open, macOS may be hiding window details because of missing permission. ${MAC_PERMISSION_HINT}` };
+}
+
+async function macScreenshot(titleLike, maxWidth) {
+  const found = await macStudioWindow(titleLike);
+  if (found.error) return textResult(`Screenshot failed: ${found.error}`, true);
+  const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
+  const shot = await runTool('screencapture', macCaptureArgs(found.window.id, file), 20000);
+  if (shot.err || !fs.existsSync(file) || fs.statSync(file).size === 0) {
+    fs.rmSync(file, { force: true });
+    return textResult(`Screenshot failed: ${shot.stderr.trim() || (shot.err && shot.err.message) || 'screencapture produced no image'}. ${MAC_PERMISSION_HINT}`, true);
+  }
+  const measured = await runTool('sips', ['-g', 'pixelWidth', file], 10000);
+  const pixels = measured.err ? null : parsePixelWidth(measured.stdout);
+  if (pixels && pixels > Number(maxWidth)) await runTool('sips', ['--resampleWidth', String(Math.round(Number(maxWidth))), file], 20000);
+  const data = fs.readFileSync(file).toString('base64');
+  fs.rmSync(file, { force: true });
+  return {
+    content: [
+      { type: 'image', data, mimeType: 'image/jpeg' },
+      { type: 'text', text: `${found.window.title || 'Roblox Studio'} (${found.window.width}x${found.window.height})` },
+    ],
+  };
+}
+
+async function macFocus() {
+  const opened = await runTool('open', ['-a', 'Roblox Studio'], 10000);
+  return !opened.err;
+}
+
 function takeScreenshot(titleLike, maxWidth) {
   if (isHyprland()) return hyprScreenshot(titleLike, maxWidth);
-  if (!isWindows) return Promise.resolve(textResult('The window screenshot tool only works on Windows and Hyprland (it needs grim there). Use viewport_screenshot, which captures the 3D view from inside Studio on every platform.', true));
+  if (isMac) return macScreenshot(titleLike, maxWidth);
+  if (!isWindows) return Promise.resolve(textResult('The window screenshot tool only works on Windows, macOS and Hyprland (it needs grim there). Use viewport_screenshot, which captures the 3D view from inside Studio on every platform.', true));
   return new Promise((resolve) => {
     const file = path.join(os.tmpdir(), `studio-bridge-${crypto.randomUUID()}.jpg`);
     const script = assetFile('screenshot.ps1');
@@ -1109,6 +1152,7 @@ function takeScreenshot(titleLike, maxWidth) {
 
 function focusStudio(titleLike) {
   if (isHyprland()) return hyprFocus(titleLike);
+  if (isMac) return macFocus();
   if (!isWindows) {
     return new Promise((resolve) => {
       execFile('xdotool', ['search', '--name', titleLike || 'Roblox Studio', 'windowactivate'], { timeout: 15000 }, (err) => resolve(!err));

@@ -2,6 +2,13 @@
 
 All notable changes to Studio Bridge. Newest first. Versions that were tagged but never published as a release are folded into the next one.
 
+## 0.6.13 - 2026-11-02
+
+- macOS is now supported, though it has not been tested on a real Mac yet. `install` writes the plugin to both places Studio for Mac may read it from, and your data lives in `~/Library/Application Support/StudioBridge`.
+- The `screenshot` tool works on macOS using the built-in `screencapture`, `osascript` and `sips`. It needs Screen & System Audio Recording permission for the terminal or app that runs your AI tool; `viewport_screenshot` needs none.
+- `input_keyboard`, `input_mouse` and `gui_click` bring Studio to the front on macOS before sending input, and `doctor` checks the macOS tools.
+- The Open Cloud key instructions now show a command for your system instead of always showing a Windows one.
+
 ## 0.6.12 - 2026-11-01
 
 - The Studio Bridge window has a new look: its own dark palette, a gradient header, a sliding tab bar, raised cards, colored stat tiles, a pulsing connection beacon, hover highlights on buttons and colored log lines.

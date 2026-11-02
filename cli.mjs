@@ -7,7 +7,7 @@ import readline from 'node:readline';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { appDir, assetFile, isPackaged, readAsset } from './paths.mjs';
-import { describeHolder, isHyprland, isWindows, pluginsDirs, portHolder, portHolderHint, unsupportedTools, wineRobloxFolders } from './platform.mjs';
+import { describeHolder, isHyprland, isMac, isWindows, pluginsDirs, portHolder, portHolderHint, unsupportedTools, wineRobloxFolders } from './platform.mjs';
 import { loadPacks, packsDir } from './packs.mjs';
 import { activate as proActivate, remove as proRemove, status as proStatus } from './pro.mjs';
 import { checkLicense, licenseHash, TAMPER_MESSAGE } from './checks.mjs';
@@ -149,7 +149,7 @@ function previousSourceFolder() {
   if (found.status !== 0) return null;
   const { command, args } = parseRegistration(found.stdout || '');
   if (!/(^|[\\/])node(\.exe)?$/i.test(command)) return null;
-  const script = /[A-Za-z]:\\[^"]*?\.mjs/.exec(args);
+  const script = /(?:[A-Za-z]:\\|\/)[^"]*?\.mjs/.exec(args);
   return script ? path.dirname(script[0]) : null;
 }
 
@@ -293,7 +293,14 @@ async function install(args) {
   console.log(client === 'codex' ? '  1. Restart Codex so it starts the bridge.' : '  1. Restart Claude Code, or run /mcp, so it starts the bridge.' + (client === 'all' ? ' Restart Codex too.' : ''));
   console.log('  2. Restart Roblox Studio. If it asks, allow HTTP requests and Script Injection for "Studio Bridge".');
   console.log('  3. Ask Claude to list the connected Studio windows to check it works.');
-  if (!isWindows) {
+  if (isMac) {
+    console.log('');
+    console.log('macOS notes:');
+    console.log(`  - The plugin was written to ${targets.length} folders (listed above) because reports disagree on which one Studio for Mac reads; it reads only one. Studio only loads plugins at startup, so quit and reopen it.`);
+    console.log('  - The screenshot tool needs Screen & System Audio Recording permission for your terminal (System Settings > Privacy & Security). viewport_screenshot does not.');
+    console.log('  - input_keyboard, input_mouse and gui_click bring Studio to the front for you.');
+    console.log('  - Run studio-bridge doctor if the Studio window does not show up.');
+  } else if (!isWindows) {
     const prefixes = wineRobloxFolders();
     console.log('');
     console.log('Linux notes:');
@@ -383,6 +390,9 @@ async function doctor(args) {
     } catch (err) {
       note('FAIL', `screenshot helper is not available: ${err.message}`);
     }
+  } else if (isMac) {
+    const missing = ['screencapture', 'osascript', 'sips'].filter((name) => spawnSync(name, ['-h'], { stdio: 'ignore', timeout: 5000 }).error);
+    note(missing.length > 0 ? 'WARN' : 'ok', missing.length > 0 ? `${missing.join(', ')} not found, so the screenshot tool is unavailable (viewport_screenshot still works)` : 'screencapture, osascript and sips are available for the screenshot tool (it also needs Screen & System Audio Recording permission for your terminal)');
   } else if (isHyprland()) {
     const hyprctl = spawnSync('hyprctl', ['version', '-j'], { encoding: 'utf8' });
     note(hyprctl.error || hyprctl.status !== 0 ? 'WARN' : 'ok', hyprctl.error || hyprctl.status !== 0 ? 'Hyprland was detected but hyprctl does not work from here, so input_keyboard, input_mouse and gui_click cannot focus the Studio window' : 'hyprctl can focus the Studio window');
@@ -402,7 +412,7 @@ async function doctor(args) {
   for (const message of packNotes) note('WARN', message);
   note('info', `pack trust: ${packTrust} (${packTrust === 'verified' ? 'only packs signed by Studio Bridge are loaded' : 'unsigned third-party packs are loaded and labeled unverified'})`);
   const hidden = [...unsupportedTools()];
-  if (hidden.length > 0) note('info', `tools not offered on this computer: ${hidden.join(', ')} (the window screenshot needs Windows, or Hyprland with hyprctl and grim; viewport_screenshot works everywhere)`);
+  if (hidden.length > 0) note('info', `tools not offered on this computer: ${hidden.join(', ')} (the window screenshot needs Windows, macOS, or Hyprland with hyprctl and grim; viewport_screenshot works everywhere)`);
   const port = process.env.STUDIO_BRIDGE_PORT || '3010';
   if (token) {
     const status = await bridgeStatus(token, port);

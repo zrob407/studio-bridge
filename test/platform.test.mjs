@@ -123,7 +123,32 @@ check('every tool is offered on Windows', platform.unsupportedTools({ platform: 
 check('the window screenshot is not offered on a Linux desktop without Hyprland', platform.unsupportedTools({ platform: 'linux', hyprland: false, has: () => true }).has('screenshot'));
 check('nor on Hyprland when grim or hyprctl is missing', platform.unsupportedTools({ platform: 'linux', hyprland: true, has: (name) => name === 'hyprctl' }).has('screenshot') && platform.unsupportedTools({ platform: 'linux', hyprland: true, has: (name) => name === 'grim' }).has('screenshot'));
 check('but it is offered on Hyprland with both tools installed', !platform.unsupportedTools({ platform: 'linux', hyprland: true, has: () => true }).has('screenshot'));
-check('and not on other systems', platform.unsupportedTools({ platform: 'darwin', hyprland: false, has: () => true }).has('screenshot'));
+check('and not on systems nobody supports', platform.unsupportedTools({ platform: 'freebsd', hyprland: false, has: () => true }).has('screenshot'));
+check('the window screenshot is offered on macOS with its three tools', !platform.unsupportedTools({ platform: 'darwin', hyprland: false, has: () => true }).has('screenshot'));
+check('and hidden on macOS when one of them is missing', ['screencapture', 'osascript', 'sips'].every((missing) => platform.unsupportedTools({ platform: 'darwin', hyprland: false, has: (name) => name !== missing }).has('screenshot')));
+
+const macHome = path.join(sandbox, 'mac-home');
+check('macOS plugins go in both candidate folders, since Studio reads only one', platform.pluginsDirs(macHome, {}, 'darwin').join() === [path.join(macHome, 'Documents', 'Roblox', 'Plugins'), path.join(macHome, 'Library', 'Application Support', 'Roblox', 'Plugins')].join());
+check('the plugins override still wins on macOS', platform.pluginsDirs(macHome, { STUDIO_BRIDGE_PLUGINS_DIR: override }, 'darwin').join() === path.resolve(override));
+check('macOS data lives in Application Support/StudioBridge', platform.dataRoot('darwin', {}, macHome) === path.join(macHome, 'Library', 'Application Support') && platform.dataDirName('darwin') === 'StudioBridge');
+check('Windows and Linux data folders are unchanged', platform.dataRoot('win32', { LOCALAPPDATA: 'C:\\L' }, macHome) === 'C:\\L' && platform.dataDirName('win32') === 'StudioBridge' && platform.dataRoot('linux', { XDG_DATA_HOME: '/x' }, macHome) === '/x' && platform.dataRoot('linux', {}, macHome) === path.join(macHome, '.local', 'share') && platform.dataDirName('linux') === 'studio-bridge');
+check('the port hint names the right command per system', platform.portHolderHint(3010, 'darwin').includes('lsof') && platform.portHolderHint(3010, 'win32').includes('Get-NetTCPConnection') && platform.portHolderHint(3010, 'linux').includes('ss -ltnp'));
+
+const macWindows = [
+  { id: 1, owner: 'Terminal', title: 'zsh', layer: 0, width: 800, height: 600 },
+  { id: 2, owner: 'RobloxStudio', title: 'Obby - Roblox Studio', layer: 0, width: 1800, height: 1000 },
+  { id: 3, owner: 'RobloxStudio', title: 'Lure - Roblox Studio', layer: 0, width: 1200, height: 800 },
+  { id: 4, owner: 'RobloxStudio', title: '', layer: 25, width: 1800, height: 40 },
+  { id: 5, owner: 'RobloxStudio', title: 'Output', layer: 0, width: 100, height: 50 },
+];
+check('the macOS window is matched by place name', platform.findMacWindow(macWindows, 'lure').id === 3);
+check('macOS falls back to the biggest Studio window', platform.findMacWindow(macWindows, 'missing').id === 2);
+check('macOS ignores other apps, menu layers and tiny windows', platform.findMacWindow(macWindows.filter((window) => window.owner === 'Terminal' || window.layer !== 0 || window.width < 200), '') === null);
+check('macOS still finds Studio when titles are hidden by missing permission', platform.findMacWindow(macWindows.map((window) => ({ ...window, title: '' })), 'lure').id === 2);
+check('macOS window lookup handles bad input', platform.findMacWindow(null, 'x') === null && platform.findMacWindow([null, {}], 'x') === null);
+check('screencapture captures one window by id without a shadow', platform.macCaptureArgs(7, '/tmp/o.jpg').join(' ') === '-x -o -l 7 -t jpg /tmp/o.jpg');
+check('sips output is parsed for the pixel width', platform.parsePixelWidth('/tmp/o.jpg\n  pixelWidth: 2880\n') === 2880 && platform.parsePixelWidth('nothing') === null);
+check('the macOS window script uses CoreGraphics and prints JSON', platform.MAC_WINDOW_SCRIPT.includes('CGWindowListCopyWindowInfo') && platform.MAC_WINDOW_SCRIPT.includes('JSON.stringify'));
 check('a missing command is reported as missing, not as an error', platform.commandExists('definitely-not-a-real-command-xyz') === false);
 
 fs.rmSync(sandbox, { recursive: true, force: true });
