@@ -8,6 +8,8 @@ An MCP server and Roblox Studio plugin that let an AI coding assistant such as C
 
 Studio Bridge speaks standard MCP, so it is not tied to one assistant. It is used and tested with Claude Code. Setup for OpenAI's Codex CLI is included (see Install), but it has not yet been tried with Codex itself.
 
+<p align="center"><a href="docs/intro.mp4"><img src="https://raw.githubusercontent.com/zrob407/studio-bridge/main/assets/social-preview.png" width="640" alt="Watch the Studio Bridge intro video"></a><br><a href="docs/intro.mp4">Watch the intro video (2 min)</a></p>
+
 ## Quick start
 
 ```

@@ -118,6 +118,12 @@ const index = page({
 </div>
 
 <section>
+<div class="wrap" data-reveal>
+<video controls preload="metadata" playsinline poster="social-preview.png" style="width:100%;max-width:960px;display:block;margin:0 auto;border-radius:12px" aria-label="Studio Bridge introduction video"><source src="intro.mp4" type="video/mp4"></video>
+</div>
+</section>
+
+<section>
 <div class="wrap">
 <div class="section-head" data-reveal>
 <p class="eyebrow">What it does</p>
